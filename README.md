@@ -1,60 +1,133 @@
-# OPTICODE - Plataforma de Análisis de Métricas WGAC Para Accesibilidad Web
+# OPTICODE - Plataforma de Análisis de Métricas WCAG Para Accesibilidad Web
 
 **Autor:** StackFlow - ACK
 
-Plataforma de análisis de métricas WGAC para accesibilidad web, que permite a los usuarios evaluar la accesibilidad de sus sitios web y obtener recomendaciones para mejorarla.
+Plataforma de auditoría de accesibilidad WCAG que permite a los desarrolladores evaluar sus archivos HTML y CSS, obtener un puntaje por archivo y visualizar los errores con detalle de línea y contexto de código.
 
 ## Características
 
-- Análisis de métricas WGAC
-- Evaluación de accesibilidad web
-- Recomendaciones para mejorar la accesibilidad
+- Registro e inicio de sesión con JWT
+- Gestión de proyectos y carga de archivos HTML/CSS (individual o por lote ZIP)
+- Motor de análisis estático de reglas WCAG
+- Dashboard de resultados con sistema de semáforo y puntaje por archivo (0-100)
+- Detalle de errores con severidad, regla WCAG violada y fragmento de código
 
 
 ## BACKEND
 
 ### Tecnologías
 
-- Python
-- Django
+- Python 3.13
+- Django 5.2
 - Django REST Framework
+- djangorestframework-simplejwt
+- django-cors-headers
+- django-environ
+- Loguru
 - MySQL
 
-### Instalación
+### Estructura del proyecto
+
+```
+opticode_backend/
+├── config/                  # Configuración central de Django
+│   ├── settings/
+│   │   ├── base.py          # Settings compartidos
+│   │   ├── development.py   # Settings de desarrollo (DEBUG=True)
+│   │   └── logging.py       # Configuración de Loguru
+│   ├── urls.py              # Rutas raíz
+│   ├── asgi.py
+│   └── wsgi.py
+├── core/
+│   └── logging.py           # Inicialización de Loguru (compartido entre features)
+├── features/
+│   ├── auth/                # Autenticación: registro, login, JWT, recuperación
+│   ├── users/               # Administración de cuentas
+│   ├── projects/            # Proyectos y carga de archivos
+│   └── audit/               # Motor WCAG y resultados
+├── logs/                    # Archivos de log generados en tiempo de ejecución
+├── manage.py
+├── requirements.txt
+└── .env.example
+```
+
+### Requisitos previos
+
+- Python 3.11 o superior
+- MySQL 8.0 o superior
+
+### Instalación paso a paso
+
+**1. Clona el repositorio y entra a la carpeta del backend**
 
 ```bash
-cd opticode_backend
+git clone <url-del-repo>
+cd opticode-repository/opticode_backend
+```
+
+**2. Crea y activa el entorno virtual**
+
+```bash
+python -m venv venv
+
+# macOS / Linux
+source venv/bin/activate
+
+# Windows
+venv\Scripts\activate
+```
+
+**3. Instala las dependencias**
+
+```bash
 pip install -r requirements.txt
 ```
 
-### Configuración de la base de datos MySQL
-
-Crea la base de datos en tu servidor MySQL:"
+**4. Crea la base de datos en MySQL**
 
 ```sql
 CREATE DATABASE opticode_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### Configuración de .env
+**5. Configura las variables de entorno**
 
-Consultar el .env.example y llenar los campos
-
-```env
-SECRET_KEY=your-secret-key-here
-ALLOWED_HOSTS=yourhosts (local or 127.0.0.1)
-
-DB_NAME=opticode_db
-DB_USER=your-db-user
-DB_PASSWORD=your-db-password
-DB_HOST=your-db-host
-DB_PORT=3306
+```bash
+cp .env.example .env
 ```
 
-### Uso
+Edita el archivo `.env` con tus credenciales:
+
+```env
+SECRET_KEY=una-clave-secreta-segura
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+DJANGO_ENV=development
+
+DB_NAME=opticode_db
+DB_USER=tu-usuario-mysql
+DB_PASSWORD=tu-contraseña-mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+
+LOG_LEVEL=DEBUG
+LOG_DIR=logs
+```
+
+**6. Aplica las migraciones**
+
+```bash
+python manage.py migrate
+```
+
+**7. Inicia el servidor de desarrollo**
 
 ```bash
 python manage.py runserver
 ```
+
+El servidor quedará disponible en `http://127.0.0.1:8000`.
 
 
 ## FRONTEND
@@ -71,7 +144,6 @@ python manage.py runserver
 ```bash
 cd opticode_frontend
 npm install
-npm run dev
 ```
 
 ### Uso
@@ -79,6 +151,8 @@ npm run dev
 ```bash
 npm run dev
 ```
+
+El cliente quedará disponible en `http://localhost:5173`.
 
 ## Guía de Contribución
 
