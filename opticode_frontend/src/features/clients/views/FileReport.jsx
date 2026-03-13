@@ -3,7 +3,6 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import ScoreDonutChart from '../components/ScoreDonutChart';
-import './FileReport.css';
 
 const FileReport = () => {
   const { projectId, fileId } = useParams();
@@ -14,60 +13,86 @@ const FileReport = () => {
   return (
     <section>
       {/* Breadcrumb */}
-      <div className="oc-breadcrumb">
-        <Link to="/dashboard">Mis Proyectos</Link>
-        <NavigateNextIcon style={{ fontSize: '1rem' }} />
-        <Link to={`/projects/${projectId}`}>Portal Educativo</Link>
-        <NavigateNextIcon style={{ fontSize: '1rem' }} />
-        <span className="active">{mockData.name}</span>
-      </div>
+      <nav aria-label="breadcrumb">
+        <ol className="breadcrumb">
+          <li className="breadcrumb-item">
+            <Link to="/dashboard">Mis Proyectos</Link>
+          </li>
+          <li className="breadcrumb-item">
+            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
+          </li>
+          <li className="breadcrumb-item">
+            <Link to={`/projects/${projectId}`}>Portal Educativo</Link>
+          </li>
+          <li className="breadcrumb-item">
+            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
+          </li>
+          <li className="breadcrumb-item active" aria-current="page">{mockData.name}</li>
+        </ol>
+      </nav>
 
       {/* Disclaimer */}
-      <div className="file-report__disclaimer">
-        <span className="file-report__disclaimer-icon">i</span>
-        <p>
+      <div className="alert alert-info d-flex gap-2 mb-4">
+        <span className="fw-bold fs-5 lh-1" style={{ color: 'var(--oc-royal)' }}>i</span>
+        <p className="mb-0 small" style={{ color: '#1e3a5f' }}>
           <strong>Este es un análisis estático.</strong> Para garantizar la accesibilidad completa, realice pruebas manuales
           complementarias utilizando teclado y lectores de pantalla en su sitio renderizado en vivo.
         </p>
       </div>
 
       {/* Score + Counts Grid */}
-      <div className="file-report__grid">
+      <div className="row g-4 mb-4">
         {/* Donut */}
-        <div className="oc-card file-report__score-card">
-          <h3 className="file-report__score-label">Puntuación Final</h3>
-          <ScoreDonutChart score={mockData.score} />
+        <div className="col-md-4">
+          <div className="card h-100 d-flex flex-column align-items-center justify-content-center p-4">
+            <h3 className="text-uppercase small fw-semibold text-secondary mb-3" style={{ letterSpacing: '0.05em' }}>
+              Puntuación Final
+            </h3>
+            <ScoreDonutChart score={mockData.score} />
+          </div>
         </div>
 
         {/* Counts */}
-        <div className="file-report__counts">
-          <div className="file-report__count-card file-report__count-card--critical">
-            <div className="file-report__count-icon file-report__count-icon--critical">
-              <CloseOutlinedIcon style={{ fontSize: '1.25rem' }} />
+        <div className="col-md-8">
+          <div className="row row-cols-1 row-cols-sm-2 g-3 h-100">
+            <div className="col">
+              <div className="card h-100 d-flex flex-row align-items-center gap-3 p-4" style={{ backgroundColor: 'var(--oc-danger-light)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                  style={{ width: '3rem', height: '3rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--oc-danger)' }}
+                >
+                  <CloseOutlinedIcon style={{ fontSize: '1.25rem' }} />
+                </div>
+                <div>
+                  <div className="fw-bold fs-3" style={{ color: 'var(--oc-danger-dark)' }}>{mockData.critical}</div>
+                  <div className="fw-medium small" style={{ color: '#7f1d1d' }}>Faltas Críticas (Nivel A)</div>
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="file-report__count-number file-report__count-number--critical">{mockData.critical}</div>
-              <div className="file-report__count-label file-report__count-label--critical">Faltas Críticas (Nivel A)</div>
-            </div>
-          </div>
 
-          <div className="file-report__count-card file-report__count-card--warning">
-            <div className="file-report__count-icon file-report__count-icon--warning">
-              <WarningAmberOutlinedIcon style={{ fontSize: '1.25rem' }} />
-            </div>
-            <div>
-              <div className="file-report__count-number file-report__count-number--warning">{mockData.warnings}</div>
-              <div className="file-report__count-label file-report__count-label--warning">Advertencias (Nivel AA)</div>
+            <div className="col">
+              <div className="card h-100 d-flex flex-row align-items-center gap-3 p-4" style={{ backgroundColor: 'var(--oc-warning-light)', border: '1px solid rgba(249, 115, 22, 0.15)' }}>
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                  style={{ width: '3rem', height: '3rem', backgroundColor: 'rgba(249, 115, 22, 0.15)', color: 'var(--oc-warning)' }}
+                >
+                  <WarningAmberOutlinedIcon style={{ fontSize: '1.25rem' }} />
+                </div>
+                <div>
+                  <div className="fw-bold fs-3" style={{ color: 'var(--oc-warning-dark)' }}>{mockData.warnings}</div>
+                  <div className="fw-medium small" style={{ color: '#7c2d12' }}>Advertencias (Nivel AA)</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Link to errors */}
-      <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+      <div className="text-center mt-3">
         <button
           type="button"
-          className="oc-btn oc-btn-primary oc-btn-lg"
+          className="btn btn-primary btn-lg"
           onClick={() => navigate(`/projects/${projectId}/files/${fileId}/errors`)}
         >
           Ver Hallazgos Detectados

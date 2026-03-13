@@ -4,7 +4,6 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AuthFormField from '../components/AuthFormField';
-import './Login.css';
 
 const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
@@ -17,7 +16,6 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    /* Placeholder — se integrará con el backend posteriormente */
     if (!form.email || !form.password) {
       setError('Credenciales de acceso incorrectas.');
       return;
@@ -26,12 +24,12 @@ const Login = () => {
   };
 
   return (
-    <div className="login-view">
-      <h2>Iniciar Sesión</h2>
-      <p className="login-view__subtitle">Ingresa tus credenciales para acceder a tu cuenta.</p>
+    <div>
+      <h2 className="fw-bold mb-1" style={{ color: 'var(--oc-navy)' }}>Iniciar Sesión</h2>
+      <p className="text-secondary small mb-4">Ingresa tus credenciales para acceder a tu cuenta.</p>
 
       {error && (
-        <div className="login-view__error" role="alert">
+        <div className="alert alert-danger d-flex align-items-center gap-2 py-2 small" role="alert">
           <ErrorOutlineIcon style={{ fontSize: '1.125rem' }} />
           {error}
         </div>
@@ -60,16 +58,16 @@ const Login = () => {
           icon={LockOutlinedIcon}
         />
 
-        <Link to="/forgot-password" className="login-view__forgot">
+        <Link to="/forgot-password" className="d-block text-end small mb-3" style={{ fontSize: '0.75rem' }}>
           ¿Olvidaste tu contraseña?
         </Link>
 
-        <button type="submit" className="oc-btn oc-btn-primary oc-btn-lg oc-btn-block">
+        <button type="submit" className="btn btn-primary btn-lg w-100">
           Entrar
         </button>
       </form>
 
-      <p className="login-view__footer">
+      <p className="text-center text-secondary small mt-4">
         ¿No tienes cuenta?{' '}
         <Link to="/register">Regístrate</Link>
       </p>

@@ -5,7 +5,7 @@ const getScoreColor = (score) => {
 };
 
 const ScoreBadge = ({ score, size = 'md' }) => {
-  const dimensions = size === 'lg' ? { width: '3rem', height: '3rem', fontSize: 'var(--oc-font-base)' } : {};
+  const dimensions = size === 'lg' ? { width: '3rem', height: '3rem', fontSize: '1rem' } : {};
 
   return (
     <div className={`oc-score ${getScoreColor(score)}`} style={dimensions}>

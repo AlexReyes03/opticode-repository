@@ -10,10 +10,11 @@ const ScoreDonutChart = ({ score = 0 }) => {
   const offset = circumference - (score / 100) * circumference;
 
   return (
-    <div style={{ position: 'relative', width: '10rem', height: '10rem' }}>
+    <div className="position-relative" style={{ width: '10rem', height: '10rem' }}>
       <svg
         viewBox="0 0 160 160"
-        style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}
+        className="w-100 h-100"
+        style={{ transform: 'rotate(-90deg)' }}
       >
         {/* Background circle */}
         <circle
@@ -38,20 +39,11 @@ const ScoreDonutChart = ({ score = 0 }) => {
           style={{ transition: 'stroke-dashoffset 0.8s ease' }}
         />
       </svg>
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <span style={{ fontSize: 'var(--oc-font-4xl)', fontWeight: 700, color: 'var(--oc-gray-800)' }}>
+      <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+        <span className="fw-bold" style={{ fontSize: '2.25rem', color: 'var(--oc-gray-800)' }}>
           {score}
         </span>
-        <span style={{ fontSize: 'var(--oc-font-sm)', color: 'var(--oc-gray-400)' }}>/ 100</span>
+        <span className="small text-secondary">/ 100</span>
       </div>
     </div>
   );

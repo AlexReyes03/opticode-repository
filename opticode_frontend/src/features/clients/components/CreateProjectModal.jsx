@@ -1,97 +1,66 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 
 const CreateProjectModal = ({ show, onClose }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const modalRef = useRef(null);
 
-  if (!show) return null;
+  useEffect(() => {
+    if (!modalRef.current) return;
+    const bsModal = window.bootstrap?.Modal;
+    if (!bsModal) return;
+
+    let instance = bsModal.getInstance(modalRef.current);
+    if (!instance) {
+      instance = new bsModal(modalRef.current, { backdrop: true, keyboard: true });
+    }
+
+    if (show) {
+      instance.show();
+    } else {
+      instance.hide();
+    }
+  }, [show]);
+
+  useEffect(() => {
+    const el = modalRef.current;
+    if (!el) return;
+
+    const handleHidden = () => onClose();
+    el.addEventListener('hidden.bs.modal', handleHidden);
+    return () => el.removeEventListener('hidden.bs.modal', handleHidden);
+  }, [onClose]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    /* Placeholder — se integrará con el backend posteriormente */
     onClose();
   };
 
   return (
-    <>
-      {/* Overlay */}
-      <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.5)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        onClick={onClose}
-      >
-        {/* Modal */}
-        <div
-          style={{
-            backgroundColor: 'var(--oc-white)',
-            borderRadius: 'var(--oc-radius-xl)',
-            boxShadow: 'var(--oc-shadow-xl)',
-            width: '100%',
-            maxWidth: '32rem',
-            overflow: 'hidden',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
+    <div className="modal fade" ref={modalRef} tabIndex="-1" aria-labelledby="createProjectModalLabel" aria-hidden="true">
+      <div className="modal-dialog modal-dialog-centered">
+        <div className="modal-content">
           {/* Header */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderBottom: '1px solid var(--oc-gray-100)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <h3
-              style={{
-                fontSize: 'var(--oc-font-xl)',
-                fontWeight: 600,
-                color: 'var(--oc-navy)',
-                borderLeft: '4px solid var(--oc-royal)',
-                paddingLeft: '0.75rem',
-                margin: 0,
-              }}
-            >
+          <div className="modal-header">
+            <h3 className="modal-title fs-5 fw-semibold" id="createProjectModalLabel" style={{ color: 'var(--oc-navy)', borderLeft: '4px solid var(--oc-royal)', paddingLeft: '0.75rem' }}>
               Nuevo Proyecto
             </h3>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--oc-gray-400)',
-                display: 'flex',
-                padding: '0.25rem',
-                borderRadius: 'var(--oc-radius-sm)',
-              }}
-              aria-label="Cerrar modal"
-            >
-              <CloseIcon style={{ fontSize: '1.25rem' }} />
-            </button>
+            <button type="button" className="btn-close" onClick={onClose} aria-label="Cerrar modal"></button>
           </div>
 
           {/* Body */}
           <form onSubmit={handleSubmit}>
-            <div style={{ padding: '1.5rem' }}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label htmlFor="project-name" className="oc-label">
-                  Nombre del proyecto <span style={{ color: 'var(--oc-danger)' }}>*</span>
+            <div className="modal-body">
+              <div className="mb-3">
+                <label htmlFor="project-name" className="form-label">
+                  Nombre del proyecto <span className="text-danger">*</span>
                 </label>
-                <div style={{ position: 'relative' }}>
+                <div className="position-relative">
                   <input
                     id="project-name"
                     type="text"
-                    className="oc-input"
+                    className="form-control"
                     placeholder="Ej: Portal Educativo"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -99,14 +68,8 @@ const CreateProjectModal = ({ show, onClose }) => {
                     required
                   />
                   <span
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      fontSize: 'var(--oc-font-xs)',
-                      color: 'var(--oc-gray-400)',
-                    }}
+                    className="position-absolute top-50 translate-middle-y text-secondary"
+                    style={{ right: '0.75rem', fontSize: '0.75rem' }}
                   >
                     {name.length}/100
                   </span>
@@ -114,12 +77,12 @@ const CreateProjectModal = ({ show, onClose }) => {
               </div>
 
               <div>
-                <label htmlFor="project-desc" className="oc-label">
+                <label htmlFor="project-desc" className="form-label">
                   Descripción (opcional)
                 </label>
                 <textarea
                   id="project-desc"
-                  className="oc-input"
+                  className="form-control"
                   rows={3}
                   placeholder="Describe brevemente el propósito de este proyecto..."
                   value={description}
@@ -130,27 +93,18 @@ const CreateProjectModal = ({ show, onClose }) => {
             </div>
 
             {/* Footer */}
-            <div
-              style={{
-                padding: '1rem 1.5rem',
-                backgroundColor: 'var(--oc-gray-50)',
-                borderTop: '1px solid var(--oc-gray-100)',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.75rem',
-              }}
-            >
-              <button type="button" className="oc-btn oc-btn-outline" onClick={onClose}>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-outline-secondary" onClick={onClose}>
                 Cancelar
               </button>
-              <button type="submit" className="oc-btn oc-btn-primary">
+              <button type="submit" className="btn btn-primary">
                 Crear Proyecto
               </button>
             </div>
           </form>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

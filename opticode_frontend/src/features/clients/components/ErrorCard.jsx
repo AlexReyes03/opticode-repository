@@ -9,67 +9,47 @@ const ErrorCard = ({ error }) => {
 
   return (
     <div
-      style={{
-        backgroundColor: 'var(--oc-white)',
-        borderLeft: `4px solid ${borderColor}`,
-        borderRadius: '0 var(--oc-radius-xl) var(--oc-radius-xl) 0',
-        boxShadow: 'var(--oc-shadow-sm)',
-        overflow: 'hidden',
-      }}
+      className="card shadow-sm overflow-hidden"
+      style={{ borderLeft: `4px solid ${borderColor}`, borderRadius: '0 1rem 1rem 0' }}
     >
-      <div style={{ padding: '1.25rem' }}>
+      <div className="card-body p-4">
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+        <div className="d-flex justify-content-between align-items-start mb-2">
           <div>
             <span
+              className="badge mb-2"
               style={{
-                display: 'inline-block',
-                padding: '0.125rem 0.5rem',
                 backgroundColor: badgeBg,
                 color: badgeColor,
-                fontSize: 'var(--oc-font-xs)',
+                fontSize: '0.75rem',
                 fontWeight: 700,
-                borderRadius: 'var(--oc-radius-sm)',
-                textTransform: 'uppercase',
                 letterSpacing: '0.04em',
-                marginBottom: '0.5rem',
               }}
             >
               {badgeLabel}
             </span>
-            <h3 style={{ fontSize: 'var(--oc-font-lg)', fontWeight: 700, color: 'var(--oc-gray-900)', margin: 0 }}>
+            <h3 className="fw-bold fs-6 mb-0" style={{ color: 'var(--oc-gray-900)' }}>
               {title}
             </h3>
           </div>
-          <div
-            style={{
-              fontSize: 'var(--oc-font-sm)',
-              fontFamily: 'monospace',
-              backgroundColor: 'var(--oc-gray-100)',
-              padding: '0.25rem 0.75rem',
-              borderRadius: 'var(--oc-radius-md)',
-              color: 'var(--oc-gray-600)',
-              whiteSpace: 'nowrap',
-            }}
-          >
+          <div className="font-monospace small rounded-2 px-3 py-1" style={{ backgroundColor: 'var(--oc-gray-100)', color: 'var(--oc-gray-600)', whiteSpace: 'nowrap' }}>
             Línea {line}
           </div>
         </div>
 
         {/* Description */}
-        <p style={{ fontSize: 'var(--oc-font-sm)', color: 'var(--oc-gray-600)', marginBottom: '1rem', lineHeight: 1.5 }}>
+        <p className="text-secondary small mb-3" style={{ lineHeight: 1.5 }}>
           {description}
         </p>
 
         {/* Code Snippet */}
         <div
+          className="rounded-3 overflow-hidden"
           style={{
             backgroundColor: '#0f172a',
-            borderRadius: 'var(--oc-radius-lg)',
-            overflow: 'hidden',
             border: '1px solid #334155',
             fontFamily: '"Fira Code", "Cascadia Code", monospace',
-            fontSize: 'var(--oc-font-sm)',
+            fontSize: '0.875rem',
           }}
         >
           {codeLines.map((codeLine) => {
@@ -77,33 +57,29 @@ const ErrorCard = ({ error }) => {
             return (
               <div
                 key={codeLine.lineNumber}
+                className="d-flex"
                 style={{
-                  display: 'flex',
                   backgroundColor: isError ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
                   borderLeft: isError ? '2px solid var(--oc-danger)' : '2px solid transparent',
                 }}
               >
                 <div
+                  className="flex-shrink-0 text-end user-select-none"
                   style={{
                     width: '2.5rem',
-                    textAlign: 'right',
-                    paddingRight: '0.5rem',
                     padding: '0.25rem 0.5rem 0.25rem 0',
                     backgroundColor: 'rgba(15, 23, 42, 0.5)',
                     borderRight: '1px solid #334155',
                     color: isError ? '#fca5a5' : '#64748b',
-                    flexShrink: 0,
-                    userSelect: 'none',
                   }}
                 >
                   {codeLine.lineNumber}
                 </div>
                 <div
+                  className="text-truncate"
                   style={{
                     padding: '0.25rem 1rem',
                     color: isError ? '#fecaca' : '#94a3b8',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
                     whiteSpace: 'pre',
                   }}
                 >

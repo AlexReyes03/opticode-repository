@@ -2,7 +2,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import AddIcon from '@mui/icons-material/Add';
 import ScoreBadge from '../components/ScoreBadge';
-import './ProjectDashboard.css';
 
 const MOCK_FILES = [
   { id: 1, name: 'header.html', date: 'Hace 2 horas', critical: 0, warnings: 1, score: 95 },
@@ -19,24 +18,32 @@ const ProjectDashboard = () => {
   return (
     <section>
       {/* Breadcrumb */}
-      <div className="oc-breadcrumb">
-        <Link to="/dashboard">Mis Proyectos</Link>
-        <NavigateNextIcon style={{ fontSize: '1rem' }} />
-        <span className="active">Portal Educativo</span>
-      </div>
+      <nav aria-label="breadcrumb">
+        <ol className="breadcrumb">
+          <li className="breadcrumb-item">
+            <Link to="/dashboard">Mis Proyectos</Link>
+          </li>
+          <li className="breadcrumb-item">
+            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
+          </li>
+          <li className="breadcrumb-item active" aria-current="page">Portal Educativo</li>
+        </ol>
+      </nav>
 
       {/* Header */}
-      <div className="project-dashboard__header">
+      <div className="d-flex justify-content-between align-items-start mb-4">
         <div>
-          <h1 className="project-dashboard__title">
+          <h1 className="fw-bold fs-4 mb-1" style={{ color: 'var(--oc-navy)' }}>
             Portal Educativo
-            <span className="project-dashboard__count">{MOCK_FILES.length} Archivos</span>
+            <span className="badge bg-light text-secondary fw-normal ms-2" style={{ fontSize: '0.75rem' }}>
+              {MOCK_FILES.length} Archivos
+            </span>
           </h1>
-          <p className="project-dashboard__desc">Repositorio del frontend de la nueva plataforma escolar.</p>
+          <p className="text-secondary small mb-0">Repositorio del frontend de la nueva plataforma escolar.</p>
         </div>
         <button
           type="button"
-          className="oc-btn oc-btn-primary"
+          className="btn btn-primary d-inline-flex align-items-center gap-2"
           onClick={() => navigate(`/projects/${projectId}/upload`)}
         >
           <AddIcon style={{ fontSize: '1.125rem' }} />
@@ -45,15 +52,15 @@ const ProjectDashboard = () => {
       </div>
 
       {/* Files Table */}
-      <div className="oc-card" style={{ overflow: 'hidden' }}>
-        <table className="project-dashboard__table">
-          <thead>
+      <div className="card overflow-hidden">
+        <table className="table table-hover mb-0">
+          <thead className="table-light">
             <tr>
               <th>Archivo</th>
               <th>Última Modificación</th>
-              <th style={{ textAlign: 'center' }}>Críticas</th>
-              <th style={{ textAlign: 'center' }}>Advertencias</th>
-              <th style={{ textAlign: 'center' }}>Puntaje Global</th>
+              <th className="text-center">Críticas</th>
+              <th className="text-center">Advertencias</th>
+              <th className="text-center">Puntaje Global</th>
             </tr>
           </thead>
           <tbody>
@@ -61,25 +68,26 @@ const ProjectDashboard = () => {
               <tr
                 key={file.id}
                 onClick={() => navigate(`/projects/${projectId}/files/${file.id}`)}
+                style={{ cursor: 'pointer' }}
               >
-                <td className="project-dashboard__filename">{file.name}</td>
-                <td className="project-dashboard__date">{file.date}</td>
-                <td style={{ textAlign: 'center' }}>
+                <td className="fw-medium" style={{ color: 'var(--oc-royal)' }}>{file.name}</td>
+                <td className="text-secondary">{file.date}</td>
+                <td className="text-center">
                   {file.critical > 0 ? (
-                    <span style={{ color: 'var(--oc-danger)', fontWeight: 700 }}>{file.critical}</span>
+                    <span className="fw-bold text-danger">{file.critical}</span>
                   ) : (
-                    <span style={{ color: 'var(--oc-gray-400)' }}>0</span>
+                    <span className="text-secondary">0</span>
                   )}
                 </td>
-                <td style={{ textAlign: 'center' }}>
+                <td className="text-center">
                   {file.warnings > 0 ? (
-                    <span style={{ color: 'var(--oc-warning)', fontWeight: 500 }}>{file.warnings}</span>
+                    <span className="fw-medium text-warning">{file.warnings}</span>
                   ) : (
-                    <span style={{ color: 'var(--oc-gray-400)' }}>0</span>
+                    <span className="text-secondary">0</span>
                   )}
                 </td>
-                <td style={{ textAlign: 'center' }}>
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <td className="text-center">
+                  <div className="d-flex justify-content-center">
                     <ScoreBadge score={file.score} size="lg" />
                   </div>
                 </td>

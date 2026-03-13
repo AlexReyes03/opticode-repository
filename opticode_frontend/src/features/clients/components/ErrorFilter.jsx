@@ -6,15 +6,7 @@ const filters = [
 
 const ErrorFilter = ({ activeFilter, onFilterChange, counts = {} }) => {
   return (
-    <div
-      style={{
-        display: 'flex',
-        backgroundColor: 'var(--oc-gray-100)',
-        padding: '0.25rem',
-        borderRadius: 'var(--oc-radius-lg)',
-        gap: '0.125rem',
-      }}
-    >
+    <div className="btn-group" role="group" aria-label="Filtro de errores">
       {filters.map(({ key, label, dotColor }) => {
         const isActive = activeFilter === key;
         const count = counts[key] ?? 0;
@@ -23,33 +15,17 @@ const ErrorFilter = ({ activeFilter, onFilterChange, counts = {} }) => {
           <button
             key={key}
             type="button"
+            className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-outline-secondary'} d-flex align-items-center gap-2`}
             onClick={() => onFilterChange(key)}
-            style={{
-              padding: '0.375rem 1rem',
-              fontSize: 'var(--oc-font-sm)',
-              fontWeight: 500,
-              fontFamily: 'var(--oc-font-family)',
-              borderRadius: 'var(--oc-radius-md)',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              whiteSpace: 'nowrap',
-              transition: 'all var(--oc-transition-fast)',
-              backgroundColor: isActive ? 'var(--oc-white)' : 'transparent',
-              color: isActive ? 'var(--oc-royal)' : 'var(--oc-gray-600)',
-              boxShadow: isActive ? 'var(--oc-shadow-sm)' : 'none',
-            }}
+            style={{ whiteSpace: 'nowrap' }}
           >
             {dotColor && (
               <span
+                className="rounded-circle d-inline-block flex-shrink-0"
                 style={{
                   width: '0.5rem',
                   height: '0.5rem',
-                  borderRadius: 'var(--oc-radius-full)',
-                  backgroundColor: dotColor,
-                  flexShrink: 0,
+                  backgroundColor: isActive ? 'var(--oc-white)' : dotColor,
                 }}
               />
             )}

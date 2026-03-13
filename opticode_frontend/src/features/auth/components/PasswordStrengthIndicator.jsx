@@ -9,21 +9,14 @@ const rules = [
 
 const PasswordStrengthIndicator = ({ password = '' }) => {
   return (
-    <ul style={{ listStyle: 'none', padding: 0, margin: '0.75rem 0 0 0' }}>
+    <ul className="list-unstyled mt-2 mb-0">
       {rules.map(({ key, label, test }) => {
         const passed = test(password);
         return (
           <li
             key={key}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: 'var(--oc-font-xs)',
-              color: passed ? 'var(--oc-success-dark)' : 'var(--oc-gray-400)',
-              marginBottom: '0.25rem',
-              transition: 'color 200ms ease',
-            }}
+            className={`d-flex align-items-center gap-2 mb-1 ${passed ? 'text-success' : 'text-secondary'}`}
+            style={{ fontSize: '0.75rem', transition: 'color 200ms ease' }}
           >
             {passed ? (
               <CheckCircleOutlineIcon style={{ fontSize: '0.875rem' }} />

@@ -5,7 +5,7 @@ import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import logo from '../../assets/img/ack_logo.png';
-import './Navbar.css';
+import './Sidebar.css';
 
 const mainMenu = [
   { to: '/dashboard', label: 'Mis Proyectos', icon: FolderCopyOutlinedIcon },
@@ -17,7 +17,7 @@ const bottomMenu = [
   { to: '/settings', label: 'Configuración', icon: SettingsOutlinedIcon },
 ];
 
-const Navbar = () => {
+const Sidebar = () => {
   const location = useLocation();
 
   const isActive = (path) => location.pathname.startsWith(path);
@@ -64,7 +64,7 @@ const Navbar = () => {
             <button
               type="button"
               className="navbar-sidebar__link navbar-sidebar__link--danger"
-              onClick={() => {/* logout logic */}}
+              onClick={() => {/* logout logic */ }}
               style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}
             >
               <LogoutOutlinedIcon />
@@ -77,4 +77,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default Sidebar;

@@ -5,7 +5,6 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import AuthFormField from '../components/AuthFormField';
 import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
-import './Register.css';
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -21,13 +20,12 @@ const Register = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    /* Placeholder — se integrará con el backend posteriormente */
   };
 
   return (
-    <div className="register-view">
-      <h2>Crear Cuenta</h2>
-      <p className="register-view__subtitle">Regístrate para comenzar a auditar tu código.</p>
+    <div>
+      <h2 className="fw-bold mb-1" style={{ color: 'var(--oc-navy)' }}>Crear Cuenta</h2>
+      <p className="text-secondary small mb-4">Regístrate para comenzar a auditar tu código.</p>
 
       <form onSubmit={handleSubmit} noValidate>
         <AuthFormField
@@ -64,7 +62,7 @@ const Register = () => {
 
         <PasswordStrengthIndicator password={form.password} />
 
-        <div style={{ marginTop: '1.25rem' }}>
+        <div className="mt-3">
           <AuthFormField
             id="register-confirm"
             label="Confirmar contraseña"
@@ -77,12 +75,12 @@ const Register = () => {
           />
         </div>
 
-        <button type="submit" className="oc-btn oc-btn-primary oc-btn-lg oc-btn-block">
+        <button type="submit" className="btn btn-primary btn-lg w-100">
           Crear cuenta
         </button>
       </form>
 
-      <p className="register-view__footer">
+      <p className="text-center text-secondary small mt-4">
         ¿Ya tienes cuenta?{' '}
         <Link to="/login">Inicia sesión</Link>
       </p>

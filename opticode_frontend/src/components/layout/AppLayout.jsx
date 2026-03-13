@@ -1,12 +1,14 @@
 import { Outlet } from 'react-router-dom';
-import Navbar from './Navbar';
-import './AppLayout.css';
+import Sidebar from './Sidebar';
 
 const AppLayout = () => {
   return (
-    <div className="app-layout">
-      <Navbar />
-      <main className="app-layout__content">
+    <div className="d-flex vh-100">
+      <Sidebar />
+      <main
+        className="flex-grow-1 bg-body-secondary"
+        style={{ marginLeft: 'var(--oc-sidebar-width)', padding: '2rem 2.5rem', minHeight: '100vh' }}
+      >
         <Outlet />
       </main>
     </div>

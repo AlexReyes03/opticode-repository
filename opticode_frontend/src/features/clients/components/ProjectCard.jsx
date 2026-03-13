@@ -8,73 +8,60 @@ const ProjectCard = ({ project }) => {
   const { id, name, description, fileCount, date } = project;
 
   return (
-    <div className="oc-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Icon + Name */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-        <div
+    <div className="card h-100">
+      <div className="card-body d-flex flex-column p-4">
+        {/* Icon + Name */}
+        <div className="d-flex align-items-center gap-2 mb-2">
+          <div
+            className="rounded d-flex align-items-center justify-content-center flex-shrink-0"
+            style={{
+              width: '2.5rem',
+              height: '2.5rem',
+              backgroundColor: 'var(--oc-info-light)',
+            }}
+          >
+            <FolderOutlinedIcon style={{ fontSize: '1.25rem', color: 'var(--oc-royal)' }} />
+          </div>
+          <h3 className="fw-semibold mb-0 fs-6" style={{ color: 'var(--oc-navy)' }}>
+            {name}
+          </h3>
+        </div>
+
+        {/* Description */}
+        <p
+          className="text-secondary small flex-grow-1 mb-3"
           style={{
-            width: '2.5rem',
-            height: '2.5rem',
-            borderRadius: 'var(--oc-radius-md)',
-            backgroundColor: 'var(--oc-info-light)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            lineHeight: 1.5,
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
           }}
         >
-          <FolderOutlinedIcon style={{ fontSize: '1.25rem', color: 'var(--oc-royal)' }} />
+          {description}
+        </p>
+
+        {/* Meta */}
+        <div className="d-flex align-items-center gap-3 small text-secondary mb-3">
+          <span className="d-flex align-items-center gap-1">
+            <InsertDriveFileOutlinedIcon style={{ fontSize: '0.875rem' }} />
+            {fileCount} archivos
+          </span>
+          <span className="d-flex align-items-center gap-1">
+            <CalendarTodayOutlinedIcon style={{ fontSize: '0.875rem' }} />
+            {date}
+          </span>
         </div>
-        <h3 style={{ fontSize: 'var(--oc-font-lg)', fontWeight: 600, color: 'var(--oc-navy)', margin: 0 }}>
-          {name}
-        </h3>
+
+        {/* Action */}
+        <button
+          type="button"
+          className="btn btn-primary w-100"
+          onClick={() => navigate(`/projects/${id}`)}
+        >
+          Ver proyecto
+        </button>
       </div>
-
-      {/* Description */}
-      <p
-        style={{
-          fontSize: 'var(--oc-font-sm)',
-          color: 'var(--oc-gray-500)',
-          flex: 1,
-          marginBottom: '1rem',
-          lineHeight: 1.5,
-          overflow: 'hidden',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-        }}
-      >
-        {description}
-      </p>
-
-      {/* Meta */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-          fontSize: 'var(--oc-font-xs)',
-          color: 'var(--oc-gray-400)',
-          marginBottom: '1rem',
-        }}
-      >
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <InsertDriveFileOutlinedIcon style={{ fontSize: '0.875rem' }} />
-          {fileCount} archivos
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <CalendarTodayOutlinedIcon style={{ fontSize: '0.875rem' }} />
-          {date}
-        </span>
-      </div>
-
-      {/* Action */}
-      <button
-        type="button"
-        className="oc-btn oc-btn-primary oc-btn-block"
-        onClick={() => navigate(`/projects/${id}`)}
-      >
-        Ver proyecto
-      </button>
     </div>
   );
 };

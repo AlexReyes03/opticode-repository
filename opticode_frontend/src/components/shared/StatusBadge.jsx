@@ -1,11 +1,11 @@
 const variants = {
   active: {
     label: 'Activo',
-    className: 'oc-badge oc-badge--success',
+    className: 'badge bg-success',
   },
   suspended: {
     label: 'Suspendido',
-    className: 'oc-badge oc-badge--danger',
+    className: 'badge bg-danger',
   },
 };
 

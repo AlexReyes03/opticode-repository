@@ -1,11 +1,11 @@
 /* ============================================================
-   OptiCode — Design System
+   OptiCode — Global Styles (Bootstrap overrides + brand tokens)
    ============================================================ */
 
 /* ---------- Google Font ---------- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-/* ---------- CSS Custom Properties ---------- */
+/* ---------- CSS Custom Properties (Brand Palette) ---------- */
 :root {
   /* Brand palette */
   --oc-navy: #1a2b5e;
@@ -43,54 +43,34 @@
 
   /* Typography */
   --oc-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --oc-font-xs: 0.75rem;
-  --oc-font-sm: 0.875rem;
-  --oc-font-base: 1rem;
-  --oc-font-lg: 1.125rem;
-  --oc-font-xl: 1.25rem;
-  --oc-font-2xl: 1.5rem;
-  --oc-font-3xl: 1.875rem;
-  --oc-font-4xl: 2.25rem;
-
-  /* Spacing */
-  --oc-radius-sm: 0.375rem;
-  --oc-radius-md: 0.5rem;
-  --oc-radius-lg: 0.75rem;
-  --oc-radius-xl: 1rem;
-  --oc-radius-full: 9999px;
-
-  /* Shadows */
-  --oc-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --oc-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --oc-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --oc-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-
-  /* Transitions */
-  --oc-transition-fast: 150ms ease;
-  --oc-transition-base: 250ms ease;
-  --oc-transition-slow: 350ms ease;
 
   /* Layout */
   --oc-sidebar-width: 260px;
+
+  /* ---- Bootstrap overrides ---- */
+  --bs-font-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --bs-body-font-family: var(--oc-font-family);
+  --bs-body-color: var(--oc-gray-800);
+  --bs-body-bg: var(--oc-gray-50);
+  --bs-primary: var(--oc-royal);
+  --bs-primary-rgb: 37, 99, 235;
+  --bs-success: var(--oc-success);
+  --bs-success-rgb: 34, 197, 94;
+  --bs-warning: var(--oc-warning);
+  --bs-warning-rgb: 249, 115, 22;
+  --bs-danger: var(--oc-danger);
+  --bs-danger-rgb: 239, 68, 68;
+  --bs-info: var(--oc-info);
+  --bs-info-rgb: 59, 130, 246;
+  --bs-link-color: var(--oc-royal);
+  --bs-link-hover-color: var(--oc-royal-hover);
 }
 
-/* ---------- Global Reset & Base ---------- */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* ---------- Bootstrap Component Overrides ---------- */
 
-html {
-  font-size: 16px;
-  scroll-behavior: smooth;
-}
-
+/* Body */
 body {
   font-family: var(--oc-font-family);
-  font-size: var(--oc-font-base);
   color: var(--oc-gray-800);
   background-color: var(--oc-gray-50);
   line-height: 1.6;
@@ -101,192 +81,242 @@ body {
 a {
   color: var(--oc-royal);
   text-decoration: none;
-  transition: color var(--oc-transition-fast);
+  transition: color 150ms ease;
 }
 
 a:hover {
   color: var(--oc-royal-hover);
 }
 
-/* ---------- Utility Classes ---------- */
-.oc-text-navy { color: var(--oc-navy); }
-.oc-text-royal { color: var(--oc-royal); }
-.oc-text-muted { color: var(--oc-gray-500); }
-.oc-text-danger { color: var(--oc-danger); }
-.oc-text-success { color: var(--oc-success-dark); }
-.oc-text-warning { color: var(--oc-warning); }
+/* Buttons — match original oc-btn look */
+.btn {
+  font-family: var(--oc-font-family);
+  font-weight: 500;
+  border-radius: 0.75rem;
+  transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
 
-.oc-bg-navy { background-color: var(--oc-navy); }
-.oc-bg-royal { background-color: var(--oc-royal); }
-.oc-bg-gray-50 { background-color: var(--oc-gray-50); }
+.btn:active {
+  transform: scale(0.98);
+}
 
-/* ---------- Card Utility ---------- */
-.oc-card {
+.btn-primary {
+  background-color: var(--oc-royal);
+  border-color: var(--oc-royal);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-primary:hover {
+  background-color: var(--oc-royal-hover);
+  border-color: var(--oc-royal-hover);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-outline-secondary {
+  color: var(--oc-gray-600);
   background-color: var(--oc-white);
-  border: 1px solid var(--oc-gray-200);
-  border-radius: var(--oc-radius-xl);
-  box-shadow: var(--oc-shadow-sm);
-  transition: box-shadow var(--oc-transition-base), transform var(--oc-transition-base);
+  border-color: var(--oc-gray-300);
 }
 
-.oc-card:hover {
-  box-shadow: var(--oc-shadow-md);
+.btn-outline-secondary:hover {
+  background-color: var(--oc-gray-50);
+  color: var(--oc-gray-700);
+  border-color: var(--oc-gray-300);
 }
 
-/* ---------- Form Inputs ---------- */
-.oc-input {
-  display: block;
-  width: 100%;
+/* Form controls — match original oc-input look */
+.form-control {
   padding: 0.625rem 1rem;
   font-family: var(--oc-font-family);
-  font-size: var(--oc-font-sm);
+  font-size: 0.875rem;
   color: var(--oc-gray-800);
   background-color: var(--oc-white);
   border: 1px solid var(--oc-gray-300);
-  border-radius: var(--oc-radius-lg);
-  transition: border-color var(--oc-transition-fast), box-shadow var(--oc-transition-fast);
+  border-radius: 0.75rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.oc-input::placeholder {
+.form-control::placeholder {
   color: var(--oc-gray-400);
 }
 
-.oc-input:focus {
-  outline: none;
+.form-control:focus {
   border-color: var(--oc-royal);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
-.oc-label {
-  display: block;
+.form-label {
   margin-bottom: 0.25rem;
-  font-size: var(--oc-font-sm);
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--oc-gray-700);
 }
 
-/* ---------- Button Utilities ---------- */
-.oc-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  font-family: var(--oc-font-family);
-  font-size: var(--oc-font-sm);
-  font-weight: 500;
-  border: none;
-  border-radius: var(--oc-radius-lg);
-  cursor: pointer;
-  transition: background-color var(--oc-transition-fast), box-shadow var(--oc-transition-fast), transform var(--oc-transition-fast);
-}
-
-.oc-btn:active {
-  transform: scale(0.98);
-}
-
-.oc-btn-primary {
-  color: var(--oc-white);
-  background-color: var(--oc-royal);
-  box-shadow: var(--oc-shadow-sm);
-}
-
-.oc-btn-primary:hover {
-  background-color: var(--oc-royal-hover);
-  box-shadow: var(--oc-shadow-md);
-}
-
-.oc-btn-outline {
-  color: var(--oc-gray-600);
+/* Cards — match original oc-card look */
+.card {
   background-color: var(--oc-white);
-  border: 1px solid var(--oc-gray-300);
+  border: 1px solid var(--oc-gray-200);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: box-shadow 250ms ease, transform 250ms ease;
 }
 
-.oc-btn-outline:hover {
+.card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+/* Tables */
+.table {
+  --bs-table-bg: transparent;
+  margin-bottom: 0;
+  font-size: 0.875rem;
+}
+
+.table thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--oc-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--oc-gray-100);
+  padding: 0.875rem 1.5rem;
+}
+
+.table tbody td {
+  padding: 0.875rem 1.5rem;
+  border-top: 1px solid var(--oc-gray-100);
+  vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
   background-color: var(--oc-gray-50);
 }
 
-.oc-btn-lg {
-  padding: 0.75rem 1.5rem;
-  font-size: var(--oc-font-base);
+.table tbody tr {
+  cursor: pointer;
+  transition: background-color 150ms ease;
 }
 
-.oc-btn-block {
-  width: 100%;
+/* Breadcrumb — match original oc-breadcrumb look */
+.breadcrumb {
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  --bs-breadcrumb-divider: '';
 }
 
-/* ---------- Score Semaphore ---------- */
+.breadcrumb-item a {
+  color: var(--oc-gray-500);
+}
+
+.breadcrumb-item a:hover {
+  color: var(--oc-royal);
+}
+
+.breadcrumb-item.active {
+  color: var(--oc-navy);
+  font-weight: 500;
+}
+
+/* Alerts — match original look */
+.alert {
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Badges */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+/* Modal — match original look */
+.modal-content {
+  border-radius: 1rem;
+  border: none;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--oc-gray-100);
+  padding: 1rem 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  background-color: var(--oc-gray-50);
+  border-top: 1px solid var(--oc-gray-100);
+  padding: 1rem 1.5rem;
+}
+
+/* ---------- Score Semaphore (no Bootstrap equivalent) ---------- */
 .oc-score {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: var(--oc-radius-full);
-  font-size: var(--oc-font-sm);
+  border-radius: 9999px;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--oc-white);
-  box-shadow: var(--oc-shadow-sm);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .oc-score--green { background-color: var(--oc-success); }
 .oc-score--orange { background-color: var(--oc-warning); }
 .oc-score--red { background-color: var(--oc-danger); }
 
-/* ---------- Badge ---------- */
-.oc-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.75rem;
-  font-size: var(--oc-font-xs);
-  font-weight: 600;
-  border-radius: var(--oc-radius-full);
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
+/* ---------- Auth Layout (gradient branding panel) ---------- */
+.auth-brand-panel {
+  background: linear-gradient(135deg, var(--oc-navy) 0%, #1e3a7a 50%, var(--oc-royal) 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-.oc-badge--success {
-  color: var(--oc-success-dark);
-  background-color: var(--oc-success-light);
+.auth-brand-panel::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: -20%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: rgba(96, 165, 250, 0.08);
 }
 
-.oc-badge--danger {
-  color: var(--oc-danger-dark);
-  background-color: var(--oc-danger-light);
+.auth-brand-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -15%;
+  left: -10%;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.1);
 }
 
-.oc-badge--warning {
-  color: var(--oc-warning-dark);
-  background-color: var(--oc-warning-light);
+.auth-brand-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 0.75rem;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
 }
 
-.oc-badge--info {
-  color: var(--oc-royal);
-  background-color: var(--oc-info-light);
+.auth-card-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 0.5rem;
 }
 
-/* ---------- Breadcrumb ---------- */
-.oc-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: var(--oc-font-sm);
-  color: var(--oc-gray-500);
-  margin-bottom: 1.5rem;
-}
-
-.oc-breadcrumb a {
-  color: var(--oc-gray-500);
-}
-
-.oc-breadcrumb a:hover {
-  color: var(--oc-royal);
-}
-
-.oc-breadcrumb .active {
-  color: var(--oc-navy);
-  font-weight: 500;
+/* ---------- Utilities (no Bootstrap equivalent) ---------- */
+.border-dashed {
+  border-style: dashed !important;
 }
 
 /* ---------- Scrollbar ---------- */
@@ -300,7 +330,7 @@ a:hover {
 
 ::-webkit-scrollbar-thumb {
   background-color: var(--oc-gray-300);
-  border-radius: var(--oc-radius-full);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

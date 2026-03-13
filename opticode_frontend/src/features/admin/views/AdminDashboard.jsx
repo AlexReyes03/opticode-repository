@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import UserTable from '../components/UserTable';
-import './AdminDashboard.css';
 
 const MOCK_USERS = [
   { id: 1, name: 'Carlos Méndez', email: 'carlos@ejemplo.com', registeredAt: '02 Mar 2026', status: 'active' },
@@ -22,13 +21,16 @@ const AdminDashboard = () => {
 
   return (
     <section>
-      <div className="admin-dashboard__header">
-        <h1 className="admin-dashboard__title">Administración de Usuarios</h1>
-        <div className="admin-dashboard__search">
-          <SearchOutlinedIcon className="admin-dashboard__search-icon" />
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h1 className="fw-bold fs-4" style={{ color: 'var(--oc-navy)' }}>Administración de Usuarios</h1>
+        <div className="position-relative" style={{ width: '20rem' }}>
+          <SearchOutlinedIcon
+            className="position-absolute top-50 translate-middle-y"
+            style={{ left: '0.75rem', fontSize: '1.125rem', color: 'var(--oc-gray-400)', pointerEvents: 'none' }}
+          />
           <input
             type="text"
-            className="oc-input"
+            className="form-control"
             placeholder="Buscar por nombre o correo..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}

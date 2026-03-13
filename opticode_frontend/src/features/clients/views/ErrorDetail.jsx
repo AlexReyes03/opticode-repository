@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ErrorCard from '../components/ErrorCard';
 import ErrorFilter from '../components/ErrorFilter';
-import './ErrorDetail.css';
 
 const MOCK_ERRORS = [
   {
@@ -68,24 +67,38 @@ const ErrorDetail = () => {
   return (
     <section>
       {/* Breadcrumb */}
-      <div className="oc-breadcrumb">
-        <Link to="/dashboard">Mis Proyectos</Link>
-        <NavigateNextIcon style={{ fontSize: '1rem' }} />
-        <Link to={`/projects/${projectId}`}>Portal Educativo</Link>
-        <NavigateNextIcon style={{ fontSize: '1rem' }} />
-        <Link to={`/projects/${projectId}/files/${fileId}`}>index.html</Link>
-        <NavigateNextIcon style={{ fontSize: '1rem' }} />
-        <span className="active">Hallazgos</span>
-      </div>
+      <nav aria-label="breadcrumb">
+        <ol className="breadcrumb">
+          <li className="breadcrumb-item">
+            <Link to="/dashboard">Mis Proyectos</Link>
+          </li>
+          <li className="breadcrumb-item">
+            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
+          </li>
+          <li className="breadcrumb-item">
+            <Link to={`/projects/${projectId}`}>Portal Educativo</Link>
+          </li>
+          <li className="breadcrumb-item">
+            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
+          </li>
+          <li className="breadcrumb-item">
+            <Link to={`/projects/${projectId}/files/${fileId}`}>index.html</Link>
+          </li>
+          <li className="breadcrumb-item">
+            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
+          </li>
+          <li className="breadcrumb-item active" aria-current="page">Hallazgos</li>
+        </ol>
+      </nav>
 
       {/* Header + Filter */}
-      <div className="error-detail__header">
-        <h2 className="error-detail__title">Hallazgos Detectados</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="fw-semibold fs-5 mb-0" style={{ color: 'var(--oc-navy)' }}>Hallazgos Detectados</h2>
         <ErrorFilter activeFilter={filter} onFilterChange={setFilter} counts={counts} />
       </div>
 
       {/* Error Cards */}
-      <div className="error-detail__list">
+      <div className="d-flex flex-column gap-3">
         {filteredErrors.map((error) => (
           <ErrorCard key={error.id} error={error} />
         ))}

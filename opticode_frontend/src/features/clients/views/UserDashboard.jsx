@@ -2,7 +2,6 @@ import { useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
-import './UserDashboard.css';
 
 const MOCK_PROJECTS = [
   {
@@ -32,12 +31,12 @@ const UserDashboard = () => {
   const [showModal, setShowModal] = useState(false);
 
   return (
-    <section className="user-dashboard">
-      <div className="user-dashboard__header">
-        <h1 className="user-dashboard__title">Mis Proyectos</h1>
+    <section>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h1 className="fw-bold fs-4" style={{ color: 'var(--oc-navy)' }}>Mis Proyectos</h1>
         <button
           type="button"
-          className="oc-btn oc-btn-primary"
+          className="btn btn-primary d-inline-flex align-items-center gap-2"
           onClick={() => setShowModal(true)}
         >
           <AddIcon style={{ fontSize: '1.125rem' }} />
@@ -45,9 +44,11 @@ const UserDashboard = () => {
         </button>
       </div>
 
-      <div className="user-dashboard__grid">
+      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         {MOCK_PROJECTS.map((project) => (
-          <ProjectCard key={project.id} project={project} />
+          <div className="col" key={project.id}>
+            <ProjectCard project={project} />
+          </div>
         ))}
       </div>
 

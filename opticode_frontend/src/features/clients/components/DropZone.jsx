@@ -11,13 +11,11 @@ const DropZone = ({ variant = 'individual', title, description, constraints }) =
 
   return (
     <div
+      className="border border-2 border-dashed rounded-4 p-5 text-center"
       style={{
-        border: '2px dashed var(--oc-gray-300)',
-        borderRadius: 'var(--oc-radius-xl)',
-        padding: '2.5rem 1.5rem',
-        textAlign: 'center',
+        borderColor: 'var(--oc-gray-300)',
         cursor: 'pointer',
-        transition: 'border-color var(--oc-transition-fast), background-color var(--oc-transition-fast)',
+        transition: 'border-color 150ms ease, background-color 150ms ease',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = 'var(--oc-royal)';
@@ -32,38 +30,24 @@ const DropZone = ({ variant = 'individual', title, description, constraints }) =
       aria-label={`Zona de carga: ${title}`}
     >
       <div
-        style={{
-          width: '4rem',
-          height: '4rem',
-          borderRadius: 'var(--oc-radius-full)',
-          backgroundColor: 'var(--oc-info-light)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 1rem',
-        }}
+        className="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+        style={{ width: '4rem', height: '4rem', backgroundColor: 'var(--oc-info-light)' }}
       >
         <Icon style={{ fontSize: '1.5rem', color: 'var(--oc-royal)' }} />
       </div>
 
-      <h3 style={{ fontSize: 'var(--oc-font-lg)', fontWeight: 500, color: 'var(--oc-navy)', marginBottom: '0.5rem' }}>
+      <h3 className="fw-medium fs-6 mb-2" style={{ color: 'var(--oc-navy)' }}>
         {title}
       </h3>
 
-      <p style={{ fontSize: 'var(--oc-font-sm)', color: 'var(--oc-gray-500)', marginBottom: '1rem' }}>
+      <p className="text-secondary small mb-3">
         {description}{' '}
-        <span style={{ color: 'var(--oc-royal)', fontWeight: 500, cursor: 'pointer' }}>explora</span>
+        <span className="fw-medium" style={{ color: 'var(--oc-royal)', cursor: 'pointer' }}>explora</span>
       </p>
 
       <span
-        style={{
-          display: 'inline-block',
-          backgroundColor: 'var(--oc-gray-100)',
-          borderRadius: 'var(--oc-radius-md)',
-          padding: '0.25rem 0.75rem',
-          fontSize: 'var(--oc-font-xs)',
-          color: 'var(--oc-gray-600)',
-        }}
+        className="badge bg-light text-secondary fw-normal rounded-2 px-3 py-1"
+        style={{ fontSize: '0.75rem' }}
       >
         {constraints}
       </span>

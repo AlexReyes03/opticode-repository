@@ -8,57 +8,46 @@ const getFileIcon = (fileName) => {
 
 const FileStatusList = ({ files = [] }) => {
   return (
-    <div className="oc-card" style={{ padding: '1.5rem' }}>
-      <h4 style={{ fontWeight: 500, color: 'var(--oc-navy)', marginBottom: '1rem' }}>Archivos Recientes</h4>
+    <div className="card">
+      <div className="card-body p-4">
+        <h4 className="fw-medium mb-3" style={{ color: 'var(--oc-navy)' }}>Archivos Recientes</h4>
 
-      {files.length === 0 && (
-        <p style={{ fontSize: 'var(--oc-font-sm)', color: 'var(--oc-gray-400)', textAlign: 'center', padding: '1rem 0' }}>
-          Aún no se han subido archivos.
-        </p>
-      )}
+        {files.length === 0 && (
+          <p className="text-center text-secondary small py-3">
+            Aún no se han subido archivos.
+          </p>
+        )}
 
-      {files.map((file, idx) => (
-        <div
-          key={file.name}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0.75rem 0',
-            borderBottom: idx < files.length - 1 ? '1px solid var(--oc-gray-100)' : 'none',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {getFileIcon(file.name)}
-            <span style={{ fontWeight: 500, fontSize: 'var(--oc-font-sm)' }}>{file.name}</span>
-            <span style={{ fontSize: 'var(--oc-font-xs)', color: 'var(--oc-gray-400)' }}>{file.size}</span>
-          </div>
+        <div className="list-group list-group-flush">
+          {files.map((file) => (
+            <div
+              key={file.name}
+              className="list-group-item d-flex align-items-center justify-content-between px-0"
+            >
+              <div className="d-flex align-items-center gap-2">
+                {getFileIcon(file.name)}
+                <span className="fw-medium small">{file.name}</span>
+                <span className="small text-secondary">{file.size}</span>
+              </div>
 
-          {file.status === 'analyzing' ? (
-            <span className="oc-badge oc-badge--info" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-              <span
-                style={{
-                  width: '0.625rem',
-                  height: '0.625rem',
-                  border: '2px solid var(--oc-royal)',
-                  borderTopColor: 'transparent',
-                  borderRadius: 'var(--oc-radius-full)',
-                  animation: 'spin 0.8s linear infinite',
-                  display: 'inline-block',
-                }}
-              />
-              Analizando...
-            </span>
-          ) : (
-            <span className="oc-badge oc-badge--success">
-              Completado - Eval: {file.score}
-            </span>
-          )}
+              {file.status === 'analyzing' ? (
+                <span className="badge bg-info bg-opacity-10 text-primary d-flex align-items-center gap-1">
+                  <span
+                    className="spinner-border spinner-border-sm"
+                    style={{ width: '0.625rem', height: '0.625rem', borderWidth: '2px' }}
+                    role="status"
+                  />
+                  Analizando...
+                </span>
+              ) : (
+                <span className="badge bg-success bg-opacity-10 text-success">
+                  Completado - Eval: {file.score}
+                </span>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
-
-      {/* Spinner keyframes inline */}
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </div>
   );
 };

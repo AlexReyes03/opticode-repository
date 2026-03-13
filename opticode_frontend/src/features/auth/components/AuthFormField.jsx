@@ -19,12 +19,12 @@ const AuthFormField = ({
   const inputType = isPasswordField && showPassword ? 'text' : type;
 
   return (
-    <div style={{ marginBottom: '1.25rem' }}>
-      <label htmlFor={id} className="oc-label">
+    <div className="mb-3">
+      <label htmlFor={id} className="form-label">
         {label}
-        {required && <span className="oc-text-danger" style={{ marginLeft: '0.25rem' }}>*</span>}
+        {required && <span className="text-danger ms-1">*</span>}
       </label>
-      <div style={{ position: 'relative' }}>
+      <div className="position-relative">
         {Icon && (
           <Icon
             style={{
@@ -34,13 +34,14 @@ const AuthFormField = ({
               transform: 'translateY(-50%)',
               fontSize: '1.125rem',
               color: 'var(--oc-gray-400)',
+              zIndex: 1,
             }}
           />
         )}
         <input
           id={id}
           type={inputType}
-          className="oc-input"
+          className="form-control"
           placeholder={placeholder}
           value={value}
           onChange={onChange}
@@ -57,17 +58,11 @@ const AuthFormField = ({
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            className="btn btn-link position-absolute top-50 translate-middle-y p-0 d-flex"
             style={{
-              position: 'absolute',
               right: '0.75rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              display: 'flex',
               color: 'var(--oc-gray-400)',
+              textDecoration: 'none',
             }}
           >
             {showPassword ? (
@@ -79,7 +74,7 @@ const AuthFormField = ({
         )}
       </div>
       {error && (
-        <span style={{ fontSize: 'var(--oc-font-xs)', color: 'var(--oc-danger)', marginTop: '0.25rem', display: 'block' }}>
+        <span className="d-block small text-danger mt-1">
           {error}
         </span>
       )}
