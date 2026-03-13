@@ -1,0 +1,73 @@
+.project-dashboard__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.project-dashboard__title {
+  font-size: var(--oc-font-2xl);
+  font-weight: 700;
+  color: var(--oc-navy);
+  margin-bottom: 0.25rem;
+}
+
+.project-dashboard__count {
+  display: inline-block;
+  font-size: var(--oc-font-xs);
+  font-weight: 400;
+  color: var(--oc-gray-500);
+  background-color: var(--oc-gray-100);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--oc-radius-sm);
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.project-dashboard__desc {
+  font-size: var(--oc-font-sm);
+  color: var(--oc-gray-600);
+}
+
+.project-dashboard__table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+}
+
+.project-dashboard__table thead {
+  background-color: var(--oc-gray-50);
+}
+
+.project-dashboard__table th {
+  padding: 0.875rem 1.5rem;
+  font-size: var(--oc-font-xs);
+  font-weight: 600;
+  color: var(--oc-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.project-dashboard__table td {
+  padding: 0.875rem 1.5rem;
+  font-size: var(--oc-font-sm);
+  border-top: 1px solid var(--oc-gray-100);
+}
+
+.project-dashboard__table tbody tr {
+  cursor: pointer;
+  transition: background-color var(--oc-transition-fast);
+}
+
+.project-dashboard__table tbody tr:hover {
+  background-color: var(--oc-gray-50);
+}
+
+.project-dashboard__filename {
+  font-weight: 500;
+  color: var(--oc-royal);
+}
+
+.project-dashboard__date {
+  color: var(--oc-gray-500);
+}

@@ -1,0 +1,22 @@
+.file-upload__header {
+  margin-bottom: 2rem;
+}
+
+.file-upload__title {
+  font-size: var(--oc-font-2xl);
+  font-weight: 700;
+  color: var(--oc-navy);
+}
+
+.file-upload__zones {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+  .file-upload__zones {
+    grid-template-columns: 1fr;
+  }
+}

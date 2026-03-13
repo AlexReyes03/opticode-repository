@@ -1,0 +1,12 @@
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-layout__content {
+  margin-left: var(--oc-sidebar-width);
+  flex: 1;
+  padding: 2rem 2.5rem;
+  background-color: var(--oc-gray-50);
+  min-height: 100vh;
+}
