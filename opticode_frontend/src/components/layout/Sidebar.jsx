@@ -5,7 +5,6 @@ import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import logo from '../../assets/img/ack_logo.png';
-import './Sidebar.css';
 
 const mainMenu = [
   { to: '/dashboard', label: 'Mis Proyectos', icon: FolderCopyOutlinedIcon },
