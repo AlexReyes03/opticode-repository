@@ -1,1 +1,18 @@
+.env
 .env.development
+
+# Logs — solo se trackea .gitkeep, no los archivos de log
+logs/*.log
+logs/*.log.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtualenv
+venv/
+.venv/
