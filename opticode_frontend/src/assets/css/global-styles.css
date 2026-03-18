@@ -1,0 +1,437 @@
+/* ============================================================
+   OptiCode — Global Styles (Bootstrap overrides + brand tokens)
+   ============================================================ */
+
+/* ---------- Google Font ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ---------- CSS Custom Properties (Brand Palette) ---------- */
+:root {
+  /* Brand palette */
+  --oc-navy: #1a2b5e;
+  --oc-navy-light: #243570;
+  --oc-royal: #2563eb;
+  --oc-royal-hover: #1d4ed8;
+  --oc-sky: #60a5fa;
+  --oc-sky-light: #93c5fd;
+
+  /* Neutrals */
+  --oc-white: #ffffff;
+  --oc-gray-50: #f8fafc;
+  --oc-gray-100: #f1f5f9;
+  --oc-gray-200: #e2e8f0;
+  --oc-gray-300: #cbd5e1;
+  --oc-gray-400: #94a3b8;
+  --oc-gray-500: #64748b;
+  --oc-gray-600: #475569;
+  --oc-gray-700: #334155;
+  --oc-gray-800: #1e293b;
+  --oc-gray-900: #0f172a;
+
+  /* Semantic */
+  --oc-success: #22c55e;
+  --oc-success-light: #dcfce7;
+  --oc-success-dark: #15803d;
+  --oc-warning: #f97316;
+  --oc-warning-light: #fff7ed;
+  --oc-warning-dark: #c2410c;
+  --oc-danger: #ef4444;
+  --oc-danger-light: #fef2f2;
+  --oc-danger-dark: #b91c1c;
+  --oc-info: #3b82f6;
+  --oc-info-light: #eff6ff;
+
+  /* Typography */
+  --oc-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Layout */
+  --oc-sidebar-width: 260px;
+
+  /* ---- Bootstrap overrides ---- */
+  --bs-font-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --bs-body-font-family: var(--oc-font-family);
+  --bs-body-color: var(--oc-gray-800);
+  --bs-body-bg: var(--oc-gray-50);
+  --bs-primary: var(--oc-royal);
+  --bs-primary-rgb: 37, 99, 235;
+  --bs-success: var(--oc-success);
+  --bs-success-rgb: 34, 197, 94;
+  --bs-warning: var(--oc-warning);
+  --bs-warning-rgb: 249, 115, 22;
+  --bs-danger: var(--oc-danger);
+  --bs-danger-rgb: 239, 68, 68;
+  --bs-info: var(--oc-info);
+  --bs-info-rgb: 59, 130, 246;
+  --bs-link-color: var(--oc-royal);
+  --bs-link-hover-color: var(--oc-royal-hover);
+}
+
+/* ---------- Bootstrap Component Overrides ---------- */
+
+/* Body */
+body {
+  font-family: var(--oc-font-family);
+  color: var(--oc-gray-800);
+  background-color: var(--oc-gray-50);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--oc-royal);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+a:hover {
+  color: var(--oc-royal-hover);
+}
+
+/* Buttons — match original oc-btn look */
+.btn {
+  font-family: var(--oc-font-family);
+  font-weight: 500;
+  border-radius: 0.75rem;
+  transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background-color: var(--oc-royal);
+  border-color: var(--oc-royal);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-primary:hover {
+  background-color: var(--oc-royal-hover);
+  border-color: var(--oc-royal-hover);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-outline-secondary {
+  color: var(--oc-gray-600);
+  background-color: var(--oc-white);
+  border-color: var(--oc-gray-300);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--oc-gray-50);
+  color: var(--oc-gray-700);
+  border-color: var(--oc-gray-300);
+}
+
+/* Form controls — match original oc-input look */
+.form-control {
+  padding: 0.625rem 1rem;
+  font-family: var(--oc-font-family);
+  font-size: 0.875rem;
+  color: var(--oc-gray-800);
+  background-color: var(--oc-white);
+  border: 1px solid var(--oc-gray-300);
+  border-radius: 0.75rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.form-control::placeholder {
+  color: var(--oc-gray-400);
+}
+
+.form-control:focus {
+  border-color: var(--oc-royal);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.form-label {
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--oc-gray-700);
+}
+
+/* Cards — match original oc-card look */
+.card {
+  background-color: var(--oc-white);
+  border: 1px solid var(--oc-gray-200);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: box-shadow 250ms ease, transform 250ms ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+/* Tables */
+.table {
+  --bs-table-bg: transparent;
+  margin-bottom: 0;
+  font-size: 0.875rem;
+}
+
+.table thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--oc-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--oc-gray-100);
+  padding: 0.875rem 1.5rem;
+}
+
+.table tbody td {
+  padding: 0.875rem 1.5rem;
+  border-top: 1px solid var(--oc-gray-100);
+  vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+  background-color: var(--oc-gray-50);
+}
+
+.table tbody tr {
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+/* Breadcrumb — match original oc-breadcrumb look */
+.breadcrumb {
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  --bs-breadcrumb-divider: '';
+}
+
+.breadcrumb-item a {
+  color: var(--oc-gray-500);
+}
+
+.breadcrumb-item a:hover {
+  color: var(--oc-royal);
+}
+
+.breadcrumb-item.active {
+  color: var(--oc-navy);
+  font-weight: 500;
+}
+
+/* Alerts — match original look */
+.alert {
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Badges */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+/* Modal — match original look */
+.modal-content {
+  border-radius: 1rem;
+  border: none;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--oc-gray-100);
+  padding: 1rem 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  background-color: var(--oc-gray-50);
+  border-top: 1px solid var(--oc-gray-100);
+  padding: 1rem 1.5rem;
+}
+
+/* ---------- Score Semaphore (no Bootstrap equivalent) ---------- */
+.oc-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--oc-white);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.oc-score--green { background-color: var(--oc-success); }
+.oc-score--orange { background-color: var(--oc-warning); }
+.oc-score--red { background-color: var(--oc-danger); }
+
+/* ---------- Auth Layout (gradient branding panel) ---------- */
+.auth-brand-panel {
+  background: linear-gradient(135deg, var(--oc-navy) 0%, #1e3a7a 50%, var(--oc-royal) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-brand-panel::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: -20%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.auth-brand-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -15%;
+  left: -10%;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.auth-brand-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 0.75rem;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+}
+
+.auth-card-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 0.5rem;
+}
+
+/* ---------- Utilities (no Bootstrap equivalent) ---------- */
+.border-dashed {
+  border-style: dashed !important;
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--oc-gray-300);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--oc-gray-400);
+}
+
+/* ---------- Sidebar (Layout) ---------- */
+.navbar-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--oc-sidebar-width);
+  height: 100vh;
+  background-color: var(--oc-navy);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.navbar-sidebar__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.navbar-sidebar__logo img {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--oc-radius-md);
+}
+
+.navbar-sidebar__logo-text {
+  font-size: var(--oc-font-xl);
+  font-weight: 700;
+  color: var(--oc-white);
+  letter-spacing: -0.02em;
+}
+
+.navbar-sidebar__nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem 0;
+}
+
+.navbar-sidebar__section {
+  list-style: none;
+  padding: 0 0.75rem;
+  margin: 0;
+}
+
+.navbar-sidebar__section--bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 1rem;
+}
+
+.navbar-sidebar__item {
+  margin-bottom: 0.25rem;
+}
+
+.navbar-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--oc-radius-md);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: var(--oc-font-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color var(--oc-transition-fast), color var(--oc-transition-fast);
+}
+
+.navbar-sidebar__link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--oc-white);
+}
+
+.navbar-sidebar__link--active {
+  background-color: var(--oc-royal);
+  color: var(--oc-white);
+}
+
+.navbar-sidebar__link--active:hover {
+  background-color: var(--oc-royal-hover);
+}
+
+.navbar-sidebar__link--danger {
+  color: rgba(239, 68, 68, 0.75);
+}
+
+.navbar-sidebar__link--danger:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.navbar-sidebar__link .MuiSvgIcon-root {
+  font-size: 1.25rem;
+}
