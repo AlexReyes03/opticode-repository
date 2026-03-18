@@ -4,6 +4,28 @@ from rest_framework.permissions import AllowAny
 from .serializers import RegisterSerializer
 
 class RegisterView(generics.CreateAPIView):
+    """
+    Endpoint público para el registro de nuevos usuarios.
+
+    **Método:** POST
+    **URL:** /api/auth/register/
+
+    **Ejemplo de Payload (JSON) requerido:**
+    ```json
+    {
+        "username": "usuario_ejemplo",
+        "email": "correo@ejemplo.com",
+        "first_name": "Nombre",
+        "last_name": "Apellido",
+        "password": "ContraseñaSegura123!",
+        "password_confirm": "ContraseñaSegura123!"
+    }
+    ```
+
+    **Respuestas:**
+    - `201 Created`: Usuario registrado exitosamente.
+    - `400 Bad Request`: Error en validación (email duplicado, contraseñas no coinciden, contraseña débil).
+    """
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
 
