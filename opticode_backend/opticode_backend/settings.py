@@ -33,7 +33,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=["*"])
 
-#AUTH_USER_MODEL = "users.User"
+AUTH_USER_MODEL = "users.User"
 
 # Application definition
 
@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     # Local-apps
-    # Conforme se vayan definiendo los apps locales, se agregan aqui
+    "users",
 ]
 
 MIDDLEWARE = [
