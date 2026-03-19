@@ -1,34 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
-
-const MOCK_PROJECTS = [
-  {
-    id: 1,
-    name: 'Portal Educativo',
-    description: 'Repositorio del frontend de la nueva plataforma escolar con enfoque en accesibilidad.',
-    fileCount: 12,
-    date: '10 Mar 2026',
-  },
-  {
-    id: 2,
-    name: 'Landing Corporativa',
-    description: 'Sitio web promocional para la empresa, con formularios de contacto y blog integrado.',
-    fileCount: 8,
-    date: '08 Mar 2026',
-  },
-  {
-    id: 3,
-    name: 'E-Commerce MVP',
-    description: 'Prototipo de tienda en línea con catálogo de productos y carrito de compras.',
-    fileCount: 5,
-    date: '05 Mar 2026',
-  },
-];
+import { getProjects } from '../../../api/project-services';
 
 const UserDashboard = () => {
   const [showModal, setShowModal] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getProjects()
+      .then((data) => {
+        setProjects(data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error fetching projects:", error);
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <section>
@@ -45,11 +36,23 @@ const UserDashboard = () => {
       </div>
 
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        {MOCK_PROJECTS.map((project) => (
-          <div className="col" key={project.id}>
-            <ProjectCard project={project} />
+        {loading ? (
+          <div className="col-12 text-center py-5">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Cargando...</span>
+            </div>
           </div>
-        ))}
+        ) : projects.length === 0 ? (
+  <div className="col-12 text-center text-muted py-5">
+    <p>Aún no tienes proyectos. Crea uno primero!</p>
+  </div>
+        ) : (
+          projects.map((project) => (
+            <div className="col" key={project.id}>
+              <ProjectCard project={project} />
+            </div>
+          ))
+        )}
       </div>
 
       <CreateProjectModal show={showModal} onClose={() => setShowModal(false)} />
