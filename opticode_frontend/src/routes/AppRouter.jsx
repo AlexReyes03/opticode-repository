@@ -35,14 +35,20 @@ const AppRouter = () => {
           <Route path="/reset-password" element={<ResetPassword />} />
         </Route>
 
-        {/* Private routes — App layout (sidebar + content) */}
-        <Route element={<PrivateRoute />}>
+        {/* Private routes — cliente (dashboard, proyectos) */}
+        <Route element={<PrivateRoute allowedRoles={['user', 'admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/projects/:projectId" element={<ProjectDashboard />} />
             <Route path="/projects/:projectId/upload" element={<FileUpload />} />
             <Route path="/projects/:projectId/files/:fileId" element={<FileReport />} />
             <Route path="/projects/:projectId/files/:fileId/errors" element={<ErrorDetail />} />
+          </Route>
+        </Route>
+
+        {/* Private routes — solo admin */}
+        <Route element={<PrivateRoute allowedRoles={['admin']} />}>
+          <Route element={<AppLayout />}>
             <Route path="/admin" element={<AdminDashboard />} />
           </Route>
         </Route>
