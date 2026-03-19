@@ -16,3 +16,6 @@ build/
 # Virtualenv
 venv/
 .venv/
+
+# Media
+media/
