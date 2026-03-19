@@ -49,4 +49,27 @@ class AuditResult(models.Model):
         return f"{self.uploaded_file.filename} - {self.status}"
 
 
+class Finding(models.Model):
+    class Severity(models.TextChoices):
+        ERROR = "error", "Error"
+        WARNING = "warning", "Warning"
 
+    audit_result = models.ForeignKey(
+        AuditResult,
+        on_delete=models.CASCADE,
+        related_name="findings",
+    )
+    severity = models.CharField(max_length=20, choices=Severity.choices)
+    wcag_rule = models.CharField(max_length=50)
+    message = models.TextField()
+    line_number = models.PositiveIntegerField()
+    code_snippet = models.TextField()
+    affected_element = models.TextField()
+
+    class Meta:
+        db_table = "hallazgos_accesibilidad"
+        verbose_name = "hallazgo de accesibilidad"
+        verbose_name_plural = "hallazgos de accesibilidad"
+
+    def __str__(self):
+        return f"[{self.wcag_rule}] Línea {self.line_number}"
