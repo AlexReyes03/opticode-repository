@@ -85,6 +85,11 @@ TIME_ZONE = "America/Mexico_City"
 USE_I18N = True
 USE_TZ = True
 
+# Configuración para archivos subidos (momentaneo hasta creacion de S3)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+
 STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
