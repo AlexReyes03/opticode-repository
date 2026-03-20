@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
+import { createProject } from '../../../api/project-services';
 
-const CreateProjectModal = ({ show, onClose }) => {
+const CreateProjectModal = ({ show, onClose, onProjectCreated }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const modalRef = useRef(null);
 
   useEffect(() => {
@@ -32,9 +35,25 @@ const CreateProjectModal = ({ show, onClose }) => {
     return () => el.removeEventListener('hidden.bs.modal', handleHidden);
   }, [onClose]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onClose();
+    setError(null);
+    setLoading(true);
+
+    try {
+      await createProject(name, description);
+      setName('');
+      setDescription('');
+      onClose();
+      if (onProjectCreated) {
+        onProjectCreated();
+      }
+    } catch (err) {
+      setError('Ocurrió un error al crear el proyecto. Por favor, intenta de nuevo.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,6 +71,11 @@ const CreateProjectModal = ({ show, onClose }) => {
           {/* Body */}
           <form onSubmit={handleSubmit}>
             <div className="modal-body">
+              {error && (
+                <div className="alert alert-danger py-2" role="alert">
+                  {error}
+                </div>
+              )}
               <div className="mb-3">
                 <label htmlFor="project-name" className="form-label">
                   Nombre del proyecto <span className="text-danger">*</span>
@@ -94,11 +118,11 @@ const CreateProjectModal = ({ show, onClose }) => {
 
             {/* Footer */}
             <div className="modal-footer">
-              <button type="button" className="btn btn-outline-secondary" onClick={onClose}>
+              <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={loading}>
                 Cancelar
               </button>
-              <button type="submit" className="btn btn-primary">
-                Crear Proyecto
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {loading ? 'Creando...' : 'Crear Proyecto'}
               </button>
             </div>
           </form>
