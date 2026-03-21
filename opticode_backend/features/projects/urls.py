@@ -1,5 +1,9 @@
 from django.urls import path  # noqa: F401
+from .views import ProjectListCreateView
 
 app_name = "projects"
 
-urlpatterns = []
+urlpatterns = [
+    path("", ProjectListCreateView.as_view(), name="project-list-create"),
+
+]
