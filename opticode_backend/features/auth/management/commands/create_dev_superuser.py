@@ -1,15 +1,19 @@
 from django.core.management.base import BaseCommand
 
+import environ
+
 from features.auth.models import User
+
+env = environ.Env()
 
 
 class Command(BaseCommand):
     help = "Crea el superusuario de desarrollo para el equipo"
 
     def handle(self, *args, **options):
-        email = "admin@opticode.com"
-        username = "admin"
-        password = "Admin123!"
+        email = env("DEV_ADMIN_EMAIL", default="admin@opticode.com")
+        username = env("DEV_ADMIN_USERNAME", default="admin")
+        password = env("DEV_ADMIN_PASSWORD", default="Admin123!")
 
         if User.objects.filter(email=email).exists():
             self.stdout.write(self.style.WARNING(
