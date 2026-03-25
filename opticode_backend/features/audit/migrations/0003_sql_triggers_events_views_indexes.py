@@ -68,7 +68,7 @@ class Migration(migrations.Migration):
             """,
             reverse_sql="DROP TRIGGER IF EXISTS trg_update_score_on_finding;",
         ),
-        
+
          # ──────────────────────────────────────────────
         # EVENTOS
         # ──────────────────────────────────────────────
@@ -103,6 +103,47 @@ class Migration(migrations.Migration):
             """,
             reverse_sql="DROP EVENT IF EXISTS evt_cleanup_empty_projects;",
         ),
+
+         # ──────────────────────────────────────────────
+        # VISTAS
+        # ──────────────────────────────────────────────
+
+        # V1 — Resumen por proyecto
+        migrations.RunSQL(
+            sql="""
+                CREATE VIEW vw_project_summary AS
+                SELECT
+                    p.id            AS project_id,
+                    p.name          AS project_name,
+                    u.email         AS owner_email,
+                    COUNT(uf.id)    AS total_files,
+                    SUM(CASE WHEN r.status = 'Fallas' THEN 1 ELSE 0 END) AS files_with_failures,
+                    ROUND(AVG(uf.score), 2) AS avg_score
+                FROM proyectos p
+                LEFT JOIN usuarios u        ON u.id  = p.owner_id
+                LEFT JOIN uploaded_files uf  ON uf.project_id = p.id
+                LEFT JOIN reportes r         ON r.uploaded_file_id = uf.id
+                GROUP BY p.id, p.name, u.email;
+            """,
+            reverse_sql="DROP VIEW IF EXISTS vw_project_summary;",
+        ),
+
+        # V2 — Resumen de violaciones WCAG
+        migrations.RunSQL(
+            sql="""
+                CREATE VIEW vw_wcag_violations_summary AS
+                SELECT
+                    h.wcag_rule,
+                    h.severity,
+                    COUNT(*)       AS total_findings,
+                    COUNT(DISTINCT r.uploaded_file_id) AS affected_files
+                FROM hallazgos_accesibilidad h
+                JOIN reportes r ON r.id = h.audit_result_id
+                GROUP BY h.wcag_rule, h.severity;
+            """,
+            reverse_sql="DROP VIEW IF EXISTS vw_wcag_violations_summary;",
+        ),
+
 
 
         
