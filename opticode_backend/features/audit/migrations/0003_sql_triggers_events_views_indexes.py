@@ -68,6 +68,44 @@ class Migration(migrations.Migration):
             """,
             reverse_sql="DROP TRIGGER IF EXISTS trg_update_score_on_finding;",
         ),
+        
+         # ──────────────────────────────────────────────
+        # EVENTOS
+        # ──────────────────────────────────────────────
+
+        # E1 — Limpieza diaria de reportes huérfanos
+        migrations.RunSQL(
+            sql="""
+                CREATE EVENT evt_cleanup_orphan_reports
+                ON SCHEDULE EVERY 1 DAY
+                STARTS CURRENT_TIMESTAMP
+                DO
+                    DELETE FROM reportes
+                    WHERE uploaded_file_id NOT IN (
+                        SELECT id FROM uploaded_files
+                    );
+            """,
+            reverse_sql="DROP EVENT IF EXISTS evt_cleanup_orphan_reports;",
+        ),
+
+        # E2 — Limpieza semanal de proyectos vacíos con más de 30 días
+        migrations.RunSQL(
+            sql="""
+                CREATE EVENT evt_cleanup_empty_projects
+                ON SCHEDULE EVERY 7 DAY
+                STARTS CURRENT_TIMESTAMP
+                DO
+                    DELETE FROM proyectos
+                    WHERE id NOT IN (
+                        SELECT DISTINCT project_id FROM uploaded_files
+                    )
+                    AND created_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+            """,
+            reverse_sql="DROP EVENT IF EXISTS evt_cleanup_empty_projects;",
+        ),
+
+
+        
 
 
 
