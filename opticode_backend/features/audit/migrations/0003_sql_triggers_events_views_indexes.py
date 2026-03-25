@@ -144,10 +144,4 @@ class Migration(migrations.Migration):
             reverse_sql="DROP VIEW IF EXISTS vw_wcag_violations_summary;",
         ),
 
-
-
-        
-
-
-
     ]
