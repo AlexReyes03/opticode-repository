@@ -1,5 +1,9 @@
-from django.urls import path  # noqa: F401
+from django.urls import path
+
+from .views import FileUploadView
 
 app_name = "projects"
 
-urlpatterns = []
+urlpatterns = [
+    path("<int:pk>/files/upload/", FileUploadView.as_view(), name="file_upload"),
+]
