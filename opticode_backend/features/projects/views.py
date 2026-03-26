@@ -1,3 +1,7 @@
+import zipfile
+from io import BytesIO
+
+from django.core.files.base import ContentFile
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -7,8 +11,10 @@ from features.audit.models import UploadedFile
 from features.projects.models import Project
 
 ALLOWED_EXTENSIONS = {"html", "css"}
-MIN_SIZE = 1_024          # 1 KB
-MAX_SIZE = 10_485_760     # 10 MB
+MIN_SIZE = 1_024           # 1 KB
+MAX_SIZE = 10_485_760      # 10 MB
+ZIP_MAX_SIZE = 52_428_800  # 50 MB
+ZIP_MAX_FILES = 50
 
 
 def _detect_file_type(content: bytes) -> str | None:
@@ -103,5 +109,128 @@ class FileUploadView(APIView):
                 "file_type": uploaded.file_type,
                 "size_bytes": uploaded.size_bytes,
             },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+def _save_or_overwrite(project, filename, content, file_type):
+    """Guarda o sobreescribe un UploadedFile. Retorna la instancia."""
+    existing = UploadedFile.objects.filter(project=project, filename=filename).first()
+    if existing:
+        existing.file.delete(save=False)
+        existing.file = ContentFile(content, name=filename)
+        existing.file_type = file_type
+        existing.size_bytes = len(content)
+        existing.score = None
+        existing.save()
+        return existing
+    return UploadedFile.objects.create(
+        project=project,
+        filename=filename,
+        file=ContentFile(content, name=filename),
+        file_type=file_type,
+        size_bytes=len(content),
+    )
+
+
+class ZipUploadView(APIView):
+    parser_classes = [MultiPartParser]
+
+    def post(self, request, pk):
+        try:
+            project = Project.objects.get(pk=pk, owner=request.user)
+        except Project.DoesNotExist:
+            return Response(
+                {"detail": "Proyecto no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        file = request.FILES.get("file")
+        if not file:
+            return Response(
+                {"detail": "No se proporcionó ningún archivo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ext = file.name.rsplit(".", 1)[-1].lower() if "." in file.name else ""
+        if ext != "zip":
+            return Response(
+                {"detail": "Solo se aceptan archivos .zip."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if file.size > ZIP_MAX_SIZE:
+            return Response(
+                {"detail": "El ZIP no puede superar los 50 MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            zf = zipfile.ZipFile(BytesIO(file.read()))
+        except zipfile.BadZipFile:
+            return Response(
+                {"detail": "El archivo ZIP está corrupto o no es válido."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Filtrar entradas válidas (no directorios, extensión html/css)
+        entries = [
+            e for e in zf.infolist()
+            if not e.is_dir()
+            and e.filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS
+        ]
+
+        ignored = []
+
+        if len(entries) > ZIP_MAX_FILES:
+            return Response(
+                {"detail": f"El ZIP contiene más de {ZIP_MAX_FILES} archivos .html/.css."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        uploaded = []
+
+        for entry in entries:
+            filename = entry.filename.split("/")[-1]  # descartar rutas internas
+            content = zf.read(entry.filename)
+            size = len(content)
+
+            if not (MIN_SIZE <= size <= MAX_SIZE):
+                ignored.append({
+                    "filename": filename,
+                    "reason": f"Tamaño fuera de rango ({size} bytes). Debe estar entre 1 KB y 10 MB.",
+                })
+                continue
+
+            file_type = _detect_file_type(content)
+            if file_type is None:
+                ignored.append({
+                    "filename": filename,
+                    "reason": "El contenido no corresponde a HTML ni CSS válido.",
+                })
+                continue
+
+            saved = _save_or_overwrite(project, filename, content, file_type)
+            uploaded.append({
+                "id": saved.pk,
+                "filename": saved.filename,
+                "file_type": saved.file_type,
+                "size_bytes": saved.size_bytes,
+            })
+
+        # Archivos del ZIP con extensión no permitida
+        skipped_extensions = [
+            e for e in zf.infolist()
+            if not e.is_dir()
+            and e.filename.rsplit(".", 1)[-1].lower() not in ALLOWED_EXTENSIONS
+        ]
+        for entry in skipped_extensions:
+            ignored.append({
+                "filename": entry.filename.split("/")[-1],
+                "reason": "Extensión no permitida.",
+            })
+
+        return Response(
+            {"uploaded": uploaded, "ignored": ignored},
             status=status.HTTP_201_CREATED,
         )
