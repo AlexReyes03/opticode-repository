@@ -15,6 +15,8 @@ MIN_SIZE = 1_024           # 1 KB
 MAX_SIZE = 10_485_760      # 10 MB
 ZIP_MAX_SIZE = 52_428_800  # 50 MB
 ZIP_MAX_FILES = 50
+MIN_SIZE = 1_024          # 1 KB
+MAX_SIZE = 10_485_760     # 10 MB
 
 
 def _detect_file_type(content: bytes) -> str | None:

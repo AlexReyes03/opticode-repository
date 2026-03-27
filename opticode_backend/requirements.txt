@@ -5,3 +5,4 @@ django-cors-headers==4.9.0
 django-environ==0.13.0
 mysqlclient==2.2.8
 loguru==0.7.3
+weasyprint==61.0
