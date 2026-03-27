@@ -1,67 +1,77 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ErrorCard from '../components/ErrorCard';
 import ErrorFilter from '../components/ErrorFilter';
+import { getFileFindings } from '../../../api/file-services';
 
-const MOCK_ERRORS = [
-  {
-    id: 1,
-    severity: 'critical',
-    level: 'Nivel A',
-    title: "Imagen sin atributo 'alt'",
-    description:
-      'La etiqueta de imagen actual carece de una descripción alternativa. Esto impide que los lectores de pantalla puedan transmitir su contenido a personas con discapacidad visual.',
-    line: 45,
-    codeLines: [
-      { lineNumber: 44, content: '<div class="banner-principal">' },
-      { lineNumber: 45, content: '<img src="logo_corporativo.png" class="w-full">' },
-      { lineNumber: 46, content: '</div>' },
-    ],
-  },
-  {
-    id: 2,
-    severity: 'critical',
-    level: 'Nivel A',
-    title: 'Formulario sin etiqueta asociada',
-    description:
-      'El campo de entrada no tiene un elemento <label> asociado mediante el atributo "for". Los usuarios de lectores de pantalla no podrán identificar el propósito del campo.',
-    line: 72,
-    codeLines: [
-      { lineNumber: 71, content: '<div class="form-group">' },
-      { lineNumber: 72, content: '<input type="text" name="nombre" placeholder="Tu nombre">' },
-      { lineNumber: 73, content: '</div>' },
-    ],
-  },
-  {
-    id: 3,
-    severity: 'warning',
-    level: 'Nivel AA',
-    title: 'Contraste insuficiente en texto',
-    description:
-      'El color de texto #999999 sobre fondo #ffffff tiene una relación de contraste de 2.85:1, inferior al mínimo de 4.5:1 requerido para texto normal según WCAG 2.1 AA.',
-    line: 18,
-    codeLines: [
-      { lineNumber: 17, content: '<style>' },
-      { lineNumber: 18, content: '  .subtitulo { color: #999999; font-size: 14px; }' },
-      { lineNumber: 19, content: '</style>' },
-    ],
-  },
-];
+const normalizeCodeLines = (finding) => {
+  if (Array.isArray(finding?.codeLines)) return finding.codeLines;
+  if (!finding?.code_snippet) return [];
+
+  return String(finding.code_snippet)
+    .split('\n')
+    .map((content, index) => ({
+      lineNumber: Number(finding.line ?? finding.line_number ?? 0) + index,
+      content,
+    }));
+};
+
+const normalizeFinding = (finding, index) => {
+  const severity = finding?.severity === 'error' ? 'critical' : (finding?.severity ?? 'warning');
+  return {
+    id: finding?.id ?? `${finding?.wcag_rule ?? 'finding'}-${index}`,
+    severity,
+    level: finding?.level ?? (severity === 'critical' ? 'Nivel A' : 'Nivel AA'),
+    title: finding?.title ?? finding?.wcag_rule ?? 'Hallazgo WCAG',
+    description: finding?.description ?? finding?.message ?? 'Sin descripción disponible.',
+    line: Number(finding?.line ?? finding?.line_number ?? 0),
+    codeLines: normalizeCodeLines(finding),
+  };
+};
 
 const ErrorDetail = () => {
   const { projectId, fileId } = useParams();
   const [filter, setFilter] = useState('all');
+  const [errors, setErrors] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const filteredErrors = MOCK_ERRORS.filter((err) => {
+  useEffect(() => {
+    let mounted = true;
+
+    const loadFindings = async () => {
+      try {
+        setIsLoading(true);
+        setErrorMessage('');
+        const response = await getFileFindings(projectId, fileId);
+        if (!mounted) return;
+        const findings = Array.isArray(response) ? response : (response?.results ?? []);
+        setErrors(findings.map(normalizeFinding));
+      } catch (error) {
+        if (!mounted) return;
+        setErrorMessage(error?.message ?? 'No fue posible cargar los hallazgos del archivo.');
+        setErrors([]);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    loadFindings();
+    return () => {
+      mounted = false;
+    };
+  }, [projectId, fileId]);
+
+  const filteredErrors = errors.filter((err) => {
     if (filter === 'all') return true;
     return err.severity === filter;
   });
 
   const counts = {
-    all: MOCK_ERRORS.length,
-    critical: MOCK_ERRORS.filter((e) => e.severity === 'critical').length,
-    warning: MOCK_ERRORS.filter((e) => e.severity === 'warning').length,
+    all: errors.length,
+    critical: errors.filter((e) => e.severity === 'critical').length,
+    warning: errors.filter((e) => e.severity === 'warning').length,
   };
 
   return (
@@ -97,11 +107,31 @@ const ErrorDetail = () => {
         <ErrorFilter activeFilter={filter} onFilterChange={setFilter} counts={counts} />
       </div>
 
+      {isLoading && (
+        <div className="alert alert-secondary" role="status">
+          Cargando hallazgos del archivo...
+        </div>
+      )}
+
+      {!isLoading && errorMessage && (
+        <div className="alert alert-warning" role="alert">
+          {errorMessage}
+          <div className="small mt-1">
+            TODO: backend debe exponer endpoint de hallazgos por archivo para completar esta vista.
+          </div>
+        </div>
+      )}
+
       {/* Error Cards */}
       <div className="d-flex flex-column gap-3">
         {filteredErrors.map((error) => (
           <ErrorCard key={error.id} error={error} />
         ))}
+        {!isLoading && !errorMessage && filteredErrors.length === 0 && (
+          <div className="alert alert-light border">
+            No hay hallazgos disponibles para este archivo.
+          </div>
+        )}
       </div>
     </section>
   );

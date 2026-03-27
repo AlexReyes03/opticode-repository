@@ -1,14 +1,47 @@
+import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import ScoreDonutChart from '../components/ScoreDonutChart';
+import { getFileReport } from '../../../api/file-services';
 
 const FileReport = () => {
   const { projectId, fileId } = useParams();
   const navigate = useNavigate();
+  const [report, setReport] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const mockData = { name: 'index.html', score: 75, critical: 2, warnings: 1 };
+  useEffect(() => {
+    let mounted = true;
+
+    const loadReport = async () => {
+      try {
+        setIsLoading(true);
+        setErrorMessage('');
+        const response = await getFileReport(projectId, fileId);
+        if (!mounted) return;
+        setReport(response ?? null);
+      } catch (error) {
+        if (!mounted) return;
+        setErrorMessage(error?.message ?? 'No fue posible cargar el reporte del archivo.');
+        setReport(null);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    loadReport();
+    return () => {
+      mounted = false;
+    };
+  }, [projectId, fileId]);
+
+  const reportName = report?.name ?? report?.filename ?? `Archivo ${fileId}`;
+  const reportScore = Number(report?.score ?? 0);
+  const reportCritical = Number(report?.critical ?? report?.critical_count ?? 0);
+  const reportWarnings = Number(report?.warnings ?? report?.warning_count ?? 0);
 
   return (
     <section>
@@ -27,7 +60,7 @@ const FileReport = () => {
           <li className="breadcrumb-item">
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
           </li>
-          <li className="breadcrumb-item active" aria-current="page">{mockData.name}</li>
+          <li className="breadcrumb-item active" aria-current="page">{reportName}</li>
         </ol>
       </nav>
 
@@ -40,15 +73,30 @@ const FileReport = () => {
         </p>
       </div>
 
+      {isLoading && (
+        <div className="alert alert-secondary" role="status">
+          Cargando reporte del archivo...
+        </div>
+      )}
+
+      {!isLoading && errorMessage && (
+        <div className="alert alert-warning" role="alert">
+          {errorMessage}
+          <div className="small mt-1">
+            TODO: backend debe exponer endpoint de reporte por archivo para completar esta vista.
+          </div>
+        </div>
+      )}
+
       {/* Score + Counts Grid */}
-      <div className="row g-4 mb-4">
+      <div className="row g-4 mb-4" aria-busy={isLoading}>
         {/* Donut */}
         <div className="col-md-4">
           <div className="card h-100 d-flex flex-column align-items-center justify-content-center p-4">
             <h3 className="text-uppercase small fw-semibold text-secondary mb-3" style={{ letterSpacing: '0.05em' }}>
               Puntuación Final
             </h3>
-            <ScoreDonutChart score={mockData.score} />
+            <ScoreDonutChart score={reportScore} />
           </div>
         </div>
 
@@ -64,7 +112,7 @@ const FileReport = () => {
                   <CloseOutlinedIcon style={{ fontSize: '1.25rem' }} />
                 </div>
                 <div>
-                  <div className="fw-bold fs-3" style={{ color: 'var(--oc-danger-dark)' }}>{mockData.critical}</div>
+                  <div className="fw-bold fs-3" style={{ color: 'var(--oc-danger-dark)' }}>{reportCritical}</div>
                   <div className="fw-medium small" style={{ color: '#7f1d1d' }}>Faltas Críticas (Nivel A)</div>
                 </div>
               </div>
@@ -79,7 +127,7 @@ const FileReport = () => {
                   <WarningAmberOutlinedIcon style={{ fontSize: '1.25rem' }} />
                 </div>
                 <div>
-                  <div className="fw-bold fs-3" style={{ color: 'var(--oc-warning-dark)' }}>{mockData.warnings}</div>
+                  <div className="fw-bold fs-3" style={{ color: 'var(--oc-warning-dark)' }}>{reportWarnings}</div>
                   <div className="fw-medium small" style={{ color: '#7c2d12' }}>Advertencias (Nivel AA)</div>
                 </div>
               </div>
