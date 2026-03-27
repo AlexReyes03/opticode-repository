@@ -181,9 +181,7 @@ Para mantener el historial del proyecto limpio y automatizable, es obligatorio u
 | **PERF** | Optimizaciones en el código para mejorar el rendimiento. | `[PERF] optimizar consulta a base de datos` |
 | **CI** | Cambios en la configuración de CI/CD (scripts, *pipelines* de GitHub Actions, Vercel, etc.). | `[CI] agregar acción de GitHub para linting` |
 
-
-
-# Guía: Exportación de PDFs en Django con WeasyPrint
+## Guía: Exportación de PDFs en Django con WeasyPrint
 
 WeasyPrint es una herramienta visual para generar PDFs a partir de plantillas HTML y CSS. Es ideal para integrarse con Django porque nos permite reutilizar el sistema de plantillas (`render_to_string`) y aplicar estilos CSS modernos para generar documentos bien formateados (como reportes, facturas o recibos).
 
@@ -192,17 +190,21 @@ WeasyPrint es una herramienta visual para generar PDFs a partir de plantillas HT
 WeasyPrint requiere bibliotecas de sistema C subyacentes encargadas del renderizado de gráficos y texto.
 
 **En Linux (Ubuntu/Debian):**
+
 ```bash
 sudo apt-get install build-essential python3-dev python3-pip python3-setuptools python3-wheel python3-cffi libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
 ```
 
 **En Windows:**
+
 WeasyPrint depende de **[GTK3](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer)**, que incluye `cairo` y `pango`.
+
 1. Descarga el instalador del runtime de GTK3 para Windows.
 2. Instálalo y asegúrate de marcar la opción para agregar GTK al `PATH` del sistema.
 3. Reinicia tu terminal/IDE para que tome los cambios en el entorno.
 
 **En macOS:**
+
 ```bash
 brew install cairo pango gdk-pixbuf libffi
 ```
@@ -214,6 +216,7 @@ Añade WeasyPrint a tu entorno virtual:
 ```bash
 pip install weasyprint
 ```
+
 *(No olvides agregarlo a tu `requirements.txt`)*.
 
 ---
@@ -221,12 +224,13 @@ pip install weasyprint
 ## 3. Generar un PDF desde una Vista en Django
 
 El flujo básico en Django consiste en:
+
 1. Obtener los datos del contexto.
 2. Renderizar el HTML utilizando `render_to_string` pasándole el contexto.
 3. Pasar el HTML plano a WeasyPrint.
 4. Retornar la respuesta HTTP configurando el `Content-Type` como PDF.
 
-### Ejemplo de Implementación (views.py):
+### Ejemplo de implementación (`views.py`)
 
 ```python
 from django.http import HttpResponse
@@ -262,7 +266,7 @@ def export_project_pdf(request, project_id):
     return response
 ```
 
-### Plantilla de Ejemplo (`pdf/report.html`):
+### Plantilla de ejemplo (`pdf/report.html`)
 
 ```html
 <!DOCTYPE html>
