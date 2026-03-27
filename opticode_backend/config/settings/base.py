@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -95,4 +96,27 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "authentication.User"
+
+JWT_ENABLED = env.bool("JWT_ENABLED", default=True)
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        ["rest_framework_simplejwt.authentication.JWTAuthentication"]
+        if JWT_ENABLED
+        else []
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        ["rest_framework.permissions.IsAuthenticated"]
+        if JWT_ENABLED
+        else ["rest_framework.permissions.AllowAny"]
+    ),
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(hours=24),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 
