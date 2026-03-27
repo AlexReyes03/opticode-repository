@@ -18,7 +18,10 @@ const normalizeCodeLines = (finding) => {
 };
 
 const normalizeFinding = (finding, index) => {
-  const severity = finding?.severity === 'error' ? 'critical' : (finding?.severity ?? 'warning');
+  const rawSeverity = String(finding?.severity ?? '').toLowerCase();
+  const severity = rawSeverity === 'error' || rawSeverity === 'critical'
+    ? 'critical'
+    : 'warning';
   return {
     id: finding?.id ?? `${finding?.wcag_rule ?? 'finding'}-${index}`,
     severity,

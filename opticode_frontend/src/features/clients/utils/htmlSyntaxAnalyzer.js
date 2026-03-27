@@ -1,9 +1,11 @@
 /**
- * Analizador estático de sintaxis HTML — HU-3.1 (WCAG 4.1.1)
+ * Analizador estático HTML — HU-3.1 + HU-3.2 (WCAG Nivel A)
  *
- * Detecta dos categorías de malformación clasificadas como Falta Crítica Nivel A:
+ * Detecta faltas críticas Nivel A para:
  *   1. Etiquetas de apertura sin su etiqueta de cierre correspondiente.
  *   2. Atributos duplicados dentro de la misma etiqueta.
+ *   3. Etiqueta <html> sin atributo lang.
+ *   4. Etiqueta <img> sin atributo alt (aunque alt="" es válido).
  *
  * NOTA (WCAG 4.1.1): Este criterio fue eliminado de WCAG 2.2 por redundancia tecnológica,
  * pero el motor de auditoría del proyecto lo conserva como regla propia de calidad de código
@@ -65,6 +67,20 @@ function extractCodeLines(lines, lineIdx) {
     lineNumber: start + i + 1,
     content: lines[start + i] ?? '',
   }));
+}
+
+/**
+ * Verifica si una cadena de atributos contiene un atributo específico.
+ * Acepta variantes con o sin valor: `alt`, `alt=""`, `lang='es'`, etc.
+ *
+ * @param {string} attrsString
+ * @param {string} attrName
+ * @returns {boolean}
+ */
+function hasAttribute(attrsString, attrName) {
+  if (!attrsString?.trim()) return false;
+  const attrRegex = new RegExp(`\\b${attrName}\\b(?:\\s*=|\\s|$)`, 'i');
+  return attrRegex.test(attrsString);
 }
 
 /**
@@ -163,6 +179,40 @@ export function analyzeHtmlSyntax(content) {
         attrsString, tagName, lineNumber, match.index, lines
       );
       if (dupFinding) findings.push(dupFinding);
+
+      // --- HU-3.2: <html> sin lang ---
+      if (tagName === 'html' && !hasAttribute(attrsString, 'lang')) {
+        findings.push({
+          id: `html-lang-missing-${match.index}`,
+          severity: 'critical',
+          level: 'Nivel A',
+          wcag_rule: 'WCAG 3.1.1',
+          title: 'Etiqueta <html> sin atributo lang',
+          description:
+            'La etiqueta <html> no define el atributo lang. Sin este atributo, los lectores de ' +
+            'pantalla no pueden identificar correctamente el idioma principal del documento, lo ' +
+            'que afecta la pronunciación y comprensión del contenido (WCAG 3.1.1).',
+          line: lineNumber,
+          codeLines: extractCodeLines(lines, lineNumber - 1),
+        });
+      }
+
+      // --- HU-3.2: <img> sin alt ---
+      if (tagName === 'img' && !hasAttribute(attrsString, 'alt')) {
+        findings.push({
+          id: `img-alt-missing-${match.index}`,
+          severity: 'critical',
+          level: 'Nivel A',
+          wcag_rule: 'WCAG 1.1.1',
+          title: 'Etiqueta <img> sin atributo alt',
+          description:
+            'La etiqueta <img> no incluye el atributo alt. Toda imagen debe declarar alt (incluso ' +
+            'vacío para imágenes decorativas) para proporcionar alternativa textual a tecnologías ' +
+            'de asistencia (WCAG 1.1.1).',
+          line: lineNumber,
+          codeLines: extractCodeLines(lines, lineNumber - 1),
+        });
+      }
 
       if (RAW_TEXT_ELEMENTS.has(tagName) && !isSelfClosed) {
         rawTextContext = tagName;

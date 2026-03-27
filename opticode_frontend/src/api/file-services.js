@@ -59,7 +59,10 @@ export const getFileReport = async (_projectId, _fileId) => {
  * TODO(backend): Cuando exista el endpoint (por ejemplo GET /api/projects/:projectId/files/:fileId/findings/):
  * 1. Eliminar el `throw` de abajo.
  * 2. Descomentar y ajustar la ruta y formato (array o { results }).
- * 3. Quitar en ErrorDetail.jsx el aviso temporal “TODO: backend debe exponer endpoint...”.
+ * 3. Incluir reglas críticas Nivel A de semántica base (HU-3.2):
+ *    - <html> sin atributo lang.
+ *    - <img> sin atributo alt (aunque alt="" sea válido).
+ * 4. Quitar en ErrorDetail.jsx el aviso temporal “TODO: backend debe exponer endpoint...”.
  *
  * @param {string|number} projectId
  * @param {string|number} fileId
