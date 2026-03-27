@@ -117,7 +117,8 @@ const ErrorDetail = () => {
         <div className="alert alert-warning" role="alert">
           {errorMessage}
           <div className="small mt-1">
-            TODO: backend debe exponer endpoint de hallazgos por archivo para completar esta vista.
+            TODO: Quitar este aviso cuando el backend exponga el GET de hallazgos y en file-services.js
+            se descomente request() en getFileFindings (eliminar el throw).
           </div>
         </div>
       )}

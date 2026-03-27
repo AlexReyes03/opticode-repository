@@ -83,7 +83,8 @@ const FileReport = () => {
         <div className="alert alert-warning" role="alert">
           {errorMessage}
           <div className="small mt-1">
-            TODO: backend debe exponer endpoint de reporte por archivo para completar esta vista.
+            TODO: Quitar este aviso cuando el backend exponga el GET de reporte y en file-services.js
+            se descomente request() en getFileReport (eliminar el throw).
           </div>
         </div>
       )}
