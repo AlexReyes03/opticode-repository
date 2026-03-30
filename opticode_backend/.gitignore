@@ -19,3 +19,6 @@ venv/
 
 # Media
 media/
+
+# Sonar
+sonar-project.properties
