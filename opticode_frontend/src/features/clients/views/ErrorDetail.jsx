@@ -4,7 +4,13 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ErrorCard from '../components/ErrorCard';
 import ErrorFilter from '../components/ErrorFilter';
 import { getFileFindings } from '../../../api/file-services';
+import { loadAuditResult } from '../utils/auditStorage';
 
+/**
+ * Normaliza el array codeLines desde distintos shapes (local vs. backend).
+ * @param {object} finding
+ * @returns {Array<{ lineNumber: number, content: string }>}
+ */
 const normalizeCodeLines = (finding) => {
   if (Array.isArray(finding?.codeLines)) return finding.codeLines;
   if (!finding?.code_snippet) return [];
@@ -17,6 +23,17 @@ const normalizeCodeLines = (finding) => {
     }));
 };
 
+/**
+ * Normaliza un hallazgo a la forma esperada por ErrorCard.
+ * Compatible con el shape local de htmlSyntaxAnalyzer y con el shape del backend
+ * (cuando el endpoint GET /api/audit/<fileId>/findings/ esté disponible).
+ *
+ * TODO(backend): Al activar getFileFindings() en file-services.js, los hallazgos
+ * del backend pasarán por aquí sin cambios adicionales gracias al mapeo defensivo.
+ *
+ * @param {object} finding
+ * @param {number} index
+ */
 const normalizeFinding = (finding, index) => {
   const rawSeverity = String(finding?.severity ?? '').toLowerCase();
   const severity = rawSeverity === 'error' || rawSeverity === 'critical'
@@ -33,34 +50,55 @@ const normalizeFinding = (finding, index) => {
   };
 };
 
+/**
+ * Vista de detalle de hallazgos WCAG de un archivo.
+ *
+ * Lee los findings del análisis estático local almacenados en localStorage
+ * por useFileUpload tras la subida del archivo.
+ *
+ * HU-3.2 (semántica y atributos base — Nivel A): las reglas `<html>` sin `lang` e `<img>`
+ * sin `alt` se detectan en `utils/htmlSyntaxAnalyzer.js` (analyzeHtmlSyntax), no aquí.
+ * Esta vista solo normaliza y muestra cada finding (línea, severidad crítica, snippet).
+ *
+ * Carga: primero getFileFindings (GET /api/audit/<fileId>/findings/); si falla, loadAuditResult.
+ */
 const ErrorDetail = () => {
   const { projectId, fileId } = useParams();
   const [filter, setFilter] = useState('all');
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    const loadFindings = async () => {
+    const load = async () => {
+      setIsLoading(true);
+      setErrors([]);
+      setHasData(false);
+
       try {
-        setIsLoading(true);
-        setErrorMessage('');
-        const response = await getFileFindings(projectId, fileId);
-        if (!mounted) return;
-        const findings = Array.isArray(response) ? response : (response?.results ?? []);
+        const list = await getFileFindings(projectId, fileId);
+        if (mounted && Array.isArray(list)) {
+          setErrors(list.map(normalizeFinding));
+          setHasData(true);
+          setIsLoading(false);
+          return;
+        }
+      } catch {
+        // Sin endpoint o error: usar análisis local si existe.
+      }
+
+      const result = loadAuditResult(projectId, fileId);
+      const findings = result?.findings ?? [];
+      if (mounted) {
         setErrors(findings.map(normalizeFinding));
-      } catch (error) {
-        if (!mounted) return;
-        setErrorMessage(error?.message ?? 'No fue posible cargar los hallazgos del archivo.');
-        setErrors([]);
-      } finally {
-        if (mounted) setIsLoading(false);
+        setHasData(result !== null);
+        setIsLoading(false);
       }
     };
 
-    loadFindings();
+    load();
     return () => {
       mounted = false;
     };
@@ -95,7 +133,7 @@ const ErrorDetail = () => {
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
           </li>
           <li className="breadcrumb-item">
-            <Link to={`/projects/${projectId}/files/${fileId}`}>index.html</Link>
+            <Link to={`/projects/${projectId}/files/${fileId}`}>{`Archivo ${fileId}`}</Link>
           </li>
           <li className="breadcrumb-item">
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
@@ -106,7 +144,9 @@ const ErrorDetail = () => {
 
       {/* Header + Filter */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="fw-semibold fs-5 mb-0" style={{ color: 'var(--oc-navy)' }}>Hallazgos Detectados</h2>
+        <h2 className="fw-semibold fs-5 mb-0" style={{ color: 'var(--oc-navy)' }}>
+          Hallazgos Detectados
+        </h2>
         <ErrorFilter activeFilter={filter} onFilterChange={setFilter} counts={counts} />
       </div>
 
@@ -116,12 +156,11 @@ const ErrorDetail = () => {
         </div>
       )}
 
-      {!isLoading && errorMessage && (
+      {!isLoading && !hasData && (
         <div className="alert alert-warning" role="alert">
-          {errorMessage}
+          No hay análisis disponible para este archivo.
           <div className="small mt-1">
-            TODO: Quitar este aviso cuando el backend exponga el GET de hallazgos y en file-services.js
-            se descomente request() en getFileFindings (eliminar el throw).
+            Sube el archivo desde la vista de carga para generar los hallazgos de accesibilidad.
           </div>
         </div>
       )}
@@ -131,9 +170,9 @@ const ErrorDetail = () => {
         {filteredErrors.map((error) => (
           <ErrorCard key={error.id} error={error} />
         ))}
-        {!isLoading && !errorMessage && filteredErrors.length === 0 && (
+        {!isLoading && hasData && filteredErrors.length === 0 && (
           <div className="alert alert-light border">
-            No hay hallazgos disponibles para este archivo.
+            No hay hallazgos para el filtro seleccionado.
           </div>
         )}
       </div>
