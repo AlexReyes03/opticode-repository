@@ -55,6 +55,10 @@ const normalizeFinding = (finding, index) => {
  * Lee los findings del análisis estático local almacenados en localStorage
  * por useFileUpload tras la subida del archivo.
  *
+ * HU-3.2 (semántica y atributos base — Nivel A): las reglas `<html>` sin `lang` e `<img>`
+ * sin `alt` se detectan en `utils/htmlSyntaxAnalyzer.js` (analyzeHtmlSyntax), no aquí.
+ * Esta vista solo normaliza y muestra cada finding (línea, severidad crítica, snippet).
+ *
  * TODO(backend): Cuando el endpoint GET /api/audit/<fileId>/findings/ esté disponible,
  * reemplazar loadAuditResult() por getFileFindings(projectId, fileId) de file-services.js
  * y mapear la respuesta a través de normalizeFinding.

@@ -15,7 +15,7 @@ import request from '../api/fetch-wrapper';
 
 /**
  * Claves de localStorage para persistencia de tokens.
- * Django Simple JWT devuelve `access` y `refresh` en POST /api/login/.
+ * Django Simple JWT devuelve `access` y `refresh` en POST /api/auth/login/.
  */
 const TOKEN_KEYS = {
   ACCESS:  'access_token',
@@ -130,7 +130,7 @@ export const AuthProvider = ({ children }) => {
   }, [storeTokens, clearTokens]);
 
   /**
-   * Inicia sesión contra POST /api/login/ (TokenObtainPairView de Simple JWT).
+   * Inicia sesión contra POST /api/auth/login/ (LoginView de Simple JWT).
    * Persiste access y refresh en localStorage.
    * La navegación tras el login es responsabilidad del componente consumidor.
    *
@@ -142,7 +142,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await request('/api/login/', {
+      const data = await request('/api/auth/login/', {
         method: 'POST',
         body: credentials,
       });
@@ -166,7 +166,7 @@ export const AuthProvider = ({ children }) => {
     const refresh = localStorage.getItem(TOKEN_KEYS.REFRESH);
     try {
       if (refresh) {
-        await request('/api/logout/', { method: 'POST', body: { refresh } });
+        await request('/api/auth/logout/', { method: 'POST', body: { refresh } });
       }
     } catch {
       // El logout local siempre procede aunque el servidor falle.
