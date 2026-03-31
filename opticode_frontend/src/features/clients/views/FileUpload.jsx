@@ -2,14 +2,11 @@ import { Link, useParams } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import DropZone from '../components/DropZone';
 import FileStatusList from '../components/FileStatusList';
-
-const MOCK_FILES = [
-  { name: 'index.html', size: '1.2 MB', status: 'completed', score: 75 },
-  { name: 'styles.css', size: '45 KB', status: 'analyzing' },
-];
+import { useFileUpload } from '../hooks/useFileUpload';
 
 const FileUpload = () => {
   const { projectId } = useParams();
+  const { files, handleFile } = useFileUpload(projectId);
 
   return (
     <section>
@@ -44,6 +41,7 @@ const FileUpload = () => {
             title="Archivo Individual"
             description="Arrastra tu archivo HTML o CSS aquí o"
             constraints="Soporte: .html, .css | 1KB - 10MB"
+            onFile={handleFile}
           />
         </div>
         <div className="col">
@@ -52,12 +50,13 @@ const FileUpload = () => {
             title="Carga en Lote (ZIP)"
             description="Arrastra tu archivo .zip comprimido aquí o"
             constraints="Máx. 50 archivos | 50MB | Solo procesa HTML/CSS"
+            onFile={handleFile}
           />
         </div>
       </div>
 
       {/* Files list */}
-      <FileStatusList files={MOCK_FILES} />
+      <FileStatusList files={files} />
     </section>
   );
 };

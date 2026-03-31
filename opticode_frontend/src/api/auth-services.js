@@ -2,8 +2,7 @@ import request from './fetch-wrapper';
 
 /**
  * Servicios de autenticación. Todas las peticiones pasan por fetch-wrapper
- * (JWT, refresh y manejo de errores). Los payloads están pensados para
- * integrarse con endpoints Django/DRF estándar.
+ * (JWT, refresh y manejo de errores).
  *
  * Endpoints reales del backend (config/urls.py → features.auth.urls):
  *   POST /api/auth/register/       — registro de usuario.
@@ -42,24 +41,26 @@ export const loginUser = (credentials) =>
 /**
  * Solicitud de restablecimiento de contraseña (envío de correo con enlace).
  *
- * Backend esperado: POST /api/forgot-password/
+ * TODO(backend): Endpoint pendiente de implementar en el backend.
+ * URL esperada: POST /api/auth/forgot-password/
  * Body: { email: string }.
- * Respuesta típica: 200/202 con mensaje genérico (por seguridad no se revela si el email existe).
+ * Respuesta esperada: 200/202 con mensaje genérico (sin revelar si el email existe).
  *
  * @param {{ email: string }} data
  * @returns {Promise<object>}
  */
 export const forgotPassword = (data) =>
-  request('/api/forgot-password/', { method: 'POST', body: data });
+  request('/api/auth/forgot-password/', { method: 'POST', body: data });
 
 /**
  * Confirmación de nueva contraseña con el token recibido por correo.
  *
- * Backend esperado: POST /api/reset-password/
- * Body: { uid: string, token: string, new_password: string } (o solo token + new_password según el backend).
- * Respuesta típica: 200 con mensaje de éxito.
+ * TODO(backend): Endpoint pendiente de implementar en el backend.
+ * URL esperada: POST /api/auth/reset-password/
+ * Body: { uid: string, token: string, new_password: string }.
+ * Respuesta esperada: 200 con mensaje de éxito.
  *
- * @param {{ uid?: string, token: string, new_password: string }} data
+ * @param {{ uid: string, token: string, new_password: string }} data
  * @returns {Promise<object>}
  */
 export const resetPassword = (data) =>

@@ -6,7 +6,7 @@
  *   const data = await request('/api/...', { method: 'POST', files: [{ field: 'file', file }] }); // multipart
  *
  * Endpoints que este módulo consume internamente:
- *   POST /api/login/          — TokenObtainPairView: recibe { username, password },
+ *   POST /api/auth/login/     — LoginView: recibe { email, password },
  *                               devuelve { access, refresh }.
  *   POST /api/token/refresh/  — TokenRefreshView: recibe { refresh },
  *                               devuelve { access } y { refresh } si ROTATE_REFRESH_TOKENS=True.
@@ -203,8 +203,7 @@ export default async function request(
   const url = `${BASE_URL.replace(/\/$/, '')}${normalizedEndpoint}`;
 
   const isAuthEndpoint =
-    normalizedEndpoint.includes('/api/login') ||
-    normalizedEndpoint.includes('/login')     ||
+    normalizedEndpoint.includes('/api/auth/login')  ||
     normalizedEndpoint.includes('/api/token/refresh');
 
   let opts = { method, headers: { ...headers }, signal };
