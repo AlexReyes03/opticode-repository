@@ -1,8 +1,18 @@
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import StatusBadge from '../../../components/shared/StatusBadge';
+import { suspendUser } from '../../../api/admin-services';
 
-const UserTable = ({ users = [] }) => {
+const UserTable = ({ users = [], onRefresh }) => {
+  const handleSuspend = async (id) => {
+    try {
+      await suspendUser(id);
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error('Failed to suspend user', error);
+    }
+  };
+
   return (
     <div className="card overflow-hidden">
       <table className="table table-hover mb-0">
@@ -28,6 +38,7 @@ const UserTable = ({ users = [] }) => {
                     type="button"
                     className="btn btn-outline-warning btn-sm d-flex align-items-center p-1"
                     title={user.status === 'active' ? 'Suspender' : 'Reactivar'}
+                    onClick={() => handleSuspend(user.id)}
                   >
                     <BlockOutlinedIcon style={{ fontSize: '1rem' }} />
                   </button>
