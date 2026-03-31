@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import PublicRoute from './PublicRoute';
 import PrivateRoute from './PrivateRoute';
 import AuthLayout from '../components/auth/AuthLayout';
@@ -23,8 +23,7 @@ import AdminDashboard from '../features/admin/views/AdminDashboard';
 
 const AppRouter = () => {
   return (
-    <BrowserRouter>
-      <Routes>
+    <Routes>
         {/* Public routes — Auth layout (split brand + form) */}
         <Route element={<PublicRoute />}>
           <Route element={<AuthLayout />}>
@@ -58,7 +57,6 @@ const AppRouter = () => {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-    </BrowserRouter>
   );
 };
 

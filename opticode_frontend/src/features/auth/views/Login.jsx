@@ -7,13 +7,14 @@ import AuthFormField from '../components/AuthFormField';
 import { useAuth } from '../../../contexts/AuthContext';
 
 const Login = () => {
-  const { login, error: authError, loading } = useAuth();
+  const { login, error: authError, loading, clearError } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
 
   const handleChange = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
     if (error) setError('');
+    if (authError) clearError();
   };
 
   const handleSubmit = async (e) => {
