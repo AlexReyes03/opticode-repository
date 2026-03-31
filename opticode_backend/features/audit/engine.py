@@ -8,9 +8,10 @@ elemento o selector afectado). El modelo :class:`Finding` almacena ese valor en
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable, Iterable
+from django.db import transaction
 
-from features.audit.models import AuditResult, Finding
+from features.audit.models import AuditResult, Finding, UploadedFile
 
 
 def _normalize_severity(raw: str | None) -> str:
@@ -21,6 +22,34 @@ def _normalize_severity(raw: str | None) -> str:
     if s in ("error", "critical"):
         return Finding.Severity.ERROR
     return Finding.Severity.WARNING
+
+
+def _count_severities(findings: Iterable[dict[str, Any]]) -> tuple[int, int]:
+    """
+    Cuenta críticas (error|critical) y advertencias (warning) en la salida de reglas.
+
+    :returns: (critical_count, warning_count)
+    """
+    critical = 0
+    warning = 0
+    for f in findings:
+        if not isinstance(f, dict):
+            continue
+        sev = _normalize_severity(f.get("severity"))
+        if sev == Finding.Severity.ERROR:
+            critical += 1
+        else:
+            warning += 1
+    return critical, warning
+
+
+def _compute_score(critical_count: int, warning_count: int) -> float:
+    """
+    HU-3.6 scoring:
+      score = 100 - 10*criticas - 5*advertencias, mínimo 0.
+    """
+    score = 100 - (10 * int(critical_count)) - (5 * int(warning_count))
+    return float(max(0, score))
 
 
 def persist_findings(audit_result: AuditResult, findings: list[dict[str, Any]]) -> list[Finding]:
@@ -72,3 +101,59 @@ def persist_findings(audit_result: AuditResult, findings: list[dict[str, Any]]) 
 
     Finding.objects.bulk_create(to_create)
     return to_create
+
+
+@transaction.atomic
+def run_audit(
+    uploaded_file: UploadedFile,
+    *,
+    rules: list[Callable[[str], list[dict[str, Any]]]] | None = None,
+    content: str | None = None,
+) -> dict[str, Any]:
+    """
+    Orquestador de auditoría + scoring (HU-3.6).
+
+    - Ejecuta reglas (si se proveen) contra `content`.
+    - Calcula score = 100 − 10×críticas − 5×advertencias (mínimo 0).
+    - Crea AuditResult + Finding(s) y persiste `UploadedFile.score`.
+
+    Nota: si `rules` o `content` no se proporcionan, se asume `findings=[]` y el score será 100.
+    Esto permite integrar el orquestador de forma incremental sin romper el flujo de subida.
+
+    :returns: {
+      "audit_result_id": int,
+      "score": float,
+      "critical_count": int,
+      "warning_count": int,
+    }
+    """
+    findings: list[dict[str, Any]] = []
+
+    if rules and content is not None:
+        for rule in rules:
+            if not callable(rule):
+                continue
+            out = rule(content)
+            if isinstance(out, list):
+                findings.extend([f for f in out if isinstance(f, dict)])
+
+    critical_count, warning_count = _count_severities(findings)
+    score = _compute_score(critical_count, warning_count)
+
+    status = AuditResult.Status.FAILED if critical_count > 0 else AuditResult.Status.APPROVED
+
+    audit_result = AuditResult.objects.create(
+        uploaded_file=uploaded_file,
+        status=status,
+    )
+    persist_findings(audit_result, findings)
+
+    uploaded_file.score = score
+    uploaded_file.save(update_fields=["score"])
+
+    return {
+        "audit_result_id": audit_result.id,
+        "score": score,
+        "critical_count": critical_count,
+        "warning_count": warning_count,
+    }
