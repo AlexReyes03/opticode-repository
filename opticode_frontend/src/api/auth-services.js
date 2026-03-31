@@ -5,9 +5,9 @@ import request from './fetch-wrapper';
  * (JWT, refresh y manejo de errores). Los payloads están pensados para
  * integrarse con endpoints Django/DRF estándar.
  *
- * Endpoints esperados en el backend:
- *   POST /api/register/           — registro de usuario.
- *   POST /api/login/               — obtención de tokens (Simple JWT).
+ * Endpoints reales del backend (config/urls.py → features.auth.urls):
+ *   POST /api/auth/register/       — registro de usuario.
+ *   POST /api/auth/login/          — obtención de tokens (Simple JWT).
  *   POST /api/forgot-password/     — solicitud de restablecimiento.
  *   POST /api/reset-password/      — confirmación con token/uid.
  */
@@ -15,29 +15,29 @@ import request from './fetch-wrapper';
 /**
  * Registro de usuario.
  *
- * Backend esperado: POST /api/register/
- * Body: { email, password, ... } (campos adicionales según el backend).
+ * Backend: POST /api/auth/register/
+ * Body: { email, password, first_name, last_name }.
  * Respuesta típica: 201 con datos del usuario o 400 con errores de validación.
  *
- * @param {Object} data - { email: string, password: string, ... }
+ * @param {Object} data - { email: string, password: string, first_name: string, last_name: string }
  * @returns {Promise<object>} Respuesta del backend (usuario creado o detalle de error).
  */
 export const registerUser = (data) =>
-  request('/api/register/', { method: 'POST', body: data });
+  request('/api/auth/register/', { method: 'POST', body: data });
 
 /**
  * Inicio de sesión. Devuelve access y refresh token (Simple JWT).
  * La persistencia de tokens la gestiona AuthContext tras llamar a loginUser.
  *
- * Backend esperado: POST /api/login/
- * Body: { username, password } o { email, password } según configuración del backend.
+ * Backend: POST /api/auth/login/
+ * Body: { email, password }.
  * Respuesta: { access: string, refresh: string }.
  *
- * @param {{ username?: string, email?: string, password: string }} credentials
+ * @param {{ email: string, password: string }} credentials
  * @returns {Promise<{ access: string, refresh: string }>}
  */
 export const loginUser = (credentials) =>
-  request('/api/login/', { method: 'POST', body: credentials });
+  request('/api/auth/login/', { method: 'POST', body: credentials });
 
 /**
  * Solicitud de restablecimiento de contraseña (envío de correo con enlace).
@@ -64,3 +64,4 @@ export const forgotPassword = (data) =>
  */
 export const resetPassword = (data) =>
   request('/api/reset-password/', { method: 'POST', body: data });
+

@@ -142,7 +142,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await request('/api/login/', {
+      const data = await request('/api/auth/login/', {
         method: 'POST',
         body: credentials,
       });
@@ -166,7 +166,7 @@ export const AuthProvider = ({ children }) => {
     const refresh = localStorage.getItem(TOKEN_KEYS.REFRESH);
     try {
       if (refresh) {
-        await request('/api/logout/', { method: 'POST', body: { refresh } });
+        await request('/api/auth/logout/', { method: 'POST', body: { refresh } });
       }
     } catch {
       // El logout local siempre procede aunque el servidor falle.
