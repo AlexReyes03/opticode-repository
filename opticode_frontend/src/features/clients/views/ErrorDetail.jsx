@@ -60,7 +60,7 @@ const normalizeFinding = (finding, index) => {
  * sin `alt` se detectan en `utils/htmlSyntaxAnalyzer.js` (analyzeHtmlSyntax), no aquí.
  * Esta vista solo normaliza y muestra cada finding (línea, severidad crítica, snippet).
  *
- * Carga: primero getFileFindings (GET /api/projects/.../findings/); si falla, loadAuditResult.
+ * Carga: primero getFileFindings (GET /api/audit/<fileId>/findings/); si falla, loadAuditResult.
  */
 const ErrorDetail = () => {
   const { projectId, fileId } = useParams();

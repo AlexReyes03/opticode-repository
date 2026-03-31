@@ -37,7 +37,7 @@ export const uploadZip = (projectId, file) =>
 /**
  * Reporte agregado del archivo (nombre, puntuación, conteos por severidad, etc.).
  *
- * Backend esperado (S2-JM-02): GET /api/projects/:projectId/files/:fileId/report/
+ * Backend esperado (S2-JM-02): GET /api/audit/:fileId/report/
  * Contrato sugerido: { filename?, score, critical|critical_count, warnings|warning_count }.
  * Si el endpoint aún no existe (404), FileReport usa fallback desde auditStorage (análisis local).
  *
@@ -45,13 +45,13 @@ export const uploadZip = (projectId, file) =>
  * @param {string|number} fileId
  * @returns {Promise<object>}
  */
-export const getFileReport = (projectId, fileId) =>
-  request(`/api/projects/${projectId}/files/${fileId}/report/`);
+export const getFileReport = (_projectId, fileId) =>
+  request(`/api/audit/${fileId}/report/`);
 
 /**
  * Listado de hallazgos WCAG del archivo para la vista de detalle.
  *
- * Backend esperado: GET /api/projects/:projectId/files/:fileId/findings/
+ * Backend esperado: GET /api/audit/:fileId/findings/
  * Respuesta: array de hallazgos o { results: [...] } (DRF paginado).
  * El motor backend debe incluir reglas HU-3.2 (html sin lang, img sin alt) cuando corresponda.
  * Si el endpoint aún no existe (404), ErrorDetail usa fallback desde auditStorage.
@@ -60,7 +60,7 @@ export const getFileReport = (projectId, fileId) =>
  * @param {string|number} fileId
  * @returns {Promise<Array<object>>}
  */
-export const getFileFindings = async (projectId, fileId) => {
-  const data = await request(`/api/projects/${projectId}/files/${fileId}/findings/`);
+export const getFileFindings = async (_projectId, fileId) => {
+  const data = await request(`/api/audit/${fileId}/findings/`);
   return Array.isArray(data) ? data : (data?.results ?? []);
 };
