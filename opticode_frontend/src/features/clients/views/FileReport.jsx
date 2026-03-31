@@ -4,33 +4,87 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import ScoreDonutChart from '../components/ScoreDonutChart';
+import { getFileReport } from '../../../api/file-services';
 import { loadAuditResult } from '../utils/auditStorage';
+
+/**
+ * Unifica la respuesta del GET reporte (backend) con el shape del análisis local.
+ * @param {object|null|undefined} raw
+ * @returns {{ score: number, criticalCount: number, warningCount: number, filename: string|null } | null}
+ */
+const normalizeReportShape = (raw) => {
+  if (!raw || typeof raw !== 'object') return null;
+  return {
+    score: Number(raw.score ?? 0),
+    criticalCount: Number(raw.critical ?? raw.critical_count ?? raw.criticalCount ?? 0),
+    warningCount: Number(raw.warnings ?? raw.warning_count ?? raw.warningCount ?? 0),
+    filename: raw.filename ?? raw.name ?? null,
+  };
+};
 
 /**
  * Reporte de accesibilidad de un archivo analizado.
  *
- * Lee los resultados del análisis WCAG estático generados por htmlSyntaxAnalyzer
- * y almacenados en localStorage por useFileUpload al momento de la subida.
- *
- * TODO(backend): Cuando el endpoint GET /api/audit/<fileId>/report/ esté disponible,
- * reemplazar loadAuditResult() por getFileReport(projectId, fileId) de file-services.js.
- * El shape esperado: { score, criticalCount, warningCount, filename }.
+ * Orden de carga: GET getFileReport (S2-JM-02); si falla o no hay datos, loadAuditResult (localStorage).
  */
 const FileReport = () => {
   const { projectId, fileId } = useParams();
   const navigate = useNavigate();
   const [report, setReport] = useState(null);
+  const [reportLabel, setReportLabel] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const result = loadAuditResult(projectId, fileId);
-    setReport(result ?? null);
-    setIsLoading(false);
+    let mounted = true;
+
+    const load = async () => {
+      setIsLoading(true);
+      setReport(null);
+      setReportLabel('');
+
+      try {
+        const apiRaw = await getFileReport(projectId, fileId);
+        const normalized = normalizeReportShape(apiRaw);
+        if (mounted && normalized) {
+          setReport({
+            score: normalized.score,
+            criticalCount: normalized.criticalCount,
+            warningCount: normalized.warningCount,
+          });
+          setReportLabel(normalized.filename ?? '');
+          setIsLoading(false);
+          return;
+        }
+      } catch {
+        // Endpoint aún no desplegado o error de red: continuar con caché local.
+      }
+
+      const local = loadAuditResult(projectId, fileId);
+      if (mounted) {
+        setReport(
+          local
+            ? {
+                score: local.score,
+                criticalCount: local.criticalCount,
+                warningCount: local.warningCount,
+              }
+            : null
+        );
+        setReportLabel('');
+        setIsLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
   }, [projectId, fileId]);
 
   const reportScore = Number(report?.score ?? 0);
   const reportCritical = Number(report?.criticalCount ?? 0);
   const reportWarnings = Number(report?.warningCount ?? 0);
+  const breadcrumbTitle = reportLabel || `Archivo ${fileId}`;
 
   return (
     <section>
@@ -50,7 +104,7 @@ const FileReport = () => {
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
           </li>
           <li className="breadcrumb-item active" aria-current="page">
-            {`Archivo ${fileId}`}
+            {breadcrumbTitle}
           </li>
         </ol>
       </nav>

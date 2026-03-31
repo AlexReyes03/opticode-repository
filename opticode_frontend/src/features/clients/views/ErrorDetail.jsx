@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ErrorCard from '../components/ErrorCard';
 import ErrorFilter from '../components/ErrorFilter';
+import { getFileFindings } from '../../../api/file-services';
 import { loadAuditResult } from '../utils/auditStorage';
 
 /**
@@ -59,9 +60,7 @@ const normalizeFinding = (finding, index) => {
  * sin `alt` se detectan en `utils/htmlSyntaxAnalyzer.js` (analyzeHtmlSyntax), no aquí.
  * Esta vista solo normaliza y muestra cada finding (línea, severidad crítica, snippet).
  *
- * TODO(backend): Cuando el endpoint GET /api/audit/<fileId>/findings/ esté disponible,
- * reemplazar loadAuditResult() por getFileFindings(projectId, fileId) de file-services.js
- * y mapear la respuesta a través de normalizeFinding.
+ * Carga: primero getFileFindings (GET /api/projects/.../findings/); si falla, loadAuditResult.
  */
 const ErrorDetail = () => {
   const { projectId, fileId } = useParams();
@@ -71,11 +70,38 @@ const ErrorDetail = () => {
   const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
-    const result = loadAuditResult(projectId, fileId);
-    const findings = result?.findings ?? [];
-    setErrors(findings.map(normalizeFinding));
-    setHasData(result !== null);
-    setIsLoading(false);
+    let mounted = true;
+
+    const load = async () => {
+      setIsLoading(true);
+      setErrors([]);
+      setHasData(false);
+
+      try {
+        const list = await getFileFindings(projectId, fileId);
+        if (mounted && Array.isArray(list)) {
+          setErrors(list.map(normalizeFinding));
+          setHasData(true);
+          setIsLoading(false);
+          return;
+        }
+      } catch {
+        // Sin endpoint o error: usar análisis local si existe.
+      }
+
+      const result = loadAuditResult(projectId, fileId);
+      const findings = result?.findings ?? [];
+      if (mounted) {
+        setErrors(findings.map(normalizeFinding));
+        setHasData(result !== null);
+        setIsLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
   }, [projectId, fileId]);
 
   const filteredErrors = errors.filter((err) => {
