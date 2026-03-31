@@ -5,6 +5,7 @@ import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import logo from '../../assets/img/ack_logo.png';
+import { useAuth } from '../../contexts/AuthContext';
 
 const mainMenu = [
   { to: '/dashboard', label: 'Mis Proyectos', icon: FolderCopyOutlinedIcon },
@@ -18,6 +19,7 @@ const bottomMenu = [
 
 const Sidebar = () => {
   const location = useLocation();
+  const { logout } = useAuth();
 
   const isActive = (path) => location.pathname.startsWith(path);
 
@@ -63,7 +65,7 @@ const Sidebar = () => {
             <button
               type="button"
               className="navbar-sidebar__link navbar-sidebar__link--danger"
-              onClick={() => {/* logout logic */ }}
+              onClick={logout}
               style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}
             >
               <LogoutOutlinedIcon />
