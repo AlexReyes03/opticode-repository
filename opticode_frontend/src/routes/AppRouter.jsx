@@ -16,6 +16,7 @@ import FileUpload from '../features/clients/views/FileUpload';
 import ProjectDashboard from '../features/clients/views/ProjectDashboard';
 import FileReport from '../features/clients/views/FileReport';
 import ErrorDetail from '../features/clients/views/ErrorDetail';
+import UserProfile from '../features/clients/views/UserProfile';
 
 /* Admin views */
 import AdminDashboard from '../features/admin/views/AdminDashboard';
@@ -39,6 +40,7 @@ const AppRouter = () => {
         <Route element={<PrivateRoute allowedRoles={['user', 'admin']} />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<UserDashboard />} />
+            <Route path="/profile" element={<UserProfile />} />
             <Route path="/projects/:projectId" element={<ProjectDashboard />} />
             <Route path="/projects/:projectId/upload" element={<FileUpload />} />
             <Route path="/projects/:projectId/files/:fileId" element={<FileReport />} />
