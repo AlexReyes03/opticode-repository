@@ -1,7 +1,9 @@
 import zipfile
 from io import BytesIO
 
+import openpyxl
 from django.core.files.base import ContentFile
+from django.http import FileResponse
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -238,9 +240,6 @@ class ZipUploadView(APIView):
         )
 
 
-import openpyxl
-from django.http import FileResponse
-
 class ProjectExportExcelView(APIView):
     def get(self, request, pk):
         try:
@@ -270,5 +269,5 @@ class ProjectExportExcelView(APIView):
             buffer,
             as_attachment=True,
             filename=filename,
-            content_type="application/vnd.ms-excel"
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
