@@ -4,5 +4,5 @@ from .views import DashboardKPIView
 app_name = "audit"
 
 urlpatterns = [
-    path('kpis/', DashboardKPIView.as_view(), name='dashboard-kpis'),
+    path("kpis/", DashboardKPIView.as_view(), name="dashboard-kpis"),
 ]

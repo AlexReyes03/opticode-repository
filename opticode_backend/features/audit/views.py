@@ -1,10 +1,12 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Q
 
 from features.projects.models import Project
 from features.audit.models import UploadedFile, Finding
+
+CRITICAL_SCORE_THRESHOLD = 50
 
 class DashboardKPIView(APIView):
     """
@@ -19,12 +21,13 @@ class DashboardKPIView(APIView):
         # 1. Total de proyectos
         total_projects = Project.objects.filter(owner=user).count()
 
-        # 2. Promedio de scores
-        avg_score_agg = UploadedFile.objects.filter(project__owner=user).aggregate(avg_score=Avg('score'))
-        avg_score = avg_score_agg['avg_score']
-
-        # 3. Archivos con score < 50
-        files_under_50 = UploadedFile.objects.filter(project__owner=user, score__lt=50).count()
+        # 2 y 3. Promedio de scores y archivos con score < CRITICAL_SCORE_THRESHOLD
+        file_metrics = UploadedFile.objects.filter(project__owner=user).aggregate(
+            avg_score=Avg('score'),
+            files_under_threshold=Count('id', filter=Q(score__lt=CRITICAL_SCORE_THRESHOLD))
+        )
+        avg_score = file_metrics['avg_score']
+        files_under_50 = file_metrics['files_under_threshold']
 
         # 4. Distribución de severidades (error vs warning)
         severity_dist = Finding.objects.filter(
@@ -32,8 +35,8 @@ class DashboardKPIView(APIView):
         ).values('severity').annotate(count=Count('id'))
 
         distribution = {
-            'error': 0,
-            'warning': 0
+            Finding.Severity.ERROR: 0,
+            Finding.Severity.WARNING: 0
         }
         for item in severity_dist:
             sev = item['severity']
