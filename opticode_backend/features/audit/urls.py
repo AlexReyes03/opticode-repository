@@ -1,5 +1,8 @@
-from django.urls import path  # noqa: F401
+from django.urls import path
+from .views import DashboardKPIView
 
 app_name = "audit"
 
-urlpatterns = []
+urlpatterns = [
+    path("kpis/", DashboardKPIView.as_view(), name="dashboard-kpis"),
+]
