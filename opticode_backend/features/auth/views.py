@@ -1,7 +1,8 @@
 from rest_framework import generics, status, views
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from .serializers import RegisterSerializer, LoginSerializer
 from django.contrib.auth import authenticate
 
@@ -30,3 +31,37 @@ class LoginView(views.APIView):
             else:
                 return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LogoutView(views.APIView):
+    """
+    Invalida el refresh token en el server meta en blacklist.
+    Recibe { refresh } en el body y lo revoca.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response(
+                {'error': 'El refresh token es requerido.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(
+                {'detail': 'Logout exitoso. Token revocado.'},
+                status=status.HTTP_200_OK
+            )
+        except TokenError:
+            return Response(
+                {'error': 'Token inválido o expirado.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except Exception as e:
+            return Response(
+                {'error': 'Error al revocar el token.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
