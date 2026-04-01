@@ -79,6 +79,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
 
+  /** Limpia de forma manual el error actual del contexto */
+  const clearError = useCallback(() => setError(null), []);
+
   /** Persiste ambos tokens y actualiza el estado React. */
   const storeTokens = useCallback((access, refresh) => {
     if (access) {
@@ -190,10 +193,11 @@ export const AuthProvider = ({ children }) => {
     token: accessToken,
     login,
     logout,
+    clearError,
     isAuthenticated,
     loading,
     error,
-  }), [user, accessToken, login, logout, isAuthenticated, loading, error]);
+  }), [user, accessToken, login, logout, clearError, isAuthenticated, loading, error]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
@@ -206,6 +210,7 @@ export const AuthProvider = ({ children }) => {
  *   token: string|null,
  *   login: (credentials: { email: string, password: string }) => Promise<void>,
  *   logout: () => Promise<void>,
+ *   clearError: () => void,
  *   isAuthenticated: () => boolean,
  *   loading: boolean,
  *   error: string|null,
