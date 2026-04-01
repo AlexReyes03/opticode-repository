@@ -1,7 +1,9 @@
 import zipfile
 from io import BytesIO
 
+import openpyxl
 from django.core.files.base import ContentFile
+from django.http import FileResponse
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -235,4 +237,37 @@ class ZipUploadView(APIView):
         return Response(
             {"uploaded": uploaded, "ignored": ignored},
             status=status.HTTP_201_CREATED,
+        )
+
+
+class ProjectExportExcelView(APIView):
+    def get(self, request, pk):
+        try:
+            project = Project.objects.get(pk=pk, owner=request.user)
+        except Project.DoesNotExist:
+            return Response(
+                {"detail": "Proyecto no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Project Data"
+
+        ws.append(["File Name", "File Type", "Size (bytes)", "Score"])
+
+        files = UploadedFile.objects.filter(project=project)
+        for f in files:
+            ws.append([f.filename, f.file_type, f.size_bytes, getattr(f, 'score', 'N/A')])
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        filename = f"project_{pk}_export.xlsx"
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename=filename,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
