@@ -4,5 +4,5 @@ from .views import AuditReportPDFView
 app_name = "audit"
 
 urlpatterns = [
-    path('<str:fileId>/report/pdf/', AuditReportPDFView.as_view(), name='audit-report-pdf'),
+    path('<int:file_id>/report/pdf/', AuditReportPDFView.as_view(), name='audit-report-pdf'),
 ]
