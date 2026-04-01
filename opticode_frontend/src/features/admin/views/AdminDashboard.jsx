@@ -1,19 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import UserTable from '../components/UserTable';
-
-const MOCK_USERS = [
-  { id: 1, name: 'Carlos Méndez', email: 'carlos@ejemplo.com', registeredAt: '02 Mar 2026', status: 'active' },
-  { id: 2, name: 'Ana Torres', email: 'ana.torres@ejemplo.com', registeredAt: '28 Feb 2026', status: 'active' },
-  { id: 3, name: 'Roberto Díaz', email: 'r.diaz@ejemplo.com', registeredAt: '15 Feb 2026', status: 'suspended' },
-  { id: 4, name: 'María López', email: 'maria.l@ejemplo.com', registeredAt: '10 Feb 2026', status: 'active' },
-  { id: 5, name: 'Juan Hernández', email: 'juanh@ejemplo.com', registeredAt: '05 Feb 2026', status: 'suspended' },
-];
+import { getUsers } from '../../../api/admin-services';
 
 const AdminDashboard = () => {
+  const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const data = await getUsers();
+        setUsers(data);
+      } catch (error) {
+        console.error('Failed to fetch users', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filtered = MOCK_USERS.filter(
+    fetchUsers();
+  }, [refreshKey]);
+
+  const filtered = users.filter(
     (u) =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()),
@@ -40,7 +51,15 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <UserTable users={filtered} />
+      {loading ? (
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+        </div>
+      ) : (
+        <UserTable users={filtered} onRefresh={async () => setRefreshKey(k => k + 1)} />
+      )}
     </section>
   );
 };
