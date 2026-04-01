@@ -7,7 +7,7 @@ const UserTable = ({ users = [], onRefresh }) => {
   const handleSuspend = async (id) => {
     try {
       await suspendUser(id);
-      if (onRefresh) onRefresh();
+      if (onRefresh) await onRefresh();
     } catch (error) {
       console.error('Failed to suspend user', error);
     }
@@ -37,7 +37,7 @@ const UserTable = ({ users = [], onRefresh }) => {
                   <button
                     type="button"
                     className="btn btn-outline-warning btn-sm d-flex align-items-center p-1"
-                    title={user.status === 'active' ? 'Suspender' : 'Reactivar'}
+                    title="Suspender"
                     onClick={() => handleSuspend(user.id)}
                   >
                     <BlockOutlinedIcon style={{ fontSize: '1rem' }} />

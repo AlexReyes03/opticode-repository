@@ -7,22 +7,22 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const data = await getUsers();
-      setUsers(data);
-    } catch (error) {
-      console.error('Failed to fetch users', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const data = await getUsers();
+        setUsers(data);
+      } catch (error) {
+        console.error('Failed to fetch users', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchUsers();
-  }, []);
+  }, [refreshKey]);
 
   const filtered = users.filter(
     (u) =>
@@ -58,7 +58,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       ) : (
-        <UserTable users={filtered} onRefresh={fetchUsers} />
+        <UserTable users={filtered} onRefresh={async () => setRefreshKey(k => k + 1)} />
       )}
     </section>
   );
