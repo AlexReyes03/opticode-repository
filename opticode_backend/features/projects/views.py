@@ -9,6 +9,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from features.audit.engine import run_audit
 from features.audit.models import UploadedFile
 from features.projects.models import Project
 
@@ -105,6 +106,8 @@ class FileUploadView(APIView):
                 file_type=detected_type,
                 size_bytes=file.size,
             )
+
+        run_audit(uploaded, content=content.decode("utf-8", errors="ignore"))
 
         return Response(
             {
@@ -215,6 +218,7 @@ class ZipUploadView(APIView):
                 continue
 
             saved = _save_or_overwrite(project, filename, content, file_type)
+            run_audit(saved, content=content.decode("utf-8", errors="ignore"))
             uploaded.append({
                 "id": saved.pk,
                 "filename": saved.filename,
