@@ -1,14 +1,30 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import MenuIcon from '@mui/icons-material/Menu';
+import logo from '../../assets/img/ack_logo.png';
 
 const AppLayout = () => {
   return (
-    <div className="d-flex vh-100">
+    <div className="d-flex flex-column flex-md-row vh-100">
+      {/* Mobile Topbar */}
+      <header className="d-md-none bg-white border-bottom px-3 py-2 d-flex align-items-center justify-content-between sticky-top z-3">
+        <div className="d-flex align-items-center gap-2">
+          <img src={logo} alt="OptiCode" width={32} className="rounded" />
+          <span className="fw-bold" style={{ color: 'var(--oc-navy)' }}>OptiCode</span>
+        </div>
+        <button
+          className="btn btn-outline-secondary border-0 p-1"
+          type="button"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#sidebarMenu"
+          aria-controls="sidebarMenu"
+        >
+          <MenuIcon />
+        </button>
+      </header>
+
       <Sidebar />
-      <main
-        className="flex-grow-1 bg-body-secondary"
-        style={{ marginLeft: 'var(--oc-sidebar-width)', padding: '2rem 2.5rem', minHeight: '100vh' }}
-      >
+      <main className="flex-grow-1 bg-body-secondary app-main-content">
         <Outlet />
       </main>
     </div>
