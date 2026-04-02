@@ -8,6 +8,7 @@ elemento o selector afectado). El modelo :class:`Finding` almacena ese valor en
 
 from __future__ import annotations
 
+from html import escape
 from typing import Any, Callable, Iterable
 from django.db import transaction
 
@@ -91,7 +92,7 @@ def persist_findings(audit_result: AuditResult, findings: list[dict[str, Any]]) 
                 wcag_rule=str(f.get("wcag_rule", "") or "")[:50],
                 message=str(f.get("message", f.get("description", "")) or ""),
                 line_number=line_number,
-                code_snippet=str(f.get("code_snippet", "") or ""),
+                code_snippet=escape(str(f.get("code_snippet", "") or "")),
                 affected_element=str(f.get("category", "") or ""),
             )
         )
