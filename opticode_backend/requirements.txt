@@ -3,6 +3,8 @@ djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
 django-cors-headers==4.9.0
 django-environ==0.13.0
+beautifulsoup4==4.12.3
+html5lib==1.1
 mysqlclient==2.2.8
 loguru==0.7.3
 weasyprint==61.0
