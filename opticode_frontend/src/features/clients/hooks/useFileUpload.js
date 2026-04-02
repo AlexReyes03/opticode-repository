@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadFile, uploadZip } from '../../../api/file-services';
-import { analyzeHtmlSyntax } from '../utils/htmlSyntaxAnalyzer';
-import { storeAuditResult } from '../utils/auditStorage';
 
 /**
  * Formatea bytes a una cadena legible.
@@ -18,16 +16,14 @@ function formatBytes(bytes) {
 /**
  * Gestiona la subida de archivos individuales o ZIP a un proyecto.
  *
- * Flujo para archivos HTML:
- *   1. Lee el contenido del archivo con FileReader.
- *   2. Ejecuta `analyzeHtmlSyntax` (HU-3.1 + HU-3.2) antes de enviar al backend.
- *   3. Sube el archivo al backend mediante `uploadFile` / `uploadZip`.
- *   4. Asocia los resultados del análisis con el fileId devuelto por el backend
- *      y los persiste en localStorage vía `storeAuditResult`.
- *   5. Navega automáticamente a FileReport del archivo subido.
+ * Flujo:
+ *   1. Sube el archivo al backend vía uploadFile / uploadZip.
+ *   2. Para archivos individuales: navega automáticamente a FileReport
+ *      usando el fileId devuelto por el backend.
+ *   3. Para ZIP: permanece en la vista de carga; el backend ejecuta
+ *      run_audit() por cada archivo internamente.
  *
- * Los archivos CSS y ZIP se suben normalmente; el análisis WCAG local
- * no aplica para esos formatos.
+ * El análisis WCAG lo realiza exclusivamente el backend (run_audit).
  *
  * @param {string|number} projectId
  * @returns {{ files: Array<object>, handleFile: (file: File) => void }}
@@ -45,42 +41,20 @@ export function useFileUpload(projectId) {
       if (!file) return;
 
       const isZip = file.name.toLowerCase().endsWith('.zip');
-      const isHtml = /\.html?$/i.test(file.name);
 
       setFiles((prev) => [
         ...prev.filter((f) => f.name !== file.name),
-        { name: file.name, size: formatBytes(file.size), status: 'analyzing' },
+        { name: file.name, size: formatBytes(file.size), status: 'uploading' },
       ]);
 
       try {
-        // Análisis WCAG estático local (solo HTML).
-        let analysisResult = null;
-        if (isHtml) {
-          const content = await file.text();
-          analysisResult = analyzeHtmlSyntax(content);
-        }
-
         if (isZip) {
-          const data = await uploadZip(projectId, file);
-          const first = data?.uploaded?.[0];
-          if (first?.id && analysisResult) {
-            storeAuditResult(projectId, first.id, analysisResult);
-          }
-          patchFile(file.name, {
-            status: 'completed',
-            score: analysisResult?.score ?? null,
-          });
+          await uploadZip(projectId, file);
+          patchFile(file.name, { status: 'completed' });
         } else {
           const data = await uploadFile(projectId, file);
           const fileId = data?.id ?? null;
-          if (fileId && analysisResult) {
-            storeAuditResult(projectId, fileId, analysisResult);
-          }
-          patchFile(file.name, {
-            status: 'completed',
-            score: analysisResult?.score ?? data?.score ?? null,
-            fileId,
-          });
+          patchFile(file.name, { status: 'completed', fileId });
           if (fileId) {
             navigate(`/projects/${projectId}/files/${fileId}`);
           }

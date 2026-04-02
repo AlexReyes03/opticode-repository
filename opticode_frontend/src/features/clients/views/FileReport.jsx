@@ -5,27 +5,25 @@ import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import ScoreDonutChart from '../components/ScoreDonutChart';
 import { getFileReport } from '../../../api/file-services';
-import { loadAuditResult } from '../utils/auditStorage';
 
 /**
- * Unifica la respuesta del GET reporte (backend) con el shape del análisis local.
- * @param {object|null|undefined} raw
- * @returns {{ score: number, criticalCount: number, warningCount: number, filename: string|null } | null}
+ * Normaliza la respuesta del backend al shape esperado por la vista.
+ * Contrato esperado: GET /api/audit/:fileId/report/
+ * { filename?, score, critical_count, warning_count }
  */
 const normalizeReportShape = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
   return {
     score: Number(raw.score ?? 0),
-    criticalCount: Number(raw.critical ?? raw.critical_count ?? raw.criticalCount ?? 0),
-    warningCount: Number(raw.warnings ?? raw.warning_count ?? raw.warningCount ?? 0),
-    filename: raw.filename ?? raw.name ?? null,
+    criticalCount: Number(raw.critical_count ?? raw.critical ?? 0),
+    warningCount: Number(raw.warning_count ?? raw.warnings ?? 0),
+    filename: raw.filename ?? null,
   };
 };
 
 /**
  * Reporte de accesibilidad de un archivo analizado.
- *
- * Orden de carga: GET getFileReport (S2-JM-02); si falla o no hay datos, loadAuditResult (localStorage).
+ * Lee el resultado desde GET /api/audit/:fileId/report/ (backend).
  */
 const FileReport = () => {
   const { projectId, fileId } = useParams();
@@ -40,45 +38,23 @@ const FileReport = () => {
     const load = async () => {
       setIsLoading(true);
       setReport(null);
-      setReportLabel('');
 
       try {
-        const apiRaw = await getFileReport(projectId, fileId);
-        const normalized = normalizeReportShape(apiRaw);
-        if (mounted && normalized) {
-          setReport({
-            score: normalized.score,
-            criticalCount: normalized.criticalCount,
-            warningCount: normalized.warningCount,
-          });
-          setReportLabel(normalized.filename ?? '');
-          setIsLoading(false);
-          return;
+        const raw = await getFileReport(projectId, fileId);
+        const normalized = normalizeReportShape(raw);
+        if (mounted) {
+          setReport(normalized);
+          setReportLabel(normalized?.filename ?? '');
         }
       } catch {
-        // Endpoint aún no desplegado o error de red: continuar con caché local.
-      }
-
-      const local = loadAuditResult(projectId, fileId);
-      if (mounted) {
-        setReport(
-          local
-            ? {
-                score: local.score,
-                criticalCount: local.criticalCount,
-                warningCount: local.warningCount,
-              }
-            : null
-        );
-        setReportLabel('');
-        setIsLoading(false);
+        if (mounted) setReport(null);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
     };
 
     load();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [projectId, fileId]);
 
   const reportScore = Number(report?.score ?? 0);
