@@ -19,12 +19,12 @@ import request from './fetch-wrapper';
 /**
  * Registro de usuario.
  *
- * Backend: POST /api/auth/register/ (features.auth.RegisterView — CreateAPIView).
- * Body: { email, password, ... } (campos según el serializer del backend).
- * Respuesta: 201 con datos del usuario creado, o 400 con errores de validación.
+ * Backend: POST /api/auth/register/
+ * Body: { email, password, first_name, last_name }.
+ * Respuesta típica: 201 con datos del usuario o 400 con errores de validación.
  *
- * @param {Object} data - { email: string, password: string, ... }
- * @returns {Promise<object>}
+ * @param {Object} data - { email: string, password: string, first_name: string, last_name: string }
+ * @returns {Promise<object>} Respuesta del backend (usuario creado o detalle de error).
  */
 export const registerUser = (data) =>
   request('/api/auth/register/', { method: 'POST', body: data });
@@ -33,8 +33,8 @@ export const registerUser = (data) =>
  * Inicio de sesión. Devuelve access y refresh token (Simple JWT).
  * La persistencia de tokens la gestiona AuthContext tras llamar a loginUser.
  *
- * Backend: POST /api/auth/login/ (features.auth.LoginView).
- * Body: { email: string, password: string }.
+ * Backend: POST /api/auth/login/
+ * Body: { email, password }.
  * Respuesta: { access: string, refresh: string }.
  *
  * @param {{ email: string, password: string }} credentials
@@ -69,4 +69,5 @@ export const forgotPassword = (data) =>
  * @returns {Promise<object>}
  */
 export const resetPassword = (data) =>
-  request('/api/auth/reset-password/', { method: 'POST', body: data });
+  request('/api/reset-password/', { method: 'POST', body: data });
+
