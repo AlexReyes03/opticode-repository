@@ -30,14 +30,14 @@ const FileStatusList = ({ files = [] }) => {
                 <span className="small text-secondary">{file.size}</span>
               </div>
 
-              {file.status === 'analyzing' ? (
+              {file.status === 'uploading' ? (
                 <span className="badge bg-info bg-opacity-10 text-primary d-flex align-items-center gap-1">
                   <span
                     className="spinner-border spinner-border-sm"
                     style={{ width: '0.625rem', height: '0.625rem', borderWidth: '2px' }}
-                    role="status"
+                    aria-hidden="true"
                   />
-                  Analizando...
+                  Subiendo...
                 </span>
               ) : (
                 <span className="badge bg-success bg-opacity-10 text-success">

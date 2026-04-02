@@ -4,10 +4,11 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ErrorCard from '../components/ErrorCard';
 import ErrorFilter from '../components/ErrorFilter';
 import { getFileFindings } from '../../../api/file-services';
-import { loadAuditResult } from '../utils/auditStorage';
 
 /**
- * Normaliza el array codeLines desde distintos shapes (local vs. backend).
+ * Construye el array codeLines desde el shape del backend.
+ * El backend envía code_snippet con 3 líneas separadas por \n:
+ *   línea anterior, línea del error, línea siguiente.
  * @param {object} finding
  * @returns {Array<{ lineNumber: number, content: string }>}
  */
@@ -15,52 +16,39 @@ const normalizeCodeLines = (finding) => {
   if (Array.isArray(finding?.codeLines)) return finding.codeLines;
   if (!finding?.code_snippet) return [];
 
-  return String(finding.code_snippet)
-    .split('\n')
-    .map((content, index) => ({
-      lineNumber: Number(finding.line ?? finding.line_number ?? 0) + index,
-      content,
-    }));
+  const baseLineNumber = Number(finding.line_number ?? finding.line ?? 1);
+  const lines = String(finding.code_snippet).split('\n');
+
+  // Si hay 3 líneas, la primera corresponde a line_number - 1
+  const startLine = lines.length === 3 ? baseLineNumber - 1 : baseLineNumber;
+
+  return lines.map((content, index) => ({
+    lineNumber: startLine + index,
+    content,
+  }));
 };
 
 /**
- * Normaliza un hallazgo a la forma esperada por ErrorCard.
- * Compatible con el shape local de htmlSyntaxAnalyzer y con el shape del backend
- * (cuando el endpoint GET /api/audit/<fileId>/findings/ esté disponible).
- *
- * TODO(backend): Al activar getFileFindings() en file-services.js, los hallazgos
- * del backend pasarán por aquí sin cambios adicionales gracias al mapeo defensivo.
- *
- * @param {object} finding
- * @param {number} index
+ * Normaliza un hallazgo del backend al shape esperado por ErrorCard.
+ * Contrato del backend: { id, severity, wcag_rule, message, line_number, code_snippet, affected_element }
  */
 const normalizeFinding = (finding, index) => {
   const rawSeverity = String(finding?.severity ?? '').toLowerCase();
-  const severity = rawSeverity === 'error' || rawSeverity === 'critical'
-    ? 'critical'
-    : 'warning';
+  const severity = rawSeverity === 'error' || rawSeverity === 'critical' ? 'critical' : 'warning';
   return {
-    id: finding?.id ?? `${finding?.wcag_rule ?? 'finding'}-${index}`,
+    id: finding?.id ?? `finding-${index}`,
     severity,
-    level: finding?.level ?? (severity === 'critical' ? 'Nivel A' : 'Nivel AA'),
-    title: finding?.title ?? finding?.wcag_rule ?? 'Hallazgo WCAG',
-    description: finding?.description ?? finding?.message ?? 'Sin descripción disponible.',
-    line: Number(finding?.line ?? finding?.line_number ?? 0),
+    level: severity === 'critical' ? 'Nivel A' : 'Nivel AA',
+    title: finding?.wcag_rule ?? 'Hallazgo WCAG',
+    description: finding?.message ?? 'Sin descripción disponible.',
+    line: Number(finding?.line_number ?? finding?.line ?? 0),
     codeLines: normalizeCodeLines(finding),
   };
 };
 
 /**
  * Vista de detalle de hallazgos WCAG de un archivo.
- *
- * Lee los findings del análisis estático local almacenados en localStorage
- * por useFileUpload tras la subida del archivo.
- *
- * HU-3.2 (semántica y atributos base — Nivel A): las reglas `<html>` sin `lang` e `<img>`
- * sin `alt` se detectan en `utils/htmlSyntaxAnalyzer.js` (analyzeHtmlSyntax), no aquí.
- * Esta vista solo normaliza y muestra cada finding (línea, severidad crítica, snippet).
- *
- * Carga: primero getFileFindings (GET /api/audit/<fileId>/findings/); si falla, loadAuditResult.
+ * Lee los findings desde GET /api/audit/:fileId/findings/ (backend).
  */
 const ErrorDetail = () => {
   const { projectId, fileId } = useParams();
@@ -79,29 +67,19 @@ const ErrorDetail = () => {
 
       try {
         const list = await getFileFindings(projectId, fileId);
-        if (mounted && Array.isArray(list)) {
-          setErrors(list.map(normalizeFinding));
+        if (mounted) {
+          setErrors(Array.isArray(list) ? list.map(normalizeFinding) : []);
           setHasData(true);
-          setIsLoading(false);
-          return;
         }
       } catch {
-        // Sin endpoint o error: usar análisis local si existe.
-      }
-
-      const result = loadAuditResult(projectId, fileId);
-      const findings = result?.findings ?? [];
-      if (mounted) {
-        setErrors(findings.map(normalizeFinding));
-        setHasData(result !== null);
-        setIsLoading(false);
+        if (mounted) setHasData(false);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
     };
 
     load();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [projectId, fileId]);
 
   const filteredErrors = errors.filter((err) => {
