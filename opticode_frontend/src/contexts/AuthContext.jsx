@@ -64,10 +64,8 @@ export const AuthProvider = ({ children }) => {
   );
 
   /**
-   * `user` se obtiene decodificando el JWT payload.
-   * Contiene el claim `user_id` (configurado en Django con USER_ID_CLAIM).
-   * Para datos adicionales (email, rol, nombre) el componente debe llamar
-   * a un endpoint /api/me/ tras el login y almacenar el resultado localmente.
+   * Perfil del usuario: tras login o al hidratar sesión se rellena con GET /api/auth/me/.
+   * Hasta entonces puede ser el payload decodificado del JWT (solo claims).
    * @type {object|null}
    */
   const [user, setUser] = useState(() => {
@@ -130,6 +128,15 @@ export const AuthProvider = ({ children }) => {
         // Extensible con un sistema de notificaciones (toasts, etc.).
       },
     });
+
+    const access = localStorage.getItem(TOKEN_KEYS.ACCESS);
+    if (access && !isTokenExpired(access)) {
+      request('/api/auth/me/', { method: 'GET' })
+        .then((profile) => {
+          if (profile && typeof profile === 'object') setUser(profile);
+        })
+        .catch(() => {});
+    }
   }, [storeTokens, clearTokens]);
 
   /**
@@ -150,6 +157,14 @@ export const AuthProvider = ({ children }) => {
         body: credentials,
       });
       storeTokens(data?.access, data?.refresh);
+      if (data?.access) {
+        try {
+          const profile = await request('/api/auth/me/', { method: 'GET' });
+          if (profile && typeof profile === 'object') setUser(profile);
+        } catch {
+          // Se mantiene el usuario derivado del JWT en storeTokens.
+        }
+      }
     } catch (err) {
       const message = err?.data?.detail ?? err?.message ?? 'Credenciales incorrectas.';
       setError(message);
