@@ -12,6 +12,8 @@ import request from './fetch-wrapper';
  * Deben implementarse antes de activar forgotPassword() y resetPassword():
  *   POST /api/auth/forgot-password/   — solicitud de restablecimiento por correo.
  *   POST /api/auth/reset-password/    — confirmación con uid + token.
+ * TODO(compatibilidad): El frontend debe apuntar a /api/auth/token/refresh/
+ * para mantener la compatibilidad real con el refresh token.
  */
 
 /**
