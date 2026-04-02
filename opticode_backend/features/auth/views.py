@@ -60,8 +60,26 @@ class LogoutView(views.APIView):
                 {'error': 'Token inválido o expirado.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
-        except Exception as e:
+        except Exception:
             return Response(
                 {'error': 'Error al revocar el token.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class MeView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response(
+            {
+                'id': user.id,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'is_staff': user.is_staff,
+                'date_joined': user.date_joined,
+            },
+            status=status.HTTP_200_OK,
+        )
