@@ -17,18 +17,28 @@ def _line_number(tag: Any) -> int:
         return 1
 
 
+def _build_context_snippet(source_lines: list[str], line_number: int) -> str:
+    """Retorna las 3 líneas de contexto alrededor de line_number (1-based), separadas por \\n."""
+    idx = line_number - 1  # convertir a 0-based
+    start = max(0, idx - 1)
+    end = min(len(source_lines), idx + 2)
+    return "\n".join(source_lines[start:end])
+
+
 def _build_finding(
     *,
     tag: Any,
     message: str,
     category: str,
+    source_lines: list[str],
 ) -> dict[str, Any]:
+    line_num = _line_number(tag)
     return {
         "severity": "warning",
         "wcag_rule": HEADING_RULE_CODE,
         "message": message,
-        "line_number": _line_number(tag),
-        "code_snippet": str(tag).strip(),
+        "line_number": line_num,
+        "code_snippet": _build_context_snippet(source_lines, line_num),
         "category": category,
     }
 
@@ -43,6 +53,7 @@ def detect_heading_structure_findings(html_content: str) -> list[dict[str, Any]]
     if not headings:
         return []
 
+    source_lines = html_content.splitlines()
     findings: list[dict[str, Any]] = []
     h1_tags = [tag for tag in headings if tag.name.lower() == "h1"]
 
@@ -53,6 +64,7 @@ def detect_heading_structure_findings(html_content: str) -> list[dict[str, Any]]
                     tag=tag,
                     category="heading-h1",
                     message="Se detecto mas de un <h1>; usa un unico encabezado principal por documento.",
+                    source_lines=source_lines,
                 )
             )
 
@@ -68,6 +80,7 @@ def detect_heading_structure_findings(html_content: str) -> list[dict[str, Any]]
                         f"Salto de jerarquia detectado: se paso de <h{previous_level}> "
                         f"a <h{current_level}> sin usar <h{previous_level + 1}>."
                     ),
+                    source_lines=source_lines,
                 )
             )
         previous_level = current_level

@@ -25,6 +25,7 @@ class FindingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Finding
         fields = [
+            "id",
             "severity",
             "wcag_rule",
             "message",
@@ -37,10 +38,18 @@ class FindingSerializer(serializers.ModelSerializer):
 
 class AuditResultSerializer(serializers.ModelSerializer):
     score = serializers.FloatField(source="uploaded_file.score", read_only=True)
+    filename = serializers.CharField(source="uploaded_file.filename", read_only=True)
+    critical_count = serializers.SerializerMethodField()
+    warning_count = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(source="analyzed_at", read_only=True)
-    findings = FindingSerializer(many=True, read_only=True)
+
+    def get_critical_count(self, obj):
+        return obj.findings.filter(severity=Finding.Severity.ERROR).count()
+
+    def get_warning_count(self, obj):
+        return obj.findings.filter(severity=Finding.Severity.WARNING).count()
 
     class Meta:
         model = AuditResult
-        fields = ["score", "created_at", "findings"]
+        fields = ["score", "filename", "critical_count", "warning_count", "status", "created_at"]
         read_only_fields = fields

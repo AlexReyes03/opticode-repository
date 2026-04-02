@@ -13,6 +13,7 @@ from typing import Any, Callable, Iterable
 from django.db import transaction
 
 from features.audit.models import AuditResult, Finding, UploadedFile
+from features.audit.rules import HTML_RULES, CSS_RULES
 
 
 def _normalize_severity(raw: str | None) -> str:
@@ -59,16 +60,9 @@ def persist_findings(audit_result: AuditResult, findings: list[dict[str, Any]]) 
 
     Mapeo explícito: ``affected_element = f.get('category', '')``
 
-    Claves opcionales habituales en ``f`` (se usan fallbacks para compatibilidad):
-    - ``severity`` (error | warning | critical)
-    - ``wcag_rule``
-    - ``message`` o ``description``
-    - ``line_number`` o ``line``
-    - ``code_snippet``
-
     :param audit_result: Reporte padre ya persistido.
     :param findings: Lista de dicts retornados por las reglas.
-    :returns: Instancias creadas (aún no guardadas individualmente; se usa bulk_create).
+    :returns: Instancias creadas vía bulk_create.
     """
     if not findings:
         return []
@@ -82,7 +76,6 @@ def persist_findings(audit_result: AuditResult, findings: list[dict[str, Any]]) 
             line = int(line)
         except (TypeError, ValueError):
             line = 1
-        # PositiveIntegerField: valores estrictamente > 0 en Django.
         line_number = max(1, line)
 
         to_create.append(
@@ -114,12 +107,11 @@ def run_audit(
     """
     Orquestador de auditoría + scoring (HU-3.6).
 
-    - Ejecuta reglas (si se proveen) contra `content`.
+    - Selecciona reglas automáticamente según uploaded_file.file_type si no se proveen.
+    - Ejecuta las reglas contra `content`.
     - Calcula score = 100 − 10×críticas − 5×advertencias (mínimo 0).
-    - Crea AuditResult + Finding(s) y persiste `UploadedFile.score`.
-
-    Nota: si `rules` o `content` no se proporcionan, se asume `findings=[]` y el score será 100.
-    Esto permite integrar el orquestador de forma incremental sin romper el flujo de subida.
+    - Elimina AuditResult previo (re-auditoría) y crea uno nuevo.
+    - Persiste `UploadedFile.score`.
 
     :returns: {
       "audit_result_id": int,
@@ -128,6 +120,9 @@ def run_audit(
       "warning_count": int,
     }
     """
+    if rules is None:
+        rules = HTML_RULES if uploaded_file.file_type == UploadedFile.FileType.HTML else CSS_RULES
+
     findings: list[dict[str, Any]] = []
 
     if rules and content is not None:
@@ -142,6 +137,9 @@ def run_audit(
     score = _compute_score(critical_count, warning_count)
 
     status = AuditResult.Status.FAILED if critical_count > 0 else AuditResult.Status.APPROVED
+
+    # Eliminar resultado previo para permitir re-auditoría (OneToOneField)
+    AuditResult.objects.filter(uploaded_file=uploaded_file).delete()
 
     audit_result = AuditResult.objects.create(
         uploaded_file=uploaded_file,

@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 
 from features.projects.models import Project
 from features.audit.models import AuditResult, Finding, UploadedFile
-from features.audit.serializers import AuditResultSerializer
+from features.audit.serializers import AuditResultSerializer, FindingSerializer
 
 # Inicialización de utilidades globales del módulo
 logger = logging.getLogger(__name__)
@@ -107,7 +107,7 @@ class AuditReportPDFView(APIView):
 class AuditReportView(APIView):
     """
     Endpoint: GET /api/audit/<file_id>/report/
-    Retorna el reporte de auditoría serializado con hallazgos.
+    Retorna el resumen de auditoría: score, filename, critical_count, warning_count.
     """
 
     permission_classes = [IsAuthenticated]
@@ -118,7 +118,25 @@ class AuditReportView(APIView):
             id=file_id,
             project__owner=request.user,
         )
-
         audit_result = get_object_or_404(AuditResult, uploaded_file=uploaded_file)
         serializer = AuditResultSerializer(audit_result)
+        return Response(serializer.data)
+
+
+class FindingsView(APIView):
+    """
+    Endpoint: GET /api/audit/<file_id>/findings/
+    Retorna la lista de hallazgos WCAG del archivo auditado.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, file_id, *args, **kwargs):
+        uploaded_file = get_object_or_404(
+            UploadedFile,
+            id=file_id,
+            project__owner=request.user,
+        )
+        audit_result = get_object_or_404(AuditResult, uploaded_file=uploaded_file)
+        serializer = FindingSerializer(audit_result.findings.all(), many=True)
         return Response(serializer.data)
