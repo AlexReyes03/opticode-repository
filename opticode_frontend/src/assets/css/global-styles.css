@@ -337,6 +337,20 @@ a:hover {
   background-color: var(--oc-gray-400);
 }
 
+/* ---------- Layout Utilities ---------- */
+.app-main-content {
+  margin-left: 0;
+  padding: 1.5rem 1rem;
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  .app-main-content {
+    margin-left: var(--oc-sidebar-width);
+    padding: 2rem 2.5rem;
+  }
+}
+
 /* ---------- Sidebar (Layout) ---------- */
 .navbar-sidebar {
   position: fixed;
@@ -344,7 +358,7 @@ a:hover {
   left: 0;
   width: var(--oc-sidebar-width);
   height: 100vh;
-  background-color: var(--oc-navy);
+  background-color: var(--oc-navy) !important;
   display: flex;
   flex-direction: column;
   padding: 0;

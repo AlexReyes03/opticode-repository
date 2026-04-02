@@ -24,11 +24,23 @@ const Sidebar = () => {
   const isActive = (path) => location.pathname.startsWith(path);
 
   return (
-    <aside className="navbar-sidebar" aria-label="Navegación principal">
+    <aside 
+      className="navbar-sidebar offcanvas-md offcanvas-start" 
+      tabIndex="-1" 
+      id="sidebarMenu" 
+      aria-labelledby="sidebarMenuLabel"
+    >
       {/* Logo */}
-      <div className="navbar-sidebar__logo">
+      <div className="navbar-sidebar__logo position-relative">
         <img src={logo} alt="OptiCode logo" />
-        <span className="navbar-sidebar__logo-text">OptiCode</span>
+        <span className="navbar-sidebar__logo-text" id="sidebarMenuLabel">OptiCode</span>
+        <button 
+          type="button" 
+          className="btn-close btn-close-white d-md-none position-absolute end-0 me-3" 
+          data-bs-dismiss="offcanvas" 
+          data-bs-target="#sidebarMenu"
+          aria-label="Close"
+        ></button>
       </div>
 
       {/* Navigation */}
