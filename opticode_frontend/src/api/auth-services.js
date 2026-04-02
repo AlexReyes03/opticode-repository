@@ -4,11 +4,16 @@ import request from './fetch-wrapper';
  * Servicios de autenticación. Todas las peticiones pasan por fetch-wrapper
  * (JWT, refresh y manejo de errores).
  *
- * Endpoints reales del backend (config/urls.py → features.auth.urls):
- *   POST /api/auth/register/       — registro de usuario.
- *   POST /api/auth/login/          — obtención de tokens (Simple JWT).
- *   POST /api/forgot-password/     — solicitud de restablecimiento.
- *   POST /api/reset-password/      — confirmación con token/uid.
+ * Endpoints confirmados en el backend:
+ *   POST /api/auth/register/   — registro de usuario (features.auth.RegisterView).
+ *   POST /api/auth/login/      — obtención de tokens Simple JWT (features.auth.LoginView).
+ *
+ * TODO(backend): Los siguientes endpoints aún no existen en el backend.
+ * Deben implementarse antes de activar forgotPassword() y resetPassword():
+ *   POST /api/auth/forgot-password/   — solicitud de restablecimiento por correo.
+ *   POST /api/auth/reset-password/    — confirmación con uid + token.
+ * TODO(compatibilidad): El frontend debe apuntar a /api/auth/token/refresh/
+ * para mantener la compatibilidad real con el refresh token.
  */
 
 /**
