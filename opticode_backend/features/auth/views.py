@@ -2,6 +2,7 @@ from rest_framework import generics, status, views
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from .serializers import RegisterSerializer, LoginSerializer
 from django.contrib.auth import authenticate
 
