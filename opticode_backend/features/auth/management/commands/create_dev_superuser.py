@@ -13,7 +13,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         email = env("DEV_ADMIN_EMAIL", default="admin@opticode.com")
         username = env("DEV_ADMIN_USERNAME", default="admin")
-        password = env("DEV_ADMIN_PASSWORD", default="Admin123!")
+        password = env("DEV_SEED_PASSWORD", default="Admin123!")
 
         if User.objects.filter(email=email).exists():
             self.stdout.write(self.style.WARNING(

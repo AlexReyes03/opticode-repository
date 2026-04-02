@@ -4,9 +4,13 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
+import environ
+
 from features.audit.models import AuditResult, Finding, UploadedFile
 from features.auth.models import User
 from features.projects.models import Project
+
+env = environ.Env()
 
 
 class Command(BaseCommand):
@@ -18,12 +22,13 @@ class Command(BaseCommand):
             return
 
         self.stdout.write("Creando datos de prueba...")
+        password = env("DEV_SEED_PASSWORD", default="Admin123!")
 
         # ── Usuarios (5 total, 1 admin) ─────────────────
         admin = User.objects.create_user(
             username="admin_test",
             email="dev1@opticode.com",
-            password="Test1234!",
+            password=password,
             first_name="Carlos",
             last_name="Admin",
             is_staff=True,
@@ -31,28 +36,28 @@ class Command(BaseCommand):
         user2 = User.objects.create_user(
             username="maria_dev",
             email="dev2@opticode.com",
-            password="Test1234!",
+            password=password,
             first_name="María",
             last_name="López",
         )
         user3 = User.objects.create_user(
             username="juan_qa",
             email="dev3@opticode.com",
-            password="Test1234!",
+            password=password,
             first_name="Juan",
             last_name="García",
         )
         user4 = User.objects.create_user(
             username="ana_front",
             email="dev4@opticode.com",
-            password="Test1234!",
+            password=password,
             first_name="Ana",
             last_name="Martínez",
         )
         User.objects.create_user(
             username="pedro_back",
             email="dev5@opticode.com",
-            password="Test1234!",
+            password=password,
             first_name="Pedro",
             last_name="Ramírez",
         )
@@ -171,6 +176,6 @@ class Command(BaseCommand):
         self.stdout.write(
             "\n  Credenciales de prueba:\n"
             "  ------------------------\n"
-            "  Admin:  dev1@opticode.com / Test1234!\n"
-            "  Users:  dev2@opticode.com - dev5@opticode.com / Test1234!\n"
+            f"  Admin:  dev1@opticode.com / {password}\n"
+            f"  Users:  dev2@opticode.com - dev5@opticode.com / {password}\n"
         )
