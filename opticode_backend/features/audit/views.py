@@ -11,7 +11,8 @@ from rest_framework.views import APIView
 from weasyprint import HTML
 
 from features.projects.models import Project
-from features.audit.models import UploadedFile, Finding
+from features.audit.models import AuditResult, Finding, UploadedFile
+from features.audit.serializers import AuditResultSerializer
 
 # Inicialización de utilidades globales del módulo
 logger = logging.getLogger(__name__)
@@ -101,3 +102,23 @@ class AuditReportPDFView(APIView):
                 {"detail": "Error interno al generar el reporte PDF."},
                 status=500
             )
+
+
+class AuditReportView(APIView):
+    """
+    Endpoint: GET /api/audit/<file_id>/report/
+    Retorna el reporte de auditoría serializado con hallazgos.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, file_id, *args, **kwargs):
+        uploaded_file = get_object_or_404(
+            UploadedFile,
+            id=file_id,
+            project__owner=request.user,
+        )
+
+        audit_result = get_object_or_404(AuditResult, uploaded_file=uploaded_file)
+        serializer = AuditResultSerializer(audit_result)
+        return Response(serializer.data)

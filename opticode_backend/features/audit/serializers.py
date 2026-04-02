@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from features.audit.models import Finding, UploadedFile
+from features.audit.models import AuditResult, Finding, UploadedFile
 
 
 class UploadedFileSerializer(serializers.ModelSerializer):
@@ -20,21 +20,27 @@ class UploadedFileSerializer(serializers.ModelSerializer):
 
 
 class FindingSerializer(serializers.ModelSerializer):
-    """
-    Expone el hallazgo tal como está en BD; `affected_element` recibe el valor
-    mapeado desde `category` en las reglas (ver ``engine.persist_findings``).
-    """
+    category = serializers.CharField(source="affected_element", read_only=True)
 
     class Meta:
         model = Finding
         fields = [
-            "id",
-            "audit_result",
             "severity",
             "wcag_rule",
             "message",
             "line_number",
             "code_snippet",
-            "affected_element",
+            "category",
         ]
+        read_only_fields = fields
+
+
+class AuditResultSerializer(serializers.ModelSerializer):
+    score = serializers.FloatField(source="uploaded_file.score", read_only=True)
+    created_at = serializers.DateTimeField(source="analyzed_at", read_only=True)
+    findings = FindingSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AuditResult
+        fields = ["score", "created_at", "findings"]
         read_only_fields = fields
