@@ -8,7 +8,6 @@ from django.template.loader import render_to_string
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from weasyprint import HTML
 
 from features.projects.models import Project
 from features.audit.models import AuditResult, Finding, UploadedFile
@@ -81,7 +80,8 @@ class AuditReportPDFView(APIView):
             }
             html_content = render_to_string('pdf/audit_report.html', context)
 
-            # Convert HTML to PDF using WeasyPrint
+            from weasyprint import HTML
+
             pdf_bytes = HTML(string=html_content).write_pdf()
 
             # Wrap in buffer and return as FileResponse
