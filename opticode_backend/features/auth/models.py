@@ -4,6 +4,7 @@ from django.db import models
 
 class User(AbstractUser):
     email = models.EmailField("correo electrónico", unique=True)
+    last_password_changed = models.DateTimeField("último cambio de contraseña", null=True, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
