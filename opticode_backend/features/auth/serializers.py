@@ -1,7 +1,18 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import serializers
 
 User = get_user_model()
+
+
+def _validate_password_policy(value):
+    if len(value) < 8:
+        raise serializers.ValidationError("La contraseña debe tener al menos 8 caracteres.")
+    if not any(char.isupper() for char in value):
+        raise serializers.ValidationError("La contraseña debe contener al menos una letra mayúscula.")
+    if not any(char.isdigit() for char in value):
+        raise serializers.ValidationError("La contraseña debe contener al menos un número.")
+    return value
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -14,19 +25,48 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ("email", "password", "first_name", "last_name")
 
     def validate_password(self, value):
-        if len(value) < 8:
-            raise serializers.ValidationError("La contraseña debe tener al menos 8 caracteres.")
-        if not any(char.isupper() for char in value):
-            raise serializers.ValidationError(
-                "La contraseña debe contener al menos una letra mayúscula."
-            )
-        if not any(char.isdigit() for char in value):
-            raise serializers.ValidationError("La contraseña debe contener al menos un número.")
-        return value
+        return _validate_password_policy(value)
 
     def create(self, validated_data):
-        return User.objects.create_user(username=validated_data["email"], **validated_data)
+        user = User.objects.create_user(username=validated_data["email"], **validated_data)
+        user.last_password_changed = user.date_joined
+        user.save(update_fields=["last_password_changed"])
+        return user
+
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, value):
+        return _validate_password_policy(value)
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": "Las contraseñas no coinciden."})
+        return attrs
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, value):
+        return _validate_password_policy(value)
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": "Las contraseñas no coinciden."})
+        return attrs

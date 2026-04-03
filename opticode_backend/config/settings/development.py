@@ -6,3 +6,6 @@ from core.logging import setup_logging
 DEBUG = True
 
 setup_logging(LOGURU_CONFIG)
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+PASSWORD_RESET_TIMEOUT = 1800  # 30 minutos
