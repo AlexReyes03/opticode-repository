@@ -4,33 +4,40 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ErrorCard from '../components/ErrorCard';
 import ErrorFilter from '../components/ErrorFilter';
 import { getFileFindings } from '../../../api/file-services';
+import { loadAuditResult } from '../utils/auditStorage';
+import { sanitizeDescriptionText, sanitizeSnippetLine } from '../utils/snippetSanitize';
 
 /**
- * Construye el array codeLines desde el shape del backend.
- * El backend envía code_snippet con 3 líneas separadas por \n:
- *   línea anterior, línea del error, línea siguiente.
+ * QA manual (sin recarga): con datos mixtos (críticos + advertencias), comprobar que
+ * Todos/Críticos/Advertencias filtran la lista y los contadores del grupo coinciden.
+ */
+
+/**
+ * Construye el array codeLines desde el shape del backend o análisis local.
  * @param {object} finding
  * @returns {Array<{ lineNumber: number, content: string }>}
  */
 const normalizeCodeLines = (finding) => {
-  if (Array.isArray(finding?.codeLines)) return finding.codeLines;
+  if (Array.isArray(finding?.codeLines)) {
+    return finding.codeLines.map((cl) => ({
+      lineNumber: Number(cl.lineNumber ?? cl.line ?? 0),
+      content: sanitizeSnippetLine(cl.content ?? ''),
+    }));
+  }
   if (!finding?.code_snippet) return [];
 
   const baseLineNumber = Number(finding.line_number ?? finding.line ?? 1);
   const lines = String(finding.code_snippet).split('\n');
-
-  // Si hay 3 líneas, la primera corresponde a line_number - 1
   const startLine = lines.length === 3 ? baseLineNumber - 1 : baseLineNumber;
 
   return lines.map((content, index) => ({
     lineNumber: startLine + index,
-    content,
+    content: sanitizeSnippetLine(content),
   }));
 };
 
 /**
- * Normaliza un hallazgo del backend al shape esperado por ErrorCard.
- * Contrato del backend: { id, severity, wcag_rule, message, line_number, code_snippet, affected_element }
+ * Normaliza un hallazgo (backend o local) al shape esperado por ErrorCard.
  */
 const normalizeFinding = (finding, index) => {
   const rawSeverity = String(finding?.severity ?? '').toLowerCase();
@@ -38,9 +45,11 @@ const normalizeFinding = (finding, index) => {
   return {
     id: finding?.id ?? `finding-${index}`,
     severity,
-    level: severity === 'critical' ? 'Nivel A' : 'Nivel AA',
-    title: finding?.wcag_rule ?? 'Hallazgo WCAG',
-    description: finding?.message ?? 'Sin descripción disponible.',
+    level: finding?.level ?? (severity === 'critical' ? 'Nivel A' : 'Nivel AA'),
+    title: finding?.title ?? finding?.wcag_rule ?? 'Hallazgo WCAG',
+    description: sanitizeDescriptionText(
+      finding?.message ?? finding?.description ?? 'Sin descripción disponible.'
+    ),
     line: Number(finding?.line_number ?? finding?.line ?? 0),
     codeLines: normalizeCodeLines(finding),
   };
@@ -48,7 +57,7 @@ const normalizeFinding = (finding, index) => {
 
 /**
  * Vista de detalle de hallazgos WCAG de un archivo.
- * Lee los findings desde GET /api/audit/:fileId/findings/ (backend).
+ * Orden: GET /api/audit/:fileId/findings/ ; si falla, caché local (auditStorage).
  */
 const ErrorDetail = () => {
   const { projectId, fileId } = useParams();
@@ -67,19 +76,25 @@ const ErrorDetail = () => {
 
       try {
         const list = await getFileFindings(projectId, fileId);
-        if (mounted) {
-          setErrors(Array.isArray(list) ? list.map(normalizeFinding) : []);
-          setHasData(true);
-        }
+        if (!mounted) return;
+        setErrors(Array.isArray(list) ? list.map(normalizeFinding) : []);
+        setHasData(true);
       } catch {
-        if (mounted) setHasData(false);
+        const result = loadAuditResult(projectId, fileId);
+        const findings = result?.findings ?? [];
+        if (mounted) {
+          setErrors(findings.map(normalizeFinding));
+          setHasData(result !== null);
+        }
       } finally {
         if (mounted) setIsLoading(false);
       }
     };
 
     load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [projectId, fileId]);
 
   const filteredErrors = errors.filter((err) => {
@@ -95,7 +110,6 @@ const ErrorDetail = () => {
 
   return (
     <section>
-      {/* Breadcrumb */}
       <nav aria-label="breadcrumb">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
@@ -120,7 +134,6 @@ const ErrorDetail = () => {
         </ol>
       </nav>
 
-      {/* Header + Filter */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="fw-semibold fs-5 mb-0" style={{ color: 'var(--oc-navy)' }}>
           Hallazgos Detectados
@@ -138,12 +151,12 @@ const ErrorDetail = () => {
         <div className="alert alert-warning" role="alert">
           No hay análisis disponible para este archivo.
           <div className="small mt-1">
-            Sube el archivo desde la vista de carga para generar los hallazgos de accesibilidad.
+            Confirma que el backend expone GET /api/audit/:fileId/findings/ o que exista
+            análisis previo en este navegador (caché local).
           </div>
         </div>
       )}
 
-      {/* Error Cards */}
       <div className="d-flex flex-column gap-3">
         {filteredErrors.map((error) => (
           <ErrorCard key={error.id} error={error} />

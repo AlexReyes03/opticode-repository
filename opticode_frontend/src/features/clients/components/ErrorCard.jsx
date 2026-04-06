@@ -1,5 +1,6 @@
 const ErrorCard = ({ error }) => {
-  const { severity, level, title, description, line, codeLines } = error;
+  const { severity, level, title, description, line, codeLines: rawLines } = error;
+  const codeLines = Array.isArray(rawLines) ? rawLines : [];
   const isCritical = severity === 'critical';
 
   const borderColor = isCritical ? 'var(--oc-danger)' : 'var(--oc-warning)';
@@ -51,43 +52,51 @@ const ErrorCard = ({ error }) => {
             fontFamily: '"Fira Code", "Cascadia Code", monospace',
             fontSize: '0.875rem',
           }}
+          role={codeLines.length ? 'region' : undefined}
+          aria-label={codeLines.length ? 'Fragmento de código relacionado' : undefined}
         >
-          {codeLines.map((codeLine) => {
-            const isError = codeLine.lineNumber === line;
-            return (
-              <div
-                key={codeLine.lineNumber}
-                className="d-flex"
-                style={{
-                  backgroundColor: isError ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
-                  borderLeft: isError ? '2px solid var(--oc-danger)' : '2px solid transparent',
-                }}
-              >
+          {codeLines.length === 0 ? (
+            <div className="px-3 py-2 text-secondary small" style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)' }}>
+              Sin fragmento de código disponible.
+            </div>
+          ) : (
+            codeLines.map((codeLine, idx) => {
+              const isError = codeLine.lineNumber === line;
+              return (
                 <div
-                  className="flex-shrink-0 text-end user-select-none"
+                  key={`${codeLine.lineNumber}-${idx}`}
+                  className="d-flex"
                   style={{
-                    width: '2.5rem',
-                    padding: '0.25rem 0.5rem 0.25rem 0',
-                    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-                    borderRight: '1px solid #334155',
-                    color: isError ? '#fca5a5' : '#64748b',
+                    backgroundColor: isError ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
+                    borderLeft: isError ? '2px solid var(--oc-danger)' : '2px solid transparent',
                   }}
                 >
-                  {codeLine.lineNumber}
+                  <div
+                    className="flex-shrink-0 text-end user-select-none"
+                    style={{
+                      width: '2.5rem',
+                      padding: '0.25rem 0.5rem 0.25rem 0',
+                      backgroundColor: 'rgba(15, 23, 42, 0.5)',
+                      borderRight: '1px solid #334155',
+                      color: isError ? '#fca5a5' : '#64748b',
+                    }}
+                  >
+                    {codeLine.lineNumber}
+                  </div>
+                  <div
+                    className="text-truncate"
+                    style={{
+                      padding: '0.25rem 1rem',
+                      color: isError ? '#fecaca' : '#94a3b8',
+                      whiteSpace: 'pre',
+                    }}
+                  >
+                    {codeLine.content}
+                  </div>
                 </div>
-                <div
-                  className="text-truncate"
-                  style={{
-                    padding: '0.25rem 1rem',
-                    color: isError ? '#fecaca' : '#94a3b8',
-                    whiteSpace: 'pre',
-                  }}
-                >
-                  {codeLine.content}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>
