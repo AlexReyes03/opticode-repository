@@ -5,6 +5,13 @@
     <link rel="icon" type="image/png" href="/src/assets/img/ack_logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Opticode</title>
+    <!-- Oculta controles nativos de revelar contraseña (Edge/IE); el resto en global-styles.css -->
+    <style>
+      input[type="password"]::-ms-reveal,
+      input[type="password"]::-ms-clear {
+        display: none;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
