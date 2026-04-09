@@ -302,8 +302,8 @@ a:hover {
 }
 
 .auth-brand-logo {
-  width: 72px;
-  height: 72px;
+  width: 150px;
+  height: 150px;
   border-radius: 0.75rem;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
 }
@@ -312,6 +312,38 @@ a:hover {
   width: 44px;
   height: 44px;
   border-radius: 0.5rem;
+}
+
+/* Ocultar revelar contraseña nativo (Edge legacy, IE) — refuerzo si index.html no aplica */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Área con scroll: centrado vertical equidistante si cabe; scroll si no (safe center) */
+.auth-form-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  align-items: center;
+}
+
+.auth-form-inner {
+  width: 100%;
+  max-width: 420px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 991.98px) {
+  .auth-form-scroll-area {
+    padding: 1.25rem 1rem !important;
+  }
 }
 
 /* ---------- Utilities (no Bootstrap equivalent) ---------- */
