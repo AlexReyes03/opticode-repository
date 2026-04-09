@@ -166,7 +166,11 @@ export const AuthProvider = ({ children }) => {
         }
       }
     } catch (err) {
-      const message = err?.data?.detail ?? err?.message ?? 'Credenciales incorrectas.';
+      const message =
+        err?.message ||
+        (typeof err?.data?.detail === 'string' ? err.data.detail : null) ||
+        (typeof err?.data?.error === 'string' ? err.data.error : null) ||
+        'No se pudo iniciar sesión. Verifica correo y contraseña.';
       setError(message);
       throw err;
     } finally {

@@ -145,6 +145,59 @@ async function refreshAccessToken() {
 }
 
 /**
+ * Mensaje legible desde cuerpos JSON de DRF o APIs propias (login devuelve `{ error: "..." }`).
+ * @param {unknown} data
+ * @returns {string|null}
+ */
+function messageFromErrorBody(data) {
+  if (data == null || typeof data !== 'object') return null;
+  const d = data;
+  if (typeof d.detail === 'string') return d.detail;
+  if (Array.isArray(d.detail) && d.detail.length && typeof d.detail[0] === 'string') {
+    return d.detail[0];
+  }
+  if (typeof d.message === 'string') return d.message;
+  if (typeof d.error === 'string') return d.error;
+  if (Array.isArray(d.error) && d.error.length) return String(d.error[0]);
+  if (Array.isArray(d.non_field_errors) && d.non_field_errors.length) {
+    return String(d.non_field_errors[0]);
+  }
+  return null;
+}
+
+/**
+ * Primer mensaje en cuerpos DRF tipo `{ email: ["ya existe"], ... }`.
+ * @param {unknown} data
+ * @returns {string|null}
+ */
+function firstFieldValidationMessage(data) {
+  if (data == null || typeof data !== 'object' || Array.isArray(data)) return null;
+  for (const val of Object.values(data)) {
+    if (Array.isArray(val) && val.length) return String(val[0]);
+    if (typeof val === 'string' && val.trim()) return val;
+  }
+  return null;
+}
+
+/**
+ * Mensaje para mostrar en UI a partir de un Error lanzado por `request()` (opcional `.data`).
+ * @param {unknown} err
+ * @param {string} [fallback]
+ * @returns {string}
+ */
+export function getApiErrorMessage(err, fallback = 'Ocurrió un error. Intenta de nuevo.') {
+  if (!err || typeof err !== 'object') return fallback;
+  const data = err.data;
+  const fromBody = messageFromErrorBody(data);
+  if (fromBody) return fromBody;
+  const fieldMsg = firstFieldValidationMessage(data);
+  if (fieldMsg) return fieldMsg;
+  const msg = err.message;
+  if (msg && !/^(Bad Request|Unauthorized|Forbidden|Not Found)$/i.test(msg)) return msg;
+  return fallback;
+}
+
+/**
  * Ejecuta el fetch y parsea la respuesta. Lanza un Error enriquecido con `.status` y `.data` si no es ok.
  * @param {string} url
  * @param {RequestInit} opts
@@ -157,7 +210,8 @@ async function doRequest(url, opts) {
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
 
   if (!res.ok) {
-    const err = new Error(data?.detail ?? data?.message ?? res.statusText ?? 'Error en la petición.');
+    const msg = messageFromErrorBody(data) ?? res.statusText ?? 'Error en la petición.';
+    const err = new Error(msg);
     err.status = res.status;
     err.data   = data;
     throw err;
