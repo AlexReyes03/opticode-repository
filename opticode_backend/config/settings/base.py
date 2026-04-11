@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "features.users",
     "features.projects",
     "features.audit",
+    "auditlog",
 ]
 
 MIDDLEWARE = [
