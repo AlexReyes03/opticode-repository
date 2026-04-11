@@ -7,9 +7,10 @@
  *
  * Endpoints que este módulo consume internamente:
  *   POST /api/auth/login/     — LoginView: recibe { email, password },
- *                               devuelve { access, refresh }.
+ *                               devuelve { access, refresh }. No se envía Authorization.
  *   POST /api/token/refresh/  — TokenRefreshView: recibe { refresh },
  *                               devuelve { access } y { refresh } si ROTATE_REFRESH_TOKENS=True.
+ *   Rutas en `isAnonymousAuthEndpoint`: sin header Bearer (evita 401 por access expirado).
  *
  */
 
@@ -256,8 +257,17 @@ export default async function request(
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${BASE_URL.replace(/\/$/, '')}${normalizedEndpoint}`;
 
-  const isAuthEndpoint =
-    normalizedEndpoint.includes('/api/auth/login')  ||
+  /**
+   * Rutas donde no debe enviarse JWT: el backend valida el Bearer antes del cuerpo
+   * (p. ej. login con access expirado en localStorage → 401 token_not_valid).
+   * Tampoco deben disparar refresh automático ante 401.
+   */
+  const isAnonymousAuthEndpoint =
+    normalizedEndpoint.includes('/api/auth/login') ||
+    normalizedEndpoint.includes('/api/auth/register') ||
+    normalizedEndpoint.includes('/api/auth/forgot-password') ||
+    normalizedEndpoint.includes('/api/auth/reset-password') ||
+    normalizedEndpoint.includes('/api/reset-password') ||
     normalizedEndpoint.includes('/api/token/refresh');
 
   let opts = { method, headers: { ...headers }, signal };
@@ -278,6 +288,7 @@ export default async function request(
   }
 
   const attachAuth = () => {
+    if (isAnonymousAuthEndpoint) return;
     const access = tokenProvider?.getAccessToken?.();
     if (access) opts.headers['Authorization'] = `Bearer ${access}`;
   };
@@ -306,7 +317,7 @@ export default async function request(
         throw networkError;
       }
 
-      if (error.status === 401 && !isAuthEndpoint && tokenProvider?.getRefreshToken && tokenProvider?.setTokens) {
+      if (error.status === 401 && !isAnonymousAuthEndpoint && tokenProvider?.getRefreshToken && tokenProvider?.setTokens) {
         try {
           const tokens = await refreshAccessToken();
           tokenProvider.setTokens(tokens.access, tokens.refresh ?? tokenProvider.getRefreshToken());
@@ -320,7 +331,7 @@ export default async function request(
         }
       }
 
-      if ((error.status === 401 || error.status === 403) && !isAuthEndpoint) {
+      if ((error.status === 401 || error.status === 403) && !isAnonymousAuthEndpoint) {
         authHandlers?.handleAuthError?.(
           error.status,
           error.message ?? 'No autorizado.',
