@@ -7,7 +7,8 @@ const rules = [
   { key: 'number', label: 'Al menos 1 número', test: (v) => /\d/.test(v) },
 ];
 
-const PasswordStrengthIndicator = ({ password = '' }) => {
+const PasswordStrengthIndicator = ({ password = '', visible = true }) => {
+  if (!visible) return null;
   return (
     <ul className="list-unstyled mt-2 mb-0">
       {rules.map(({ key, label, test }) => {
