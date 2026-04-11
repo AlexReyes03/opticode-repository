@@ -9,14 +9,21 @@ const AuthFormField = ({
   placeholder = '',
   value,
   onChange,
+  onFocus,
+  onBlur,
   required = false,
   icon: Icon,
   error = '',
   maxLength,
+  /** Si es false, no se muestra el toggle (p. ej. login); Edge/Chromium: ver CSS global `input[type=password]`. */
+  showPasswordToggle = true,
+  autoComplete,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPasswordField = type === 'password';
-  const inputType = isPasswordField && showPassword ? 'text' : type;
+  const inputType = isPasswordField && showPasswordToggle && showPassword ? 'text' : type;
+  const resolvedAutoComplete =
+    autoComplete ?? (isPasswordField ? 'current-password' : 'off');
 
   return (
     <div className="mb-3">
@@ -45,15 +52,17 @@ const AuthFormField = ({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
+          onFocus={onFocus}
+          onBlur={onBlur}
           required={required}
           maxLength={maxLength}
-          autoComplete={isPasswordField ? 'current-password' : 'off'}
+          autoComplete={resolvedAutoComplete}
           style={{
             paddingLeft: Icon ? '2.5rem' : '1rem',
-            paddingRight: isPasswordField ? '2.5rem' : '1rem',
+            paddingRight: isPasswordField && showPasswordToggle ? '2.5rem' : '1rem',
           }}
         />
-        {isPasswordField && (
+        {isPasswordField && showPasswordToggle && (
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
