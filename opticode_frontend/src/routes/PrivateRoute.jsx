@@ -1,21 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-
-/**
- * Normaliza el payload del JWT a un rol único para comparar con allowedRoles.
- * Compatible con claims de Django: role, user_type, is_staff, is_superuser.
- *
- * @param {object|null} user - Payload decodificado del JWT (AuthContext.user).
- * @returns {'admin' | 'user'}
- */
-function getRole(user) {
-  if (!user || typeof user !== 'object') return 'user';
-  const role = user.role ?? user.user_type;
-  if (role === 'admin' || role === 'staff' || user.is_staff === true || user.is_superuser === true) {
-    return 'admin';
-  }
-  return 'user';
-}
+import { getUserRole } from '../utils/userRole';
 
 /**
  * Guardia para rutas privadas. Requiere usuario autenticado y rol dentro de allowedRoles.
@@ -38,7 +23,7 @@ const PrivateRoute = ({ allowedRoles = ['user', 'admin'] }) => {
     return toLogin;
   }
 
-  const role = getRole(user);
+  const role = getUserRole(user);
   const hasAllowedRole = Array.isArray(allowedRoles) && allowedRoles.includes(role);
 
   if (!hasAllowedRole) {

@@ -1,16 +1,5 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-import {
-  setAuthHandlers,
-  setErrorHandlers,
-  setTokenProvider,
-} from '../api/fetch-wrapper';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { setAuthHandlers, setErrorHandlers, setTokenProvider } from '../api/fetch-wrapper';
 import request from '../api/fetch-wrapper';
 
 /**
@@ -18,7 +7,7 @@ import request from '../api/fetch-wrapper';
  * Django Simple JWT devuelve `access` y `refresh` en POST /api/auth/login/.
  */
 const TOKEN_KEYS = {
-  ACCESS:  'access_token',
+  ACCESS: 'access_token',
   REFRESH: 'refresh_token',
 };
 
@@ -59,9 +48,7 @@ const AuthContext = createContext(null);
  * para que todas las peticiones incluyan JWT y el refresh sea transparente.
  */
 export const AuthProvider = ({ children }) => {
-  const [accessToken, setAccessToken] = useState(
-    () => localStorage.getItem(TOKEN_KEYS.ACCESS) ?? null
-  );
+  const [accessToken, setAccessToken] = useState(() => localStorage.getItem(TOKEN_KEYS.ACCESS) ?? null);
 
   /**
    * Perfil del usuario: tras login o al hidratar sesión se rellena con GET /api/auth/me/.
@@ -75,7 +62,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState(null);
+  const [error, setError] = useState(null);
 
   /** Limpia de forma manual el error actual del contexto */
   const clearError = useCallback(() => setError(null), []);
@@ -108,9 +95,9 @@ export const AuthProvider = ({ children }) => {
    */
   useEffect(() => {
     setTokenProvider({
-      getAccessToken:  () => localStorage.getItem(TOKEN_KEYS.ACCESS),
+      getAccessToken: () => localStorage.getItem(TOKEN_KEYS.ACCESS),
       getRefreshToken: () => localStorage.getItem(TOKEN_KEYS.REFRESH),
-      setTokens:       storeTokens,
+      setTokens: storeTokens,
     });
 
     setAuthHandlers({
@@ -148,35 +135,34 @@ export const AuthProvider = ({ children }) => {
    * @returns {Promise<void>}
    * @throws {Error} con `.status` y `.data` si el backend rechaza las credenciales.
    */
-  const login = useCallback(async (credentials) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await request('/api/auth/login/', {
-        method: 'POST',
-        body: credentials,
-      });
-      storeTokens(data?.access, data?.refresh);
-      if (data?.access) {
-        try {
-          const profile = await request('/api/auth/me/', { method: 'GET' });
-          if (profile && typeof profile === 'object') setUser(profile);
-        } catch {
-          // Se mantiene el usuario derivado del JWT en storeTokens.
+  const login = useCallback(
+    async (credentials) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await request('/api/auth/login/', {
+          method: 'POST',
+          body: credentials,
+        });
+        storeTokens(data?.access, data?.refresh);
+        if (data?.access) {
+          try {
+            const profile = await request('/api/auth/me/', { method: 'GET' });
+            if (profile && typeof profile === 'object') setUser(profile);
+          } catch {
+            // Se mantiene el usuario derivado del JWT en storeTokens.
+          }
         }
+      } catch (err) {
+        const message = err?.message || (typeof err?.data?.detail === 'string' ? err.data.detail : null) || (typeof err?.data?.error === 'string' ? err.data.error : null) || 'No se pudo iniciar sesión. Verifica correo y contraseña.';
+        setError(message);
+        throw err;
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      const message =
-        err?.message ||
-        (typeof err?.data?.detail === 'string' ? err.data.detail : null) ||
-        (typeof err?.data?.error === 'string' ? err.data.error : null) ||
-        'No se pudo iniciar sesión. Verifica correo y contraseña.';
-      setError(message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [storeTokens]);
+    },
+    [storeTokens],
+  );
 
   /**
    * Cierra sesión: invalida el refresh token en el backend (best-effort)
@@ -202,21 +188,21 @@ export const AuthProvider = ({ children }) => {
    * Usar para guardias de ruta o renderizado condicional.
    * @returns {boolean}
    */
-  const isAuthenticated = useCallback(
-    () => !isTokenExpired(localStorage.getItem(TOKEN_KEYS.ACCESS)),
-    []
-  );
+  const isAuthenticated = useCallback(() => !isTokenExpired(localStorage.getItem(TOKEN_KEYS.ACCESS)), []);
 
-  const value = useMemo(() => ({
-    user,
-    token: accessToken,
-    login,
-    logout,
-    clearError,
-    isAuthenticated,
-    loading,
-    error,
-  }), [user, accessToken, login, logout, clearError, isAuthenticated, loading, error]);
+  const value = useMemo(
+    () => ({
+      user,
+      token: accessToken,
+      login,
+      logout,
+      clearError,
+      isAuthenticated,
+      loading,
+      error,
+    }),
+    [user, accessToken, login, logout, clearError, isAuthenticated, loading, error],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
