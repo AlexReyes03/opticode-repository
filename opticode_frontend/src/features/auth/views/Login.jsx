@@ -85,7 +85,6 @@ const Login = () => {
           onChange={handleChange('password')}
           required
           icon={LockOutlinedIcon}
-          showPasswordToggle={false}
           autoComplete="current-password"
         />
 
