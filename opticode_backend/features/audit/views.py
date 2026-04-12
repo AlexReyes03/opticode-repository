@@ -107,7 +107,7 @@ class AuditReportPDFView(APIView):
 class AuditReportView(APIView):
     """
     Endpoint: GET /api/audit/<file_id>/report/
-    Retorna el resumen de auditoría: score, filename, critical_count, warning_count.
+    Retorna el resumen de auditoría: score, filename, critical_count, warning_count, aaa_count.
     """
 
     permission_classes = [IsAuthenticated]

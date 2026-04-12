@@ -38,7 +38,7 @@ export const uploadZip = (projectId, file) =>
  * Reporte agregado del archivo (nombre, puntuación, conteos por severidad, etc.).
  *
  * Backend esperado (S2-JM-02): GET /api/audit/:fileId/report/
- * Contrato sugerido: { filename?, score, critical|critical_count, warnings|warning_count }.
+ * Contrato sugerido: { filename?, score, critical|critical_count, warnings|warning_count, aaa_count? }.
  * Si el endpoint aún no existe (404), FileReport usa fallback desde auditStorage (análisis local).
  *
  * @param {string|number} projectId
