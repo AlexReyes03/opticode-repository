@@ -5,7 +5,7 @@ import openpyxl
 from django.core.files.base import ContentFile
 from django.http import FileResponse
 from rest_framework import status
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from features.audit.engine import run_audit
 from features.audit.models import UploadedFile
 from features.projects.models import Project
-from features.projects.serializers import ProjectSerializer
+from features.projects.serializers import ProjectSerializer, UploadedFileSerializer
 
 ALLOWED_EXTENSIONS = {"html", "css"}
 MIN_SIZE = 1_024           # 1 KB
@@ -36,8 +36,8 @@ class ProjectListCreateView(ListCreateAPIView):
         serializer.save(owner=self.request.user)
 
 
-class ProjectRetrieveUpdateView(RetrieveUpdateAPIView):
-    """GET/PATCH de un proyecto propio."""
+class ProjectRetrieveUpdateView(RetrieveUpdateDestroyAPIView):
+    """GET/PATCH/DELETE de un proyecto propio (DELETE elimina el registro y datos en cascada)."""
 
     permission_classes = [IsAuthenticated]
     serializer_class = ProjectSerializer
@@ -45,6 +45,29 @@ class ProjectRetrieveUpdateView(RetrieveUpdateAPIView):
 
     def get_queryset(self):
         return Project.objects.filter(owner=self.request.user)
+
+
+class ProjectFileListView(APIView):
+    """GET: archivos subidos del proyecto (solo si el usuario es el propietario)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            project = Project.objects.get(pk=pk, owner=request.user)
+        except Project.DoesNotExist:
+            return Response(
+                {"detail": "Proyecto no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        qs = (
+            UploadedFile.objects.filter(project=project)
+            .select_related("audit_result")
+            .prefetch_related("audit_result__findings")
+            .order_by("-updated_at")
+        )
+        return Response(UploadedFileSerializer(qs, many=True).data)
 
 
 def _detect_file_type(content: bytes) -> str | None:

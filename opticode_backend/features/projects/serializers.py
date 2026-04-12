@@ -1,6 +1,9 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
+
+from features.audit.models import Finding, UploadedFile
 from .models import Project
-from features.audit.models import UploadedFile  # <-- Importación nueva necesaria
+
 
 class ProjectSerializer(serializers.ModelSerializer):
     file_count = serializers.SerializerMethodField()
@@ -14,7 +17,32 @@ class ProjectSerializer(serializers.ModelSerializer):
         return obj.uploaded_files.count()
 
 class UploadedFileSerializer(serializers.ModelSerializer):
+    critical_count = serializers.SerializerMethodField()
+    warning_count = serializers.SerializerMethodField()
+
     class Meta:
         model = UploadedFile
-        fields = ("id", "filename", "file_type", "size_bytes", "score")
-        # El campo 'created_at' no existe en el modelo actual de UploadedFile, así que lo omitimos
+        fields = (
+            "id",
+            "filename",
+            "file_type",
+            "size_bytes",
+            "score",
+            "updated_at",
+            "critical_count",
+            "warning_count",
+        )
+
+    def get_critical_count(self, obj):
+        try:
+            ar = obj.audit_result
+        except ObjectDoesNotExist:
+            return 0
+        return ar.findings.filter(severity=Finding.Severity.ERROR).count()
+
+    def get_warning_count(self, obj):
+        try:
+            ar = obj.audit_result
+        except ObjectDoesNotExist:
+            return 0
+        return ar.findings.filter(severity=Finding.Severity.WARNING).count()
