@@ -69,6 +69,32 @@ class ProjectFileListView(APIView):
         return Response(UploadedFileSerializer(qs, many=True).data)
 
 
+class ProjectUploadedFileDestroyView(APIView):
+    """DELETE: elimina un archivo del proyecto (propietario únicamente)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk, file_id):
+        try:
+            project = Project.objects.get(pk=pk, owner=request.user)
+        except Project.DoesNotExist:
+            return Response(
+                {"detail": "Proyecto no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            uploaded = UploadedFile.objects.get(pk=file_id, project=project)
+        except UploadedFile.DoesNotExist:
+            return Response(
+                {"detail": "Archivo no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if uploaded.file:
+            uploaded.file.delete(save=False)
+        uploaded.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 def _detect_file_type(content: bytes) -> str | None:
     """
     Detecta si el contenido corresponde a HTML o CSS leyendo los primeros bytes.
