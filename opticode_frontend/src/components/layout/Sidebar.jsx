@@ -41,8 +41,7 @@ const SIDEBAR_NAV_CONFIG = [
     label: 'Mis Proyectos',
     icon: FolderCopyOutlinedIcon,
     visibleForRoles: null,
-    isActive: (pathname) =>
-      pathname === '/dashboard' || pathname.startsWith('/projects'),
+    isActive: (pathname) => pathname === '/dashboard' || pathname.startsWith('/projects'),
   },
   {
     id: 'admin',
@@ -103,48 +102,22 @@ const Sidebar = () => {
     typeof document !== 'undefined' && logoutModalOpen
       ? createPortal(
           <>
-            <div
-              className="modal-backdrop fade show"
-              aria-hidden="true"
-              onClick={() => setLogoutModalOpen(false)}
-            />
-            <div
-              className="modal fade show d-block"
-              tabIndex={-1}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={logoutTitleId}
-            >
+            <div className="modal-backdrop fade show" aria-hidden="true" onClick={() => setLogoutModalOpen(false)} />
+            <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={logoutTitleId}>
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content">
                   <div className="modal-header">
                     <h5 className="modal-title" id={logoutTitleId}>
                       Cerrar sesión
                     </h5>
-                    <button
-                      type="button"
-                      className="btn-close"
-                      aria-label="Cerrar"
-                      onClick={() => setLogoutModalOpen(false)}
-                    />
+                    <button type="button" className="btn-close" aria-label="Cerrar" onClick={() => setLogoutModalOpen(false)} />
                   </div>
-                  <div className="modal-body">
-                    ¿Seguro que deseas cerrar sesión? Deberás volver a iniciar sesión para acceder
-                    a tu cuenta.
-                  </div>
+                  <div className="modal-body">¿Seguro que deseas cerrar sesión? Deberás volver a iniciar sesión para acceder a tu cuenta.</div>
                   <div className="modal-footer">
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => setLogoutModalOpen(false)}
-                    >
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setLogoutModalOpen(false)}>
                       Cancelar
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={handleConfirmLogout}
-                    >
+                    <button type="button" className="btn btn-primary" onClick={handleConfirmLogout}>
                       Cerrar sesión
                     </button>
                   </div>
@@ -158,24 +131,13 @@ const Sidebar = () => {
 
   return (
     <>
-      <aside
-        className="navbar-sidebar offcanvas-md offcanvas-start"
-        tabIndex={-1}
-        id="sidebarMenu"
-        aria-labelledby="sidebarMenuLabel"
-      >
+      <aside className="navbar-sidebar offcanvas-md offcanvas-start" tabIndex={-1} id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
         <div className="navbar-sidebar__logo position-relative">
           <img src={logo} alt="OptiCode logo" />
           <span className="navbar-sidebar__logo-text" id="sidebarMenuLabel">
             OptiCode
           </span>
-          <button
-            type="button"
-            className="btn-close btn-close-white d-md-none position-absolute end-0 me-3"
-            data-bs-dismiss="offcanvas"
-            data-bs-target="#sidebarMenu"
-            aria-label="Cerrar menú"
-          />
+          <button type="button" className="btn-close btn-close-white d-md-none position-absolute end-0 me-3" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Cerrar menú" />
         </div>
 
         <nav className="navbar-sidebar__nav" aria-label="Navegación principal">
@@ -184,10 +146,7 @@ const Sidebar = () => {
               const { to, label, icon: Icon } = item;
               return (
                 <li key={item.id} className="navbar-sidebar__item">
-                  <NavLink
-                    to={to}
-                    className={`navbar-sidebar__link ${isNavLinkActive(item, location.pathname) ? 'navbar-sidebar__link--active' : ''}`}
-                  >
+                  <NavLink to={to} className={`rounded-3 navbar-sidebar__link ${isNavLinkActive(item, location.pathname) ? 'navbar-sidebar__link--active' : ''}`}>
                     <Icon />
                     {label}
                   </NavLink>
@@ -198,12 +157,7 @@ const Sidebar = () => {
 
           <ul className="navbar-sidebar__section navbar-sidebar__section--bottom">
             <li className="navbar-sidebar__item">
-              <button
-                type="button"
-                className="navbar-sidebar__link"
-                onClick={() => setLogoutModalOpen(true)}
-                style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}
-              >
+              <button type="button" className="navbar-sidebar__link" onClick={() => setLogoutModalOpen(true)} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}>
                 <LogoutOutlinedIcon />
                 Cerrar sesión
               </button>
