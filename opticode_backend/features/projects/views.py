@@ -17,8 +17,7 @@ from features.projects.models import Project
 from features.projects.serializers import ProjectSerializer, UploadedFileSerializer
 
 ALLOWED_EXTENSIONS = {"html", "css"}
-MIN_SIZE = 1_024           # 1 KB
-MAX_SIZE = 10_485_760      # 10 MB
+MAX_SIZE = 10_485_760      # 10 MB (tamaño mínimo permitido: 0 B)
 ZIP_MAX_SIZE = 52_428_800  # 50 MB
 ZIP_MAX_FILES = 50
 
@@ -91,6 +90,16 @@ def _detect_file_type(content: bytes) -> str | None:
     return None
 
 
+def _file_type_from_extension(filename: str) -> str | None:
+    """Si el archivo está vacío, el tipo se infiere solo por extensión (.html/.htm/.css)."""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext in ("html", "htm"):
+        return UploadedFile.FileType.HTML
+    if ext == "css":
+        return UploadedFile.FileType.CSS
+    return None
+
+
 class FileUploadView(APIView):
     parser_classes = [MultiPartParser]
 
@@ -118,10 +127,10 @@ class FileUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validar tamaño
-        if not (MIN_SIZE <= file.size <= MAX_SIZE):
+        # Validar tamaño (se permiten archivos vacíos; límite superior 10 MB)
+        if file.size > MAX_SIZE:
             return Response(
-                {"detail": "El archivo debe pesar entre 1 KB y 10 MB."},
+                {"detail": "El archivo no puede superar los 10 MB."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -130,6 +139,8 @@ class FileUploadView(APIView):
         file.seek(0)
 
         detected_type = _detect_file_type(content)
+        if detected_type is None and len(content) == 0:
+            detected_type = _file_type_from_extension(file.name)
         if detected_type is None:
             return Response(
                 {"detail": "El contenido del archivo no corresponde a HTML ni CSS válido."},
@@ -250,14 +261,16 @@ class ZipUploadView(APIView):
             content = zf.read(entry.filename)
             size = len(content)
 
-            if not (MIN_SIZE <= size <= MAX_SIZE):
+            if size > MAX_SIZE:
                 ignored.append({
                     "filename": filename,
-                    "reason": f"Tamaño fuera de rango ({size} bytes). Debe estar entre 1 KB y 10 MB.",
+                    "reason": f"Supera el máximo permitido ({size} bytes). Cada archivo debe pesar como máximo 10 MB.",
                 })
                 continue
 
             file_type = _detect_file_type(content)
+            if file_type is None and len(content) == 0:
+                file_type = _file_type_from_extension(filename)
             if file_type is None:
                 ignored.append({
                     "filename": filename,
