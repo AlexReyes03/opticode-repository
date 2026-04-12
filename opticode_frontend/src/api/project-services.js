@@ -99,6 +99,7 @@ function normalizeUploadedFileRow(raw) {
     date: formatProjectDate(raw.updated_at),
     critical: typeof raw.critical_count === 'number' ? raw.critical_count : 0,
     warnings: typeof raw.warning_count === 'number' ? raw.warning_count : 0,
+    improvements: typeof raw.improvement_count === 'number' ? raw.improvement_count : 0,
     score: scoreNum,
   };
 }

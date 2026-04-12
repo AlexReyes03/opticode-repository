@@ -2,6 +2,7 @@ const filters = [
   { key: 'all', label: 'Todos' },
   { key: 'critical', label: 'Solo Críticos', dotColor: 'var(--oc-danger)' },
   { key: 'warning', label: 'Solo Advertencias', dotColor: 'var(--oc-warning)' },
+  { key: 'improvement', label: 'Solo Mejoras', dotColor: 'var(--oc-royal)' },
 ];
 
 const ErrorFilter = ({ activeFilter, onFilterChange, counts = {} }) => {

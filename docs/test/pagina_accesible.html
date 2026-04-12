@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<!-- PRUEBA: página accesible — debería generar 0 hallazgos (o mínimos)
+     Cubre correctamente:
+     - 1.1.1  todas las imágenes tienen alt
+     - 1.3.1  todos los inputs tienen <label> asociado
+     - 1.3.2  sin tabindex negativos en interactivos
+     - 1.3.5  inputs con autocomplete apropiado
+     - 1.4.2  sin audio/video autoplay
+     - 2.1.1  sin div/span onclick sin soporte de teclado
+     - 2.4.1  tiene <main>, <nav>, <header>, <footer>
+     - 2.4.2  título descriptivo con más de 3 palabras
+     - 2.4.3  sin tabindex positivos
+     - 2.4.4  textos de enlace descriptivos
+     - 2.4.6  jerarquía de encabezados correcta (1 h1, h2→h3)
+     - 2.4.9  todos los enlaces tienen texto o aria-label
+     - 2.4.10 cada section tiene encabezado hijo directo
+     - 2.5.3  aria-label contiene el texto visible del botón
+     - 3.1.1  <html lang="es">
+     - 3.1.3  usa <dfn> y <dl> para términos técnicos
+     - 3.1.4  siglas envueltas en <abbr title>
+     - 3.3.1  campo required con aria-describedby a mensaje de error
+     - 4.1.2  todos los roles personalizados tienen nombre accesible
+     - 4.1.3  mensajes de estado con role="status" y aria-live
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal de Servicios Municipales — Inicio</title>
+  <link rel="stylesheet" href="estilos_accesibles.css">
+</head>
+<body>
+
+  <!-- skip link para 2.4.1 -->
+  <a href="#contenido-principal" class="skip-link">Saltar al contenido</a>
+
+  <header>
+    <nav aria-label="Navegación principal">
+      <ul>
+        <li><a href="/inicio">Inicio</a></li>
+        <li><a href="/servicios">Catálogo de servicios</a></li>
+        <li><a href="/tramites">Trámites en línea</a></li>
+        <li><a href="/contacto">Contacto y soporte</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="contenido-principal">
+
+    <h1>Portal de Servicios Municipales</h1>
+
+    <!-- 4.1.3: mensaje de estado con live region -->
+    <div role="status" aria-live="polite" id="notificacion">
+      <!-- Los mensajes dinámicos se insertan aquí -->
+    </div>
+
+    <section>
+      <h2>Servicios disponibles</h2>
+
+      <section>
+        <h3>Trámites de identificación</h3>
+        <p>Pide tu <a href="/credencial">credencial de vecino</a> en línea. Es rápido y sin filas.</p>
+        <img src="tramites-id.jpg" alt="Persona haciendo un trámite en una ventanilla">
+      </section>
+
+      <section>
+        <h3>Pagos en línea</h3>
+        <p>Paga tu <a href="/pagos/predial">predial</a> y tu <a href="/pagos/agua">agua</a> desde casa.</p>
+        <img src="pagos.jpg" alt="Pago en línea con tarjeta">
+      </section>
+    </section>
+
+    <section>
+      <h2>Glosario de términos</h2>
+      <!-- 3.1.3: mecanismo de definición de palabras inusuales -->
+      <dl>
+        <dt><dfn>Predial</dfn></dt>
+        <dd>Impuesto que se paga cada año por tener una casa o terreno en el municipio.</dd>
+
+        <dt><dfn>Padrón municipal</dfn></dt>
+        <dd>Lista de personas que viven en el municipio y están registradas.</dd>
+
+        <dt><dfn>RFC</dfn></dt>
+        <dd>
+          <abbr title="Registro Federal de Contribuyentes">RFC</abbr>:
+          número único que da el <abbr title="Servicio de Administración Tributaria">SAT</abbr>
+          a cada persona para pagar impuestos.
+        </dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Solicitar trámite</h2>
+      <form action="/tramites/nuevo" method="post" novalidate>
+
+        <div>
+          <label for="nombre-completo">Nombre completo</label>
+          <input
+            type="text"
+            id="nombre-completo"
+            name="nombre"
+            autocomplete="name"
+            required
+            aria-describedby="nombre-error"
+          >
+          <span id="nombre-error" role="alert" style="display:none">
+            Por favor ingresa tu nombre completo.
+          </span>
+        </div>
+
+        <div>
+          <label for="correo">Correo electrónico</label>
+          <input
+            type="email"
+            id="correo"
+            name="email"
+            autocomplete="email"
+            required
+            aria-describedby="correo-error"
+          >
+          <span id="correo-error" role="alert" style="display:none">
+            Ingresa un correo electrónico válido.
+          </span>
+        </div>
+
+        <div>
+          <label for="telefono">Teléfono de contacto</label>
+          <input
+            type="tel"
+            id="telefono"
+            name="telefono"
+            autocomplete="tel"
+          >
+        </div>
+
+        <div>
+          <label for="tipo-tramite">Tipo de trámite</label>
+          <select id="tipo-tramite" name="tipo_tramite">
+            <option value="">Selecciona una opción</option>
+            <option value="credencial">Credencial de vecino</option>
+            <option value="predial">Pago de predial</option>
+            <option value="agua">Pago de agua</option>
+          </select>
+        </div>
+
+        <!-- 2.5.3: aria-label contiene el texto visible del botón -->
+        <button
+          type="submit"
+          aria-label="Enviar solicitud de trámite"
+        >Enviar solicitud</button>
+
+      </form>
+    </section>
+
+    <!-- 4.1.2: div con rol personalizado tiene nombre accesible -->
+    <div role="button" tabindex="0" aria-label="Descargar guía de trámites en PDF">
+      Descargar guía <abbr title="Portable Document Format">PDF</abbr>
+    </div>
+
+    <section>
+      <h2>Imágenes del municipio</h2>
+      <img src="palacio-municipal.jpg" alt="Vista frontal del Palacio Municipal con jardín central">
+      <img src="parque-central.jpg"    alt="Parque central con fuente y áreas verdes">
+      <!-- imagen decorativa con alt vacío (correcto) -->
+      <img src="separador.png" alt="">
+    </section>
+
+  </main>
+
+  <footer>
+    <p>
+      Portal oficial del Municipio ·
+      <a href="/privacidad">Aviso de privacidad</a> ·
+      <a href="/accesibilidad">Declaración de accesibilidad</a>
+    </p>
+  </footer>
+
+</body>
+</html>

@@ -24,27 +24,26 @@ const normalizeReportShape = (raw) => {
     score: Number(raw.score ?? 0),
     criticalCount: Number(raw.critical_count ?? raw.critical ?? 0),
     warningCount: Number(raw.warning_count ?? raw.warnings ?? 0),
-    /** Reservado si el backend etiqueta hallazgos AAA por separado (p. ej. criterios 1.4.6, 1.4.8). */
-    aaaCount: Number(raw.aaa_count ?? raw.aaa ?? 0),
+    improvementCount: Number(raw.improvement_count ?? raw.aaa_count ?? 0),
     filename: raw.filename ?? null,
   };
 };
 
 const METRIC_COPY = {
   critical: {
-    title: 'Faltas críticas (nivel A)',
+    title: 'Faltas críticas',
     explanation:
-      'El nivel A aborda barreras que suelen impedir usar el contenido: por ejemplo alternativas al contenido no textual (1.1.1), operación mediante teclado (2.1.1) o nombre, rol y valor expuestos correctamente a las tecnologías de asistencia (4.1.2). Las faltas críticas aquí corresponden a reglas de severidad «error» del analizador.',
+      'Barreras de alto impacto que suelen impedir el acceso al contenido: por ejemplo inputs sin etiqueta accesible (WCAG 1.3.1, nivel A) o texto con contraste insuficiente (WCAG 1.4.3, nivel AA). Corresponden a hallazgos de severidad «error» del analizador y penalizan −10 puntos cada uno en el score.',
   },
   warning: {
-    title: 'Advertencias (nivel AA)',
+    title: 'Advertencias',
     explanation:
-      'El nivel AA incorpora criterios que refuerzan percepción, operación y comprensión: por ejemplo contraste mínimo de texto (1.4.3), reflujo sin desplazamiento horizontal a 400 % (1.4.10), orden de foco predecible (2.4.3) o encabezados y etiquetas que describan el propósito (2.4.6). Las advertencias aquí se alinean con hallazgos «warning» del analizador.',
+      'Problemas de impacto moderado que dificultan la navegación o comprensión pero no bloquean el acceso por completo: por ejemplo saltos en la jerarquía de encabezados (WCAG 2.4.6, nivel AA). Corresponden a hallazgos de severidad «warning» y penalizan −5 puntos cada uno en el score.',
   },
-  aaa: {
-    title: 'Mejoras (nivel AAA)',
+  improvement: {
+    title: 'Mejoras sugeridas',
     explanation:
-      'El nivel AAA añade requisitos más estrictos; ejemplos frecuentes en la especificación son el contraste reforzado de texto (1.4.6), la presentación visual de bloques de texto (1.4.8) o la imagen de texto sin excepción (1.4.9). El contador refleja hallazgos etiquetados como AAA cuando el backend los expone.',
+      'Oportunidades de accesibilidad avanzada de bajo impacto inmediato: criterios aspiracionales como contraste reforzado (WCAG 1.4.6, nivel AAA) o presentación visual de texto (WCAG 1.4.8, nivel AAA). No penalizan el score — son sugerencias para ir más allá del mínimo requerido.',
   },
 };
 
@@ -163,7 +162,7 @@ const FileReport = () => {
   const [expandedSections, setExpandedSections] = useState(() => ({
     critical: false,
     warning: false,
-    aaa: false,
+    improvement: false,
   }));
 
   const scoreCardRef = useRef(null);
@@ -249,7 +248,7 @@ const FileReport = () => {
   const reportScore = Number(report?.score ?? 0);
   const reportCritical = Number(report?.criticalCount ?? 0);
   const reportWarnings = Number(report?.warningCount ?? 0);
-  const reportAaa = Number(report?.aaaCount ?? 0);
+  const reportImprovements = Number(report?.improvementCount ?? 0);
   const breadcrumbTitle = reportLabel || `Archivo ${fileId}`;
 
   const criticalTheme = {
@@ -281,10 +280,10 @@ const FileReport = () => {
 
   const cOpen = expandedSections.critical;
   const wOpen = expandedSections.warning;
-  const aOpen = expandedSections.aaa;
+  const iOpen = expandedSections.improvement;
   const flexCritical = `${cOpen ? 2 : 1} 1 0`;
   const flexWarning = `${wOpen ? 2 : 1} 1 0`;
-  const flexAaa = `${aOpen ? 2 : 1} 1 0`;
+  const flexImprovement = `${iOpen ? 2 : 1} 1 0`;
 
   return (
     <section className="min-w-0">
@@ -374,14 +373,14 @@ const FileReport = () => {
               theme={warningTheme}
             />
           </div>
-          <div className="d-flex flex-column min-h-0" style={{ flex: flexAaa }}>
+          <div className="d-flex flex-column min-h-0" style={{ flex: flexImprovement }}>
             <ExpandableMetricCard
-              metricKey="aaa"
-              isOpen={expandedSections.aaa}
+              metricKey="improvement"
+              isOpen={expandedSections.improvement}
               onToggle={toggleSection}
-              count={reportAaa}
+              count={reportImprovements}
               Icon={AutoAwesomeOutlinedIcon}
-              copy={METRIC_COPY.aaa}
+              copy={METRIC_COPY.improvement}
               theme={aaaTheme}
             />
           </div>

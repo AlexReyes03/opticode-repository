@@ -2,11 +2,25 @@ const ErrorCard = ({ error }) => {
   const { severity, level, title, description, line, codeLines: rawLines } = error;
   const codeLines = Array.isArray(rawLines) ? rawLines : [];
   const isCritical = severity === 'critical';
+  const isImprovement = severity === 'improvement';
 
-  const borderColor = isCritical ? 'var(--oc-danger)' : 'var(--oc-warning)';
-  const badgeBg = isCritical ? 'rgba(239,68,68,0.1)' : 'rgba(249,115,22,0.1)';
-  const badgeColor = isCritical ? 'var(--oc-danger-dark)' : 'var(--oc-warning-dark)';
-  const badgeLabel = isCritical ? `Falta Crítica • ${level}` : `Advertencia • ${level}`;
+  const borderColor = isCritical
+    ? 'var(--oc-danger)'
+    : isImprovement
+      ? 'var(--oc-royal)'
+      : 'var(--oc-warning)';
+  const badgeBg = isCritical
+    ? 'rgba(239,68,68,0.1)'
+    : isImprovement
+      ? 'rgba(37,99,235,0.1)'
+      : 'rgba(249,115,22,0.1)';
+  const badgeColor = isCritical
+    ? 'var(--oc-danger-dark)'
+    : isImprovement
+      ? '#1e3a8a'
+      : 'var(--oc-warning-dark)';
+  const severityLabel = isCritical ? 'Falta Crítica' : isImprovement ? 'Mejora Sugerida' : 'Advertencia';
+  const badgeLabel = level ? `${severityLabel} • ${level}` : severityLabel;
 
   return (
     <div

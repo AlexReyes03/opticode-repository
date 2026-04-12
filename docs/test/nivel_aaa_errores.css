@@ -1,0 +1,117 @@
+/* PRUEBA: errores WCAG Nivel AAA en CSS
+   Errores esperados:
+   - 1.4.6  contraste texto/fondo entre 4.5:1 y 7:1 (pasa AA, falla AAA)
+   - 1.4.8  line-height < 1.5, text-align: justify, max-width > 800px
+   - 2.3.3  animaciones sin @media (prefers-reduced-motion)
+   - 2.4.13 :focus con outline pero sin outline-offset ni box-shadow
+   - 2.5.5  botón entre 24px y 44px (pasa AA, falla AAA)
+*/
+
+body {
+  font-family: Georgia, serif;
+  /* 1.4.6: ratio ~5.9:1 — pasa 4.5:1 AA pero falla 7:1 AAA */
+  color: #555555;
+  background-color: #ffffff;
+  /* 1.4.8: max-width demasiado amplio */
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* 1.4.8: interlineado insuficiente */
+p {
+  line-height: 1.2;
+  /* 1.4.8: texto justificado dificulta la lectura */
+  text-align: justify;
+}
+
+/* 1.4.8: columna de contenido demasiado ancha */
+main {
+  max-width: 1200px;
+}
+
+/* 2.4.13: focus con outline pero sin outline-offset ni box-shadow */
+a:focus {
+  outline: 2px solid #0055cc;
+  /* falta: outline-offset: 2px; o box-shadow */
+}
+
+button:focus {
+  outline: 3px dotted #333333;
+  /* falta: outline-offset ni box-shadow */
+}
+
+/* 2.5.5: botón entre 24px y 44px — pasa AA (24px) pero falla AAA (44px) */
+button {
+  height: 32px;
+  width: 120px;
+  background-color: #0055cc;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  padding: 0 16px;
+}
+
+input[type="submit"] {
+  height: 28px;
+  width: 100px;
+  background-color: #007bff;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+}
+
+/* 1.4.6: texto de nav con ratio ~5.1:1 — pasa AA pero falla AAA */
+nav a {
+  color: #666666;
+  background-color: #ffffff;
+  text-decoration: none;
+  padding: 4px 8px;
+}
+
+/* 2.3.3: animación de entrada sin @media (prefers-reduced-motion) */
+main {
+  animation: fadeIn 0.4s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 2.3.3: transición en hover sin protección */
+nav a {
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+nav a:hover {
+  color: #003399;
+  background-color: #f0f4ff;
+}
+
+/* 2.3.3: animación en tarjetas */
+.card {
+  animation: slideIn 0.3s ease-out;
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Estilos generales para el layout */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+th, td {
+  border: 1px solid #cccccc;
+  padding: 8px 12px;
+  text-align: left;
+}

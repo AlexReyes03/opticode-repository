@@ -43,11 +43,18 @@ const normalizeCodeLines = (finding) => {
  */
 const normalizeFinding = (finding, index) => {
   const rawSeverity = String(finding?.severity ?? '').toLowerCase();
-  const severity = rawSeverity === 'error' || rawSeverity === 'critical' ? 'critical' : 'warning';
+  const severity =
+    rawSeverity === 'error' || rawSeverity === 'critical'
+      ? 'critical'
+      : rawSeverity === 'improvement'
+        ? 'improvement'
+        : 'warning';
+  const rawLevel = finding?.wcag_level ?? finding?.level ?? null;
+  const level = rawLevel ? `Nivel ${rawLevel}` : null;
   return {
     id: finding?.id ?? `finding-${index}`,
     severity,
-    level: finding?.level ?? (severity === 'critical' ? 'Nivel A' : 'Nivel AA'),
+    level,
     title: finding?.title ?? finding?.wcag_rule ?? 'Hallazgo WCAG',
     description: sanitizeDescriptionText(
       finding?.message ?? finding?.description ?? 'Sin descripción disponible.'
@@ -135,6 +142,7 @@ const ErrorDetail = () => {
     all: errors.length,
     critical: errors.filter((e) => e.severity === 'critical').length,
     warning: errors.filter((e) => e.severity === 'warning').length,
+    improvement: errors.filter((e) => e.severity === 'improvement').length,
   };
 
   return (
