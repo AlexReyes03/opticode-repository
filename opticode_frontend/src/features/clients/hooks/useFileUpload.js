@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadFile, uploadZip } from '../../../api/file-services';
+import { getApiErrorMessage } from '../../../api/fetch-wrapper';
 
 /**
  * Formatea bytes a una cadena legible.
@@ -54,7 +55,12 @@ export function useFileUpload(projectId) {
         } else {
           const data = await uploadFile(projectId, file);
           const fileId = data?.id ?? null;
-          patchFile(file.name, { status: 'completed', fileId });
+          const score = data?.score;
+          patchFile(file.name, {
+            status: 'completed',
+            fileId,
+            ...(score != null && score !== '' ? { score } : {}),
+          });
           if (fileId) {
             navigate(`/projects/${projectId}/files/${fileId}`);
           }
@@ -62,7 +68,7 @@ export function useFileUpload(projectId) {
       } catch (err) {
         patchFile(file.name, {
           status: 'error',
-          errorMessage: err?.message ?? 'Error durante la carga.',
+          errorMessage: getApiErrorMessage(err, 'Error durante la carga.'),
         });
       }
     },

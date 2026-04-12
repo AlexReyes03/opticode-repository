@@ -22,26 +22,36 @@ const FileStatusList = ({ files = [] }) => {
           {files.map((file) => (
             <div
               key={file.name}
-              className="list-group-item d-flex align-items-center justify-content-between px-0"
+              className="list-group-item d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 px-0 py-2"
             >
-              <div className="d-flex align-items-center gap-2">
+              <div className="d-flex align-items-center gap-2 min-w-0">
                 {getFileIcon(file.name)}
-                <span className="fw-medium small">{file.name}</span>
-                <span className="small text-secondary">{file.size}</span>
+                <span className="fw-medium small text-break">{file.name}</span>
+                <span className="small text-secondary flex-shrink-0">{file.size}</span>
               </div>
 
               {file.status === 'uploading' ? (
-                <span className="badge bg-info bg-opacity-10 text-primary d-flex align-items-center gap-1">
+                <span className="badge bg-info bg-opacity-10 text-primary d-inline-flex align-items-center gap-1 align-self-sm-end">
                   <span
                     className="spinner-border spinner-border-sm"
                     style={{ width: '0.625rem', height: '0.625rem', borderWidth: '2px' }}
                     aria-hidden="true"
                   />
-                  Subiendo...
+                  Subiendo…
+                </span>
+              ) : file.status === 'error' ? (
+                <span
+                  className="badge bg-danger bg-opacity-10 text-danger text-wrap text-break text-start align-self-sm-end"
+                  style={{ maxWidth: '100%', whiteSpace: 'normal' }}
+                  role="status"
+                >
+                  {file.errorMessage ?? 'Error durante la carga.'}
                 </span>
               ) : (
-                <span className="badge bg-success bg-opacity-10 text-success">
-                  Completado - Eval: {file.score}
+                <span className="badge bg-success bg-opacity-10 text-success align-self-sm-end">
+                  {file.score != null && file.score !== ''
+                    ? `Completado — eval: ${file.score}`
+                    : 'Completado'}
                 </span>
               )}
             </div>
