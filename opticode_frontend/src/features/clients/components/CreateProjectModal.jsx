@@ -1,13 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
-import CloseIcon from '@mui/icons-material/Close';
-import { createProject } from '../../../api/project-services';
+import {
+  createProject,
+  PROJECT_DESCRIPTION_MAX_LENGTH,
+  updateProject,
+} from '../../../api/project-services';
 
-const CreateProjectModal = ({ show, onClose, onProjectCreated }) => {
+/**
+ * @param {boolean} show
+ * @param {() => void} onClose
+ * @param {() => void} [onProjectCreated] Tras crear o guardar edición.
+ * @param {{ id: number|string, name?: string, description?: string }|null} [projectToEdit] Si viene definido, modo edición.
+ */
+const CreateProjectModal = ({ show, onClose, onProjectCreated, projectToEdit = null }) => {
+  const isEdit = Boolean(projectToEdit?.id);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const modalRef = useRef(null);
+
+  useEffect(() => {
+    if (!show) return;
+    if (isEdit && projectToEdit) {
+      setName(typeof projectToEdit.name === 'string' ? projectToEdit.name : '');
+      setDescription(typeof projectToEdit.description === 'string' ? projectToEdit.description : '');
+    } else if (!isEdit) {
+      setName('');
+      setDescription('');
+    }
+    setError(null);
+  }, [show, isEdit, projectToEdit]);
 
   useEffect(() => {
     if (!modalRef.current) return;
@@ -41,34 +63,43 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated }) => {
     setLoading(true);
 
     try {
-      await createProject({ name, description });
-      setName('');
-      setDescription('');
+      if (isEdit) {
+        await updateProject(projectToEdit.id, { name: name.trim(), description: description.trim() });
+      } else {
+        await createProject({ name: name.trim(), description: description.trim() });
+      }
       onClose();
       if (onProjectCreated) {
         onProjectCreated();
       }
-    } catch (err) {
-      setError('Ocurrió un error al crear el proyecto. Por favor, intenta de nuevo.');
-      console.error(err);
+    } catch {
+      setError(
+        isEdit
+          ? 'No se pudieron guardar los cambios. Intenta de nuevo.'
+          : 'Ocurrió un error al crear el proyecto. Intenta de nuevo.',
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const title = isEdit ? 'Editar proyecto' : 'Nuevo proyecto';
+  const submitLabel = loading ? (isEdit ? 'Guardando…' : 'Creando…') : isEdit ? 'Guardar cambios' : 'Crear proyecto';
+
   return (
-    <div className="modal fade" ref={modalRef} tabIndex="-1" aria-labelledby="createProjectModalLabel" aria-hidden="true">
+    <div className="modal fade" ref={modalRef} tabIndex={-1} aria-labelledby="projectModalLabel" aria-hidden="true">
       <div className="modal-dialog modal-dialog-centered">
         <div className="modal-content">
-          {/* Header */}
           <div className="modal-header">
-            <h3 className="modal-title fs-5 fw-semibold" id="createProjectModalLabel" style={{ color: 'var(--oc-navy)', borderLeft: '4px solid var(--oc-royal)', paddingLeft: '0.75rem' }}>
-              Nuevo Proyecto
+            <h3
+              className="modal-title fs-5 fw-semibold"
+              id="projectModalLabel"
+            >
+              {title}
             </h3>
-            <button type="button" className="btn-close" onClick={onClose} aria-label="Cerrar modal"></button>
+            <button type="button" className="btn-close" onClick={onClose} aria-label="Cerrar modal" />
           </div>
 
-          {/* Body */}
           <form onSubmit={handleSubmit}>
             <div className="modal-body">
               {error && (
@@ -85,7 +116,7 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated }) => {
                     id="project-name"
                     type="text"
                     className="form-control"
-                    placeholder="Ej: Portal Educativo"
+                    placeholder="Ej: Portal educativo"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     maxLength={100}
@@ -107,22 +138,25 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated }) => {
                 <textarea
                   id="project-desc"
                   className="form-control"
-                  rows={3}
-                  placeholder="Describe brevemente el propósito de este proyecto..."
+                  rows={2}
+                  placeholder="Describe brevemente el propósito de este proyecto…"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  style={{ resize: 'vertical' }}
+                  onChange={(e) => setDescription(e.target.value.slice(0, PROJECT_DESCRIPTION_MAX_LENGTH))}
+                  maxLength={PROJECT_DESCRIPTION_MAX_LENGTH}
+                  style={{ resize: 'vertical', minHeight: '4.5rem', maxHeight: '12rem' }}
                 />
+                <div className="text-end text-muted mt-1" style={{ fontSize: '0.75rem' }}>
+                  {description.length}/{PROJECT_DESCRIPTION_MAX_LENGTH}
+                </div>
               </div>
             </div>
 
-            {/* Footer */}
             <div className="modal-footer">
               <button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={loading}>
                 Cancelar
               </button>
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Creando...' : 'Crear Proyecto'}
+                {submitLabel}
               </button>
             </div>
           </form>
