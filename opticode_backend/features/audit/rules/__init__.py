@@ -3,6 +3,7 @@ from .images    import detect_image_alt_findings              # 1.1.1
 from .forms     import (
     detect_form_label_findings,                               # 1.3.1
     detect_error_identification_findings,                     # 3.3.1
+    detect_input_purpose_findings,                            # 1.3.5 (AA)
 )
 from .keyboard  import (
     detect_meaningful_sequence_findings,                      # 1.3.2
@@ -17,18 +18,30 @@ from .structure import (
     detect_bypass_blocks_findings,                            # 2.4.1
     detect_page_title_findings,                               # 2.4.2
     detect_page_language_findings,                            # 3.1.1
+    detect_reflow_findings,                                   # 1.4.10 (AA)
 )
 from .links     import detect_link_purpose_findings           # 2.4.4
 from .aria      import (
     detect_name_role_value_findings,                          # 4.1.2
     detect_label_in_name_findings,                            # 2.5.3
+    detect_status_messages_findings,                          # 4.1.3 (AA)
 )
 
 # ── Reglas HTML — Nivel AA ─────────────────────────────────────────────────
 from .headings  import detect_heading_structure_findings      # 2.4.6
 
 # ── Reglas CSS — Nivel AA ──────────────────────────────────────────────────
-from .contrast  import detect_contrast_findings               # 1.4.3
+from .contrast   import (
+    detect_contrast_findings,                                 # 1.4.3
+    detect_nontext_contrast_findings,                         # 1.4.11
+)
+from .css_checks import (
+    detect_focus_visible_findings,                            # 2.4.7
+    detect_resize_text_findings,                              # 1.4.4
+    detect_text_spacing_findings,                             # 1.4.12
+    detect_orientation_lock_findings,                         # 1.3.4
+    detect_target_size_findings,                              # 2.5.8
+)
 
 # ---------------------------------------------------------------------------
 # Registro de reglas por tipo de archivo
@@ -54,10 +67,19 @@ HTML_RULES = [
     detect_error_identification_findings,   # 3.3.1 — form required sin error accesible
     detect_name_role_value_findings,        # 4.1.2 — botones sin nombre / roles inválidos
     # ── Nivel AA ─────────────────────────────────────────────────────────
+    detect_reflow_findings,                 # 1.4.10 — viewport zoom desactivado
+    detect_input_purpose_findings,          # 1.3.5 — input sin autocomplete
     detect_heading_structure_findings,      # 2.4.6 — jerarquía de encabezados
+    detect_status_messages_findings,        # 4.1.3 — mensajes de estado sin live region
 ]
 
 CSS_RULES = [
     # ── Nivel AA ─────────────────────────────────────────────────────────
-    detect_contrast_findings,               # 1.4.3 — contraste mínimo 4.5:1
+    detect_contrast_findings,               # 1.4.3 — contraste texto 4.5:1
+    detect_nontext_contrast_findings,       # 1.4.11 — contraste borde UI 3:1
+    detect_focus_visible_findings,          # 2.4.7 — outline:none en :focus
+    detect_resize_text_findings,            # 1.4.4 — font-size en px fijo
+    detect_text_spacing_findings,           # 1.4.12 — espaciado con !important
+    detect_orientation_lock_findings,       # 1.3.4 — bloqueo de orientación
+    detect_target_size_findings,            # 2.5.8 — área de toque < 24px
 ]

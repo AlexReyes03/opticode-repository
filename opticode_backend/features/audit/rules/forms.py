@@ -4,6 +4,7 @@ Reglas de formularios y campos de entrada.
 Criterios cubiertos:
 - WCAG 1.3.1 — Info and Relationships · Nivel A
 - WCAG 3.3.1 — Error Identification · Nivel A
+- WCAG 1.3.5 — Identify Input Purpose · Nivel AA
 """
 
 from __future__ import annotations
@@ -23,7 +24,6 @@ _LABEL_RULE_CODE  = "WCAG 1.3.1"
 _LABEL_WCAG_LEVEL = "A"
 _LABEL_SEVERITY   = "error"
 
-# Tipos de <input> que no representan campos de entrada del usuario
 EXCLUDED_INPUT_TYPES = {"button", "submit", "reset", "image", "hidden"}
 
 
@@ -93,12 +93,7 @@ _REQUIRED_FIELD_TAGS = {"input", "select", "textarea"}
 
 
 def _form_has_error_container(form: Any) -> bool:
-    """
-    Verifica si el formulario contiene algún mecanismo accesible de error:
-    - Elemento con role="alert" o role="status".
-    - Elemento con aria-live.
-    - Algún campo con aria-describedby (referencia a mensaje de error).
-    """
+    """Verifica si el formulario tiene mecanismo accesible de mensajes de error."""
     if form.find(attrs={"role": lambda r: r in ("alert", "status")}):
         return True
     if form.find(attrs={"aria-live": True}):
@@ -112,10 +107,8 @@ def detect_error_identification_findings(html_content: str) -> list[WcagFinding]
     """
     Detecta <form> con campos required sin contenedor de errores accesible.
 
-    Un formulario que marca campos como obligatorios pero no expone los
-    mensajes de error a tecnologías asistivas (role="alert", aria-live,
-    aria-describedby) impide que usuarios de lector de pantalla identifiquen
-    los errores de validación.
+    Sin role="alert", aria-live o aria-describedby, los mensajes de error no
+    se anuncian a usuarios de lector de pantalla.
     """
     if not html_content or not str(html_content).strip():
         return []
@@ -140,10 +133,62 @@ def detect_error_identification_findings(html_content: str) -> list[WcagFinding]
                 severity=_ERROR_SEVERITY,
                 message=(
                     "<form> con campos required sin contenedor de errores accesible. "
-                    "Añade role=\"alert\" o aria-live en el área de mensajes de error, "
+                    'Añade role="alert" o aria-live en el área de mensajes de error, '
                     "o vincula cada campo a su mensaje con aria-describedby."
                 ),
                 category="form-error-identification",
+            ))
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# WCAG 1.3.5 — Identify Input Purpose · Nivel AA
+# ---------------------------------------------------------------------------
+
+_PURPOSE_RULE_CODE  = "WCAG 1.3.5"
+_PURPOSE_WCAG_LEVEL = "AA"
+_PURPOSE_SEVERITY   = "warning"
+
+# Tipos de input que recogen datos personales y requieren autocomplete
+_PERSONAL_DATA_TYPES = {"email", "tel", "url", "password"}
+
+
+def detect_input_purpose_findings(html_content: str) -> list[WcagFinding]:
+    """
+    Detecta <input> de datos personales sin atributo autocomplete.
+
+    El atributo autocomplete permite a gestores de contraseñas y al
+    autocompletado del navegador rellenar campos automáticamente, reduciendo
+    la carga cognitiva para usuarios con discapacidades cognitivas o motoras.
+    """
+    if not html_content or not str(html_content).strip():
+        return []
+
+    soup = BeautifulSoup(html_content, "html5lib", store_line_numbers=True)
+    source_lines = html_content.splitlines()
+    findings: list[WcagFinding] = []
+
+    for tag in soup.find_all("input"):
+        input_type = str(tag.get("type", "text")).lower()
+        if input_type not in _PERSONAL_DATA_TYPES:
+            continue
+
+        autocomplete = tag.get("autocomplete")
+
+        # Sin atributo o con autocomplete="off" ambos son problemáticos
+        if autocomplete is None or str(autocomplete).strip().lower() == "off":
+            findings.append(make_finding(
+                tag=tag,
+                source_lines=source_lines,
+                wcag_rule=_PURPOSE_RULE_CODE,
+                wcag_level=_PURPOSE_WCAG_LEVEL,
+                severity=_PURPOSE_SEVERITY,
+                message=(
+                    f'<input type="{input_type}"> sin atributo autocomplete apropiado. '
+                    f'Añade autocomplete="{input_type}" para facilitar el autocompletado.'
+                ),
+                category="input-missing-autocomplete",
             ))
 
     return findings

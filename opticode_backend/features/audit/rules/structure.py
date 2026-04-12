@@ -5,9 +5,12 @@ Criterios cubiertos:
 - WCAG 2.4.2 — Page Titled · Nivel A
 - WCAG 3.1.1 — Language of Page · Nivel A
 - WCAG 2.4.1 — Bypass Blocks · Nivel A
+- WCAG 1.4.10 — Reflow · Nivel AA
 """
 
 from __future__ import annotations
+
+import re
 
 from bs4 import BeautifulSoup
 
@@ -142,13 +145,11 @@ _BYPASS_RULE_CODE  = "WCAG 2.4.1"
 _BYPASS_WCAG_LEVEL = "A"
 _BYPASS_SEVERITY   = "warning"
 
-# Texto de skip links reconocidos (patrones en minúsculas)
 _SKIP_LINK_PATTERNS = {
     "saltar", "saltar al contenido", "saltar navegación", "ir al contenido",
     "skip", "skip to content", "skip navigation", "skip to main",
 }
 
-# Elementos semánticos HTML5 que actúan como landmarks
 _LANDMARK_TAGS = {"main", "nav", "header", "aside", "footer"}
 
 
@@ -157,9 +158,8 @@ def detect_bypass_blocks_findings(html_content: str) -> list[WcagFinding]:
     Detecta la ausencia simultánea de skip link y landmarks semánticos.
 
     Un documento satisface 2.4.1 si tiene AL MENOS UNO de:
-    - Un skip link: <a href="#..."> con texto que identifica el salto.
-    - Elementos landmark HTML5 (<main>, <nav>, <header>, etc.) o
-      role="main" / role="navigation".
+    - Un skip link (<a href="#..."> con texto identificativo).
+    - Elementos landmark HTML5 o role="main" / role="navigation".
     """
     if not html_content or not str(html_content).strip():
         return []
@@ -167,7 +167,6 @@ def detect_bypass_blocks_findings(html_content: str) -> list[WcagFinding]:
     soup = BeautifulSoup(html_content, "html5lib", store_line_numbers=True)
     source_lines = html_content.splitlines()
 
-    # Buscar skip link: <a href="#..."> cuyo texto coincida con patrones conocidos
     has_skip_link = False
     for tag in soup.find_all("a", href=True):
         href = str(tag.get("href", ""))
@@ -175,7 +174,6 @@ def detect_bypass_blocks_findings(html_content: str) -> list[WcagFinding]:
             has_skip_link = True
             break
 
-    # Buscar landmarks semánticos
     has_landmark = bool(soup.find(_LANDMARK_TAGS))
     if not has_landmark:
         has_landmark = bool(
@@ -195,8 +193,78 @@ def detect_bypass_blocks_findings(html_content: str) -> list[WcagFinding]:
         severity=_BYPASS_SEVERITY,
         message=(
             "El documento no tiene mecanismo para saltar bloques de contenido repetido. "
-            "Añade un skip link (<a href=\"#main\">Saltar al contenido</a>) "
+            'Añade un skip link (<a href="#main">Saltar al contenido</a>) '
             "o usa elementos semánticos HTML5 (<main>, <nav>, <header>)."
         ),
         category="bypass-blocks-missing",
     )]
+
+
+# ---------------------------------------------------------------------------
+# WCAG 1.4.10 — Reflow · Nivel AA
+# ---------------------------------------------------------------------------
+
+_REFLOW_RULE_CODE  = "WCAG 1.4.10"
+_REFLOW_WCAG_LEVEL = "AA"
+_REFLOW_SEVERITY   = "error"
+
+_MAX_SCALE_PATTERN = re.compile(r"maximum-scale=([0-9.]+)")
+
+
+def detect_reflow_findings(html_content: str) -> list[WcagFinding]:
+    """
+    Detecta <meta name="viewport"> que desactiva el zoom del usuario:
+    - user-scalable=no / user-scalable=0
+    - maximum-scale=1 (o menor)
+
+    Sin zoom, personas con baja visión no pueden ampliar el contenido.
+    """
+    if not html_content or not str(html_content).strip():
+        return []
+
+    soup = BeautifulSoup(html_content, "html5lib", store_line_numbers=True)
+    source_lines = html_content.splitlines()
+    findings: list[WcagFinding] = []
+
+    for tag in soup.find_all("meta"):
+        if tag.get("name", "").lower() != "viewport":
+            continue
+
+        content = tag.get("content", "").lower().replace(" ", "")
+
+        if "user-scalable=no" in content or "user-scalable=0" in content:
+            findings.append(make_finding(
+                tag=tag,
+                source_lines=source_lines,
+                wcag_rule=_REFLOW_RULE_CODE,
+                wcag_level=_REFLOW_WCAG_LEVEL,
+                severity=_REFLOW_SEVERITY,
+                message=(
+                    'El meta viewport desactiva el zoom del usuario (user-scalable=no). '
+                    "Personas con baja visión no podrán ampliar el contenido."
+                ),
+                category="viewport-zoom-disabled",
+            ))
+
+        match = _MAX_SCALE_PATTERN.search(content)
+        if match:
+            try:
+                scale = float(match.group(1))
+            except ValueError:
+                scale = None
+
+            if scale is not None and scale <= 1.0:
+                findings.append(make_finding(
+                    tag=tag,
+                    source_lines=source_lines,
+                    wcag_rule=_REFLOW_RULE_CODE,
+                    wcag_level=_REFLOW_WCAG_LEVEL,
+                    severity=_REFLOW_SEVERITY,
+                    message=(
+                        f"El meta viewport limita el zoom máximo a {scale} "
+                        "(maximum-scale≤1), impidiendo ampliar el contenido."
+                    ),
+                    category="viewport-max-scale-limited",
+                ))
+
+    return findings

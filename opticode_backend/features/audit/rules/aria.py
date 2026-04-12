@@ -4,6 +4,7 @@ Reglas de atributos ARIA y semántica de roles.
 Criterios cubiertos:
 - WCAG 4.1.2 — Name, Role, Value · Nivel A
 - WCAG 2.5.3 — Label in Name · Nivel A
+- WCAG 4.1.3 — Status Messages · Nivel AA
 """
 
 from __future__ import annotations
@@ -27,6 +28,9 @@ VALID_ARIA_ROLES = {
     "switch", "tab", "table", "tablist", "tabpanel", "term", "textbox",
     "timer", "toolbar", "tooltip", "tree", "treegrid", "treeitem",
 }
+
+# Roles que convierten un elemento en un live region accesible
+_LIVE_REGION_ROLES = {"alert", "status", "log", "marquee", "timer"}
 
 
 # ---------------------------------------------------------------------------
@@ -54,8 +58,8 @@ def _has_accessible_name(tag) -> bool:
 def detect_name_role_value_findings(html_content: str) -> list[WcagFinding]:
     """
     Detecta:
-    - <button> sin nombre accesible (vacío o solo con icono sin aria-label).
-    - Elementos con atributo role con valor no válido según ARIA 1.2.
+    - <button> sin nombre accesible.
+    - Elementos con role ARIA inválido según WAI-ARIA 1.2.
     """
     if not html_content or not str(html_content).strip():
         return []
@@ -67,15 +71,10 @@ def detect_name_role_value_findings(html_content: str) -> list[WcagFinding]:
     for tag in soup.find_all("button"):
         if not _has_accessible_name(tag):
             findings.append(make_finding(
-                tag=tag,
-                source_lines=source_lines,
-                wcag_rule=_NRV_RULE_CODE,
-                wcag_level=_NRV_WCAG_LEVEL,
+                tag=tag, source_lines=source_lines,
+                wcag_rule=_NRV_RULE_CODE, wcag_level=_NRV_WCAG_LEVEL,
                 severity=_NRV_SEVERITY,
-                message=(
-                    "<button> sin nombre accesible. "
-                    "Añade texto visible, aria-label o aria-labelledby."
-                ),
+                message="<button> sin nombre accesible. Añade texto visible, aria-label o aria-labelledby.",
                 category="button-missing-name",
             ))
 
@@ -83,10 +82,8 @@ def detect_name_role_value_findings(html_content: str) -> list[WcagFinding]:
         role_value = str(tag.get("role", "")).strip().lower()
         if role_value and role_value not in VALID_ARIA_ROLES:
             findings.append(make_finding(
-                tag=tag,
-                source_lines=source_lines,
-                wcag_rule=_NRV_RULE_CODE,
-                wcag_level=_NRV_WCAG_LEVEL,
+                tag=tag, source_lines=source_lines,
+                wcag_rule=_NRV_RULE_CODE, wcag_level=_NRV_WCAG_LEVEL,
                 severity=_NRV_SEVERITY,
                 message=(
                     f'role="{role_value}" no es un rol ARIA válido. '
@@ -106,7 +103,6 @@ _LIN_RULE_CODE  = "WCAG 2.5.3"
 _LIN_WCAG_LEVEL = "A"
 _LIN_SEVERITY   = "warning"
 
-# Elementos interactivos con texto visible que pueden tener aria-label
 _LABELED_TAGS = ["a", "button", "input", "select", "textarea", "label"]
 
 
@@ -116,7 +112,7 @@ def detect_label_in_name_findings(html_content: str) -> list[WcagFinding]:
     contiene el texto visible.
 
     Los usuarios de control por voz activan controles pronunciando su texto
-    visible. Si aria-label difiere, el comando de voz no funcionará.
+    visible; si aria-label difiere, el comando no funcionará.
     """
     if not html_content or not str(html_content).strip():
         return []
@@ -126,19 +122,16 @@ def detect_label_in_name_findings(html_content: str) -> list[WcagFinding]:
     findings: list[WcagFinding] = []
 
     for tag in soup.find_all(_LABELED_TAGS, attrs={"aria-label": True}):
-        aria_label = str(tag.get("aria-label", "")).strip().lower()
+        aria_label  = str(tag.get("aria-label", "")).strip().lower()
         visible_text = tag.get_text(strip=True).lower()
 
-        # Solo aplica cuando hay texto visible Y aria-label
         if not visible_text or not aria_label:
             continue
 
         if visible_text not in aria_label:
             findings.append(make_finding(
-                tag=tag,
-                source_lines=source_lines,
-                wcag_rule=_LIN_RULE_CODE,
-                wcag_level=_LIN_WCAG_LEVEL,
+                tag=tag, source_lines=source_lines,
+                wcag_rule=_LIN_RULE_CODE, wcag_level=_LIN_WCAG_LEVEL,
                 severity=_LIN_SEVERITY,
                 message=(
                     f'aria-label="{tag.get("aria-label")}" no contiene el texto visible '
@@ -146,6 +139,64 @@ def detect_label_in_name_findings(html_content: str) -> list[WcagFinding]:
                     "Los usuarios de control por voz no podrán activar este control."
                 ),
                 category="label-not-in-name",
+            ))
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# WCAG 4.1.3 — Status Messages · Nivel AA
+# ---------------------------------------------------------------------------
+
+_STATUS_RULE_CODE  = "WCAG 4.1.3"
+_STATUS_WCAG_LEVEL = "AA"
+_STATUS_SEVERITY   = "warning"
+
+# Palabras clave en nombres de clase que sugieren un contenedor de estado
+_STATUS_CLASS_KEYWORDS = {
+    "alert", "notification", "toast", "message", "success", "error",
+    "warning", "info", "feedback", "alerta", "notificacion", "mensaje",
+    "exito", "advertencia", "aviso",
+}
+
+
+def detect_status_messages_findings(html_content: str) -> list[WcagFinding]:
+    """
+    Detecta elementos con clases que sugieren contenido de estado/notificación
+    pero sin role de live region ni aria-live.
+
+    Sin estos atributos, los mensajes dinámicos (errores, confirmaciones,
+    notificaciones) no se anuncian a usuarios de lector de pantalla.
+    """
+    if not html_content or not str(html_content).strip():
+        return []
+
+    soup = BeautifulSoup(html_content, "html5lib", store_line_numbers=True)
+    source_lines = html_content.splitlines()
+    findings: list[WcagFinding] = []
+
+    for tag in soup.find_all(["div", "section", "aside", "span", "p"]):
+        classes = tag.get("class") or []
+        classes_str = " ".join(str(c) for c in classes).lower()
+
+        if not any(kw in classes_str for kw in _STATUS_CLASS_KEYWORDS):
+            continue
+
+        role = str(tag.get("role", "")).strip().lower()
+        has_aria_live = tag.get("aria-live") is not None
+
+        if role not in _LIVE_REGION_ROLES and not has_aria_live:
+            findings.append(make_finding(
+                tag=tag, source_lines=source_lines,
+                wcag_rule=_STATUS_RULE_CODE, wcag_level=_STATUS_WCAG_LEVEL,
+                severity=_STATUS_SEVERITY,
+                message=(
+                    f'Elemento con clase "{tag.get("class")}" parece un contenedor '
+                    "de mensajes de estado pero no tiene role=\"alert\", "
+                    'role="status" ni aria-live. '
+                    "Los lectores de pantalla no anunciarán sus cambios."
+                ),
+                category="status-message-not-accessible",
             ))
 
     return findings

@@ -1,8 +1,9 @@
 """
-WCAG 1.4.3 — Contrast (Minimum) · Nivel AA
+Reglas de contraste de color.
 
-Detecta:
-- Reglas CSS cuyo ratio de contraste entre color y background es inferior a 4.5:1.
+Criterios cubiertos:
+- WCAG 1.4.3 — Contrast (Minimum) · Nivel AA  (texto, umbral 4.5:1)
+- WCAG 1.4.11 — Non-text Contrast · Nivel AA  (bordes de UI, umbral 3:1)
 
 Formatos de color soportados: hex (#rgb, #rrggbb, #rrggbbaa), nombres CSS,
 rgb(), rgba().
@@ -21,14 +22,8 @@ import webcolors
 from ._utils import WcagFinding, build_snippet
 
 
-RULE_CODE          = "WCAG 1.4.3"
-WCAG_LEVEL         = "AA"
-SEVERITY           = "error"
-CONTRAST_THRESHOLD = 4.5
-
-
 # ---------------------------------------------------------------------------
-# Parseo de color
+# Parseo de color (compartido)
 # ---------------------------------------------------------------------------
 
 def _parse_hex(value: str) -> tuple[int, int, int]:
@@ -49,7 +44,6 @@ def _parse_named(name: str) -> tuple[int, int, int] | None:
 
 
 def _parse_rgb_function(func: Any) -> tuple[int, int, int] | None:
-    """Parsea un FunctionBlock de tinycss2 con nombre rgb o rgba."""
     numbers = [t for t in func.arguments if t.type == "number"]
     if len(numbers) < 3:
         return None
@@ -63,7 +57,6 @@ def _parse_rgb_function(func: Any) -> tuple[int, int, int] | None:
 
 
 def _extract_color(tokens: list[Any]) -> tuple[int, int, int] | None:
-    """Extrae el primer color reconocido de una lista de tokens CSS."""
     for token in tokens:
         if token.type == "hash":
             try:
@@ -82,7 +75,7 @@ def _extract_color(tokens: list[Any]) -> tuple[int, int, int] | None:
 
 
 # ---------------------------------------------------------------------------
-# Cálculo de contraste WCAG
+# Cálculo de contraste WCAG (compartido)
 # ---------------------------------------------------------------------------
 
 def _linearize(c: int) -> float:
@@ -103,19 +96,26 @@ def contrast_ratio(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> fl
 
 
 # ---------------------------------------------------------------------------
-# Regla principal
+# WCAG 1.4.3 — Contrast (Minimum) · Nivel AA
 # ---------------------------------------------------------------------------
 
+_MIN_RULE_CODE  = "WCAG 1.4.3"
+_MIN_WCAG_LEVEL = "AA"
+_MIN_SEVERITY   = "error"
+_MIN_THRESHOLD  = 4.5
+
+
 def detect_contrast_findings(css_content: str) -> list[WcagFinding]:
+    """
+    Detecta reglas CSS cuyo ratio de contraste texto/fondo es inferior a 4.5:1.
+    """
     if not css_content or not str(css_content).strip():
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    rules = tinycss2.parse_stylesheet(css_content, skip_whitespace=True, skip_comments=True)
-
-    for rule in rules:
+    for rule in tinycss2.parse_stylesheet(css_content, skip_whitespace=True, skip_comments=True):
         if rule.type != "qualified-rule":
             continue
 
@@ -130,38 +130,116 @@ def detect_contrast_findings(css_content: str) -> list[WcagFinding]:
         for decl in declarations:
             if decl.type != "declaration":
                 continue
-            name = decl.lower_name
-            if name == "color":
+            if decl.lower_name == "color":
                 foreground = _extract_color(decl.value)
-            elif name == "background-color":
+            elif decl.lower_name == "background-color":
                 bg_explicit = _extract_color(decl.value)
-            elif name == "background":
+            elif decl.lower_name == "background":
                 bg_shorthand = _extract_color(decl.value)
 
-        # background-color tiene prioridad sobre el shorthand
         background = bg_explicit if bg_explicit is not None else bg_shorthand
 
         if foreground is None or background is None:
             continue
 
         ratio = contrast_ratio(foreground, background)
-        if ratio >= CONTRAST_THRESHOLD:
+        if ratio >= _MIN_THRESHOLD:
             continue
 
         selector = "".join(t.serialize() for t in rule.prelude).strip()
-        line_num = max(1, rule.source_line)
+        line_num  = max(1, rule.source_line)
 
         findings.append(WcagFinding(
-            severity=SEVERITY,
-            wcag_level=WCAG_LEVEL,
-            wcag_rule=RULE_CODE,
+            severity=_MIN_SEVERITY,
+            wcag_level=_MIN_WCAG_LEVEL,
+            wcag_rule=_MIN_RULE_CODE,
             message=(
                 f'Contraste insuficiente en "{selector}": '
-                f"ratio {ratio:.2f}:1 (mínimo requerido {CONTRAST_THRESHOLD}:1)."
+                f"ratio {ratio:.2f}:1 (mínimo {_MIN_THRESHOLD}:1)."
             ),
             line_number=line_num,
             code_snippet=build_snippet(source_lines, line_num),
             category="color-contrast",
+        ))
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# WCAG 1.4.11 — Non-text Contrast · Nivel AA
+# ---------------------------------------------------------------------------
+
+_NTC_RULE_CODE  = "WCAG 1.4.11"
+_NTC_WCAG_LEVEL = "AA"
+_NTC_SEVERITY   = "error"
+_NTC_THRESHOLD  = 3.0
+
+# Selectores que apuntan a componentes de interfaz (heurística)
+_UI_COMPONENT_PATTERNS = [
+    "button", "input", "select", "textarea",
+    "[type=", "[role=\"button\"]", "[role='button']",
+]
+
+
+def detect_nontext_contrast_findings(css_content: str) -> list[WcagFinding]:
+    """
+    Detecta componentes de interfaz (botones, inputs) cuyo borde tiene ratio
+    de contraste contra el fondo inferior a 3:1.
+
+    Un borde con contraste insuficiente hace que el límite visual del
+    componente sea invisible para personas con baja visión.
+    """
+    if not css_content or not str(css_content).strip():
+        return []
+
+    source_lines = css_content.splitlines()
+    findings: list[WcagFinding] = []
+
+    for rule in tinycss2.parse_stylesheet(css_content, skip_whitespace=True, skip_comments=True):
+        if rule.type != "qualified-rule":
+            continue
+
+        selector = "".join(t.serialize() for t in rule.prelude).strip()
+        if not any(p in selector.lower() for p in _UI_COMPONENT_PATTERNS):
+            continue
+
+        declarations = tinycss2.parse_declaration_list(
+            rule.content, skip_whitespace=True, skip_comments=True
+        )
+
+        border_color: tuple[int, int, int] | None = None
+        background:   tuple[int, int, int] | None = None
+
+        for decl in declarations:
+            if decl.type != "declaration":
+                continue
+            if decl.lower_name in ("border-color", "border"):
+                border_color = _extract_color(decl.value)
+            elif decl.lower_name == "background-color":
+                background = _extract_color(decl.value)
+            elif decl.lower_name == "background" and background is None:
+                background = _extract_color(decl.value)
+
+        if border_color is None or background is None:
+            continue
+
+        ratio = contrast_ratio(border_color, background)
+        if ratio >= _NTC_THRESHOLD:
+            continue
+
+        line_num = max(1, rule.source_line)
+        findings.append(WcagFinding(
+            severity=_NTC_SEVERITY,
+            wcag_level=_NTC_WCAG_LEVEL,
+            wcag_rule=_NTC_RULE_CODE,
+            message=(
+                f'Contraste de borde insuficiente en "{selector}": '
+                f"ratio {ratio:.2f}:1 (mínimo {_NTC_THRESHOLD}:1). "
+                "El límite visual del componente puede ser invisible con baja visión."
+            ),
+            line_number=line_num,
+            code_snippet=build_snippet(source_lines, line_num),
+            category="nontext-contrast",
         ))
 
     return findings
