@@ -109,9 +109,9 @@ const ErrorDetail = () => {
   };
 
   return (
-    <section>
-      <nav aria-label="breadcrumb">
-        <ol className="breadcrumb">
+    <section className="min-w-0">
+      <nav aria-label="breadcrumb" className="min-w-0">
+        <ol className="breadcrumb flex-wrap">
           <li className="breadcrumb-item">
             <Link to="/dashboard">Mis Proyectos</Link>
           </li>
@@ -134,11 +134,13 @@ const ErrorDetail = () => {
         </ol>
       </nav>
 
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="fw-semibold fs-5 mb-0" style={{ color: 'var(--oc-navy)' }}>
+      <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-3 mb-4 min-w-0">
+        <h2 className="fw-semibold fs-5 mb-0 flex-shrink-0" style={{ color: 'var(--oc-navy)' }}>
           Hallazgos Detectados
         </h2>
-        <ErrorFilter activeFilter={filter} onFilterChange={setFilter} counts={counts} />
+        <div className="min-w-0 w-100 w-lg-auto">
+          <ErrorFilter activeFilter={filter} onFilterChange={setFilter} counts={counts} />
+        </div>
       </div>
 
       {isLoading && (
@@ -157,7 +159,7 @@ const ErrorDetail = () => {
         </div>
       )}
 
-      <div className="d-flex flex-column gap-3">
+      <div className="d-flex flex-column gap-3 min-w-0">
         {filteredErrors.map((error) => (
           <ErrorCard key={error.id} error={error} />
         ))}
