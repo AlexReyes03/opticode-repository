@@ -40,7 +40,7 @@ const FileUpload = () => {
             variant="individual"
             title="Archivo Individual"
             description="Arrastra tu archivo HTML o CSS aquí o"
-            constraints="Soporte: .html, .css | 1KB - 10MB"
+            constraints="Soporte: .html, .css | 0 B – 10 MB"
             onFile={handleFile}
           />
         </div>
@@ -49,7 +49,7 @@ const FileUpload = () => {
             variant="batch"
             title="Carga en Lote (ZIP)"
             description="Arrastra tu archivo .zip comprimido aquí o"
-            constraints="Máx. 50 archivos | 50MB | Solo procesa HTML/CSS"
+            constraints="Máx. 50 archivos | ZIP 50 MB | HTML/CSS hasta 10 MB c/u"
             onFile={handleFile}
           />
         </div>
