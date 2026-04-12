@@ -12,6 +12,16 @@ const ACCEPT = {
   batch: '.zip',
 };
 
+/** Fondo en reposo (transparencia 0.04); hover/drag usan --oc-info-light */
+const DROP_ZONE_IDLE_BG = 'rgba(37, 100, 235, 0.04)';
+const DROP_ZONE_ACTIVE_BG = 'var(--oc-info-light)';
+const DROP_ZONE_BORDER_IDLE = 'var(--oc-gray-400)';
+/** Grosor y estilo fijos (no usar utilidades `.border*` de Bootstrap: llevan `!important` y anulan `borderColor` inline). */
+const DROP_ZONE_BORDER_BASE = {
+  borderWidth: '2px',
+  borderStyle: 'dashed',
+};
+
 /**
  * Zona de arrastre y selección de archivos.
  *
@@ -31,20 +41,20 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
 
   const handleDrop = (e) => {
     e.preventDefault();
-    e.currentTarget.style.borderColor = 'var(--oc-gray-300)';
-    e.currentTarget.style.backgroundColor = 'transparent';
+    e.currentTarget.style.borderColor = DROP_ZONE_BORDER_IDLE;
+    e.currentTarget.style.backgroundColor = DROP_ZONE_IDLE_BG;
     emitFile(e.dataTransfer.files?.[0]);
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
     e.currentTarget.style.borderColor = 'var(--oc-royal)';
-    e.currentTarget.style.backgroundColor = 'var(--oc-info-light)';
+    e.currentTarget.style.backgroundColor = DROP_ZONE_ACTIVE_BG;
   };
 
   const handleDragLeave = (e) => {
-    e.currentTarget.style.borderColor = 'var(--oc-gray-300)';
-    e.currentTarget.style.backgroundColor = 'transparent';
+    e.currentTarget.style.borderColor = DROP_ZONE_BORDER_IDLE;
+    e.currentTarget.style.backgroundColor = DROP_ZONE_IDLE_BG;
   };
 
   const handleClick = () => inputRef.current?.click();
@@ -58,19 +68,21 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
 
   return (
     <div
-      className="border border-2 border-dashed rounded-4 p-5 text-center"
+      className="rounded-4 h-100 p-5 text-center min-w-0"
       style={{
-        borderColor: 'var(--oc-gray-300)',
+        ...DROP_ZONE_BORDER_BASE,
+        borderColor: DROP_ZONE_BORDER_IDLE,
+        backgroundColor: DROP_ZONE_IDLE_BG,
         cursor: 'pointer',
         transition: 'border-color 150ms ease, background-color 150ms ease',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = 'var(--oc-royal)';
-        e.currentTarget.style.backgroundColor = 'var(--oc-info-light)';
+        e.currentTarget.style.backgroundColor = DROP_ZONE_ACTIVE_BG;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--oc-gray-300)';
-        e.currentTarget.style.backgroundColor = 'transparent';
+        e.currentTarget.style.borderColor = DROP_ZONE_BORDER_IDLE;
+        e.currentTarget.style.backgroundColor = DROP_ZONE_IDLE_BG;
       }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -93,7 +105,12 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
 
       <div
         className="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
-        style={{ width: '4rem', height: '4rem', backgroundColor: 'var(--oc-info-light)' }}
+        style={{
+          width: '4rem',
+          height: '4rem',
+          backgroundColor: 'rgba(255, 255, 255, 0.72)',
+          boxShadow: '0 0 0 1px rgba(37, 99, 235, 0.12)',
+        }}
       >
         <Icon style={{ fontSize: '1.5rem', color: 'var(--oc-royal)' }} />
       </div>
@@ -109,12 +126,21 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
         </span>
       </p>
 
-      <span
-        className="badge bg-light text-secondary fw-normal rounded-2 px-3 py-1"
-        style={{ fontSize: '0.75rem' }}
-      >
-        {constraints}
-      </span>
+      <div className="w-100 px-1 mt-1">
+        <span
+          className="badge bg-light text-secondary fw-normal rounded-2 px-2 py-2 text-wrap text-break text-center d-block mx-auto"
+          style={{
+            fontSize: 'clamp(0.65rem, 1.75vw, 0.75rem)',
+            width: 'fit-content',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
+            lineHeight: 1.45,
+            whiteSpace: 'normal',
+          }}
+        >
+          {constraints}
+        </span>
+      </div>
     </div>
   );
 };
