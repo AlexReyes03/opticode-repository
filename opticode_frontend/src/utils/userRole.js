@@ -26,3 +26,23 @@ export function getUserRole(user) {
 export function isAdminUser(user) {
   return getUserRole(user) === 'admin';
 }
+
+/**
+ * Texto del sidebar: primer nombre si existe; si no, parte local del correo o nombre completo.
+ *
+ * @param {object|null} user
+ * @returns {{ shortLabel: string, title: string }}
+ */
+export function getSidebarUserPresentation(user) {
+  if (!user || typeof user !== 'object') {
+    return { shortLabel: 'Usuario', title: 'Usuario' };
+  }
+  const first = typeof user.first_name === 'string' ? user.first_name.trim() : '';
+  const last = typeof user.last_name === 'string' ? user.last_name.trim() : '';
+  const full = [first, last].filter(Boolean).join(' ').trim();
+  const email = typeof user.email === 'string' ? user.email.trim() : '';
+  const localPart = email.includes('@') ? email.split('@')[0] : email;
+  const shortLabel = first || localPart || full || 'Usuario';
+  const title = full || email || shortLabel;
+  return { shortLabel, title };
+}

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { setAuthHandlers, setErrorHandlers, setTokenProvider } from '../api/fetch-wrapper';
 import request from '../api/fetch-wrapper';
 
@@ -13,13 +13,15 @@ const TOKEN_KEYS = {
 
 /**
  * Decodifica el payload de un JWT sin verificar la firma (solo lectura de claims).
- * La verificación real ocurre en el backend en cada petición.
+ * La verificaci?n real ocurre en el backend en cada petici?n.
  * @param {string} token
  * @returns {object|null}
  */
 function decodeJwtPayload(token) {
   try {
-    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    if (!token || typeof token !== 'string' || !token.includes('.')) return null;
+    let base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
     return JSON.parse(atob(base64));
   } catch {
     return null;
@@ -41,17 +43,17 @@ function isTokenExpired(token) {
 const AuthContext = createContext(null);
 
 /**
- * Provider de autenticación. Debe envolverse dentro de BrowserRouter para
+ * Provider de autenticaci?n. Debe envolverse dentro de BrowserRouter para
  * que los componentes consumidores puedan usar useNavigate si lo necesitan.
  *
- * Registra automáticamente el tokenProvider y los handlers en fetch-wrapper
+ * Registra autom?ticamente el tokenProvider y los handlers en fetch-wrapper
  * para que todas las peticiones incluyan JWT y el refresh sea transparente.
  */
 export const AuthProvider = ({ children }) => {
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem(TOKEN_KEYS.ACCESS) ?? null);
 
   /**
-   * Perfil del usuario: tras login o al hidratar sesión se rellena con GET /api/auth/me/.
+   * Perfil del usuario: tras login o al hidratar sesi?n se rellena con GET /api/auth/me/.
    * Hasta entonces puede ser el payload decodificado del JWT (solo claims).
    * @type {object|null}
    */
@@ -88,12 +90,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /**
-   * Registra el tokenProvider y los handlers en fetch-wrapper.
-   * Se ejecuta una sola vez al montar el provider.
-   * `handleAuthError` usa window.location porque se invoca desde fuera
-   * del ciclo de renderizado de React (dentro de fetch-wrapper).
+   * Registra tokenProvider y handlers antes de que los hijos ejecuten sus `useEffect`
+   * (p. ej. `getProjects`), para no enviar peticiones sin Bearer ni recibir 401 ? cierre de sesi?n.
+   * `handleAuthError` usa window.location porque se invoca desde fetch-wrapper.
    */
-  useEffect(() => {
+  useLayoutEffect(() => {
     setTokenProvider({
       getAccessToken: () => localStorage.getItem(TOKEN_KEYS.ACCESS),
       getRefreshToken: () => localStorage.getItem(TOKEN_KEYS.REFRESH),
@@ -115,21 +116,26 @@ export const AuthProvider = ({ children }) => {
         // Extensible con un sistema de notificaciones (toasts, etc.).
       },
     });
-
-    const access = localStorage.getItem(TOKEN_KEYS.ACCESS);
-    if (access && !isTokenExpired(access)) {
-      request('/api/auth/me/', { method: 'GET' })
-        .then((profile) => {
-          if (profile && typeof profile === 'object') setUser(profile);
-        })
-        .catch(() => {});
-    }
   }, [storeTokens, clearTokens]);
 
+  useEffect(() => {
+    const access = localStorage.getItem(TOKEN_KEYS.ACCESS);
+    if (!access || isTokenExpired(access)) return undefined;
+    let cancelled = false;
+    request('/api/auth/me/', { method: 'GET' })
+      .then((profile) => {
+        if (!cancelled && profile && typeof profile === 'object') setUser(profile);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   /**
-   * Inicia sesión contra POST /api/auth/login/ (LoginView de Simple JWT).
+   * Inicia sesi?n contra POST /api/auth/login/ (LoginView de Simple JWT).
    * Persiste access y refresh en localStorage.
-   * La navegación tras el login es responsabilidad del componente consumidor.
+   * La navegaci?n tras el login es responsabilidad del componente consumidor.
    *
    * @param {{ email: string, password: string }} credentials
    * @returns {Promise<void>}
@@ -154,7 +160,7 @@ export const AuthProvider = ({ children }) => {
           }
         }
       } catch (err) {
-        const message = err?.message || (typeof err?.data?.detail === 'string' ? err.data.detail : null) || (typeof err?.data?.error === 'string' ? err.data.error : null) || 'No se pudo iniciar sesión. Verifica correo y contraseña.';
+        const message = err?.message || (typeof err?.data?.detail === 'string' ? err.data.detail : null) || (typeof err?.data?.error === 'string' ? err.data.error : null) || 'No se pudo iniciar sesi?n. Verifica correo y contrase?a.';
         setError(message);
         throw err;
       } finally {
@@ -165,8 +171,8 @@ export const AuthProvider = ({ children }) => {
   );
 
   /**
-   * Cierra sesión: invalida el refresh token en el backend (best-effort)
-   * y limpia el estado local. La navegación es responsabilidad del componente.
+   * Cierra sesi?n: invalida el refresh token en el backend (best-effort)
+   * y limpia el estado local. La navegaci?n es responsabilidad del componente.
    *
    * @returns {Promise<void>}
    */
@@ -184,7 +190,7 @@ export const AuthProvider = ({ children }) => {
   }, [clearTokens]);
 
   /**
-   * Indica si el usuario tiene un access token válido y no expirado.
+   * Indica si el usuario tiene un access token v?lido y no expirado.
    * Usar para guardias de ruta o renderizado condicional.
    * @returns {boolean}
    */
@@ -208,7 +214,7 @@ export const AuthProvider = ({ children }) => {
 };
 
 /**
- * Hook para consumir el contexto de autenticación.
+ * Hook para consumir el contexto de autenticaci?n.
  *
  * @returns {{
  *   user: object|null,
