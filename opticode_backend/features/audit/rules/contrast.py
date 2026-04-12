@@ -1,3 +1,16 @@
+"""
+WCAG 1.4.3 — Contrast (Minimum) · Nivel AA
+
+Detecta:
+- Reglas CSS cuyo ratio de contraste entre color y background es inferior a 4.5:1.
+
+Formatos de color soportados: hex (#rgb, #rrggbb, #rrggbbaa), nombres CSS,
+rgb(), rgba().
+
+Limitación conocida: solo analiza CSS declarado estáticamente; no resuelve
+colores heredados ni variables CSS.
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -5,17 +18,21 @@ from typing import Any
 import tinycss2
 import webcolors
 
+from ._utils import WcagFinding, build_snippet
 
-CONTRAST_RULE_CODE = "WCAG 1.4.3"
+
+RULE_CODE          = "WCAG 1.4.3"
+WCAG_LEVEL         = "AA"
+SEVERITY           = "error"
 CONTRAST_THRESHOLD = 4.5
 
 
 # ---------------------------------------------------------------------------
-# Color parsing
+# Parseo de color
 # ---------------------------------------------------------------------------
 
 def _parse_hex(value: str) -> tuple[int, int, int]:
-    """Parsea #rgb, #rrggbb o #rrggbbaa a (r, g, b). Lanza ValueError si inválido."""
+    """Parsea #rgb, #rrggbb o #rrggbbaa → (r, g, b). Lanza ValueError si inválido."""
     v = value.lstrip("#")
     if len(v) == 3:
         return tuple(int(c * 2, 16) for c in v)  # type: ignore[return-value]
@@ -26,8 +43,7 @@ def _parse_hex(value: str) -> tuple[int, int, int]:
 
 def _parse_named(name: str) -> tuple[int, int, int] | None:
     try:
-        hex_val = webcolors.name_to_hex(name.lower())
-        return _parse_hex(hex_val)
+        return _parse_hex(webcolors.name_to_hex(name.lower()))
     except (ValueError, AttributeError):
         return None
 
@@ -66,7 +82,7 @@ def _extract_color(tokens: list[Any]) -> tuple[int, int, int] | None:
 
 
 # ---------------------------------------------------------------------------
-# WCAG contrast ratio
+# Cálculo de contraste WCAG
 # ---------------------------------------------------------------------------
 
 def _linearize(c: int) -> float:
@@ -78,7 +94,8 @@ def _relative_luminance(r: int, g: int, b: int) -> float:
     return 0.2126 * _linearize(r) + 0.7152 * _linearize(g) + 0.0722 * _linearize(b)
 
 
-def _contrast_ratio(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> float:
+def contrast_ratio(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> float:
+    """Calcula el ratio de contraste WCAG entre dos colores RGB."""
     l1 = _relative_luminance(*rgb1)
     l2 = _relative_luminance(*rgb2)
     lighter, darker = max(l1, l2), min(l1, l2)
@@ -86,27 +103,15 @@ def _contrast_ratio(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> f
 
 
 # ---------------------------------------------------------------------------
-# Context snippet
+# Regla principal
 # ---------------------------------------------------------------------------
 
-def _build_context_snippet(source_lines: list[str], line_number: int) -> str:
-    """Retorna las 3 líneas de contexto alrededor de line_number (1-based)."""
-    idx = line_number - 1
-    start = max(0, idx - 1)
-    end = min(len(source_lines), idx + 2)
-    return "\n".join(source_lines[start:end])
-
-
-# ---------------------------------------------------------------------------
-# Main rule
-# ---------------------------------------------------------------------------
-
-def detect_contrast_findings(css_content: str) -> list[dict[str, Any]]:
+def detect_contrast_findings(css_content: str) -> list[WcagFinding]:
     if not css_content or not str(css_content).strip():
         return []
 
     source_lines = css_content.splitlines()
-    findings: list[dict[str, Any]] = []
+    findings: list[WcagFinding] = []
 
     rules = tinycss2.parse_stylesheet(css_content, skip_whitespace=True, skip_comments=True)
 
@@ -119,8 +124,8 @@ def detect_contrast_findings(css_content: str) -> list[dict[str, Any]]:
         )
 
         foreground: tuple[int, int, int] | None = None
-        bg_explicit: tuple[int, int, int] | None = None   # background-color
-        bg_shorthand: tuple[int, int, int] | None = None  # background shorthand
+        bg_explicit: tuple[int, int, int] | None = None
+        bg_shorthand: tuple[int, int, int] | None = None
 
         for decl in declarations:
             if decl.type != "declaration":
@@ -139,24 +144,24 @@ def detect_contrast_findings(css_content: str) -> list[dict[str, Any]]:
         if foreground is None or background is None:
             continue
 
-        ratio = _contrast_ratio(foreground, background)
+        ratio = contrast_ratio(foreground, background)
         if ratio >= CONTRAST_THRESHOLD:
             continue
 
         selector = "".join(t.serialize() for t in rule.prelude).strip()
         line_num = max(1, rule.source_line)
 
-        findings.append({
-            "severity": "critical",
-            "wcag_level": "AA",
-            "wcag_rule": CONTRAST_RULE_CODE,
-            "message": (
+        findings.append(WcagFinding(
+            severity=SEVERITY,
+            wcag_level=WCAG_LEVEL,
+            wcag_rule=RULE_CODE,
+            message=(
                 f'Contraste insuficiente en "{selector}": '
                 f"ratio {ratio:.2f}:1 (mínimo requerido {CONTRAST_THRESHOLD}:1)."
             ),
-            "line_number": line_num,
-            "code_snippet": _build_context_snippet(source_lines, line_num),
-            "category": "color-contrast",
-        })
+            line_number=line_num,
+            code_snippet=build_snippet(source_lines, line_num),
+            category="color-contrast",
+        ))
 
     return findings
