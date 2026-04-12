@@ -148,6 +148,7 @@ def detect_contrast_findings(css_content: str) -> list[dict[str, Any]]:
 
         findings.append({
             "severity": "critical",
+            "wcag_level": "AA",
             "wcag_rule": CONTRAST_RULE_CODE,
             "message": (
                 f'Contraste insuficiente en "{selector}": '

@@ -46,7 +46,8 @@ class DashboardKPIView(APIView):
 
         distribution = {
             Finding.Severity.ERROR: 0,
-            Finding.Severity.WARNING: 0
+            Finding.Severity.WARNING: 0,
+            Finding.Severity.IMPROVEMENT: 0,
         }
         for item in severity_dist:
             sev = item['severity']
@@ -70,7 +71,7 @@ class AuditReportPDFView(APIView):
 
     def get(self, request, file_id, *args, **kwargs):
         # 1. Autorización (IDOR): Verificar que el archivo existe y es propiedad del usuario
-        uploaded_file = get_object_or_404(UploadedFile, id=file_id, project__owner=request.user)
+        get_object_or_404(UploadedFile, id=file_id, project__owner=request.user)
 
         try:
             # 2. Prevención de Inyección: Utilizar render_to_string

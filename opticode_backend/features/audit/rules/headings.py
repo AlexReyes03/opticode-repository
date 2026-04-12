@@ -35,6 +35,7 @@ def _build_finding(
     line_num = _line_number(tag)
     return {
         "severity": "warning",
+        "wcag_level": "AA",
         "wcag_rule": HEADING_RULE_CODE,
         "message": message,
         "line_number": line_num,

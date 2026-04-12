@@ -27,6 +27,7 @@ class FindingSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "severity",
+            "wcag_level",
             "wcag_rule",
             "message",
             "line_number",
@@ -41,7 +42,7 @@ class AuditResultSerializer(serializers.ModelSerializer):
     filename = serializers.CharField(source="uploaded_file.filename", read_only=True)
     critical_count = serializers.SerializerMethodField()
     warning_count = serializers.SerializerMethodField()
-    aaa_count = serializers.SerializerMethodField()
+    improvement_count = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(source="analyzed_at", read_only=True)
 
     def get_critical_count(self, obj):
@@ -50,11 +51,10 @@ class AuditResultSerializer(serializers.ModelSerializer):
     def get_warning_count(self, obj):
         return obj.findings.filter(severity=Finding.Severity.WARNING).count()
 
-    def get_aaa_count(self, obj):
-        """Reservado: el motor actual solo clasifica error / warning; devuelve 0 hasta ampliar reglas AAA."""
-        return 0
+    def get_improvement_count(self, obj):
+        return obj.findings.filter(severity=Finding.Severity.IMPROVEMENT).count()
 
     class Meta:
         model = AuditResult
-        fields = ["score", "filename", "critical_count", "warning_count", "aaa_count", "status", "created_at"]
+        fields = ["score", "filename", "critical_count", "warning_count", "improvement_count", "status", "created_at"]
         read_only_fields = fields

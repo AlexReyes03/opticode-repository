@@ -19,6 +19,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 class UploadedFileSerializer(serializers.ModelSerializer):
     critical_count = serializers.SerializerMethodField()
     warning_count = serializers.SerializerMethodField()
+    improvement_count = serializers.SerializerMethodField()
 
     class Meta:
         model = UploadedFile
@@ -31,6 +32,7 @@ class UploadedFileSerializer(serializers.ModelSerializer):
             "updated_at",
             "critical_count",
             "warning_count",
+            "improvement_count",
         )
 
     def get_critical_count(self, obj):
@@ -46,3 +48,10 @@ class UploadedFileSerializer(serializers.ModelSerializer):
         except ObjectDoesNotExist:
             return 0
         return ar.findings.filter(severity=Finding.Severity.WARNING).count()
+
+    def get_improvement_count(self, obj):
+        try:
+            ar = obj.audit_result
+        except ObjectDoesNotExist:
+            return 0
+        return ar.findings.filter(severity=Finding.Severity.IMPROVEMENT).count()

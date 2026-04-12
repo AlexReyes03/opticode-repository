@@ -437,6 +437,9 @@ const ProjectDashboard = () => {
                     Advertencias
                   </th>
                   <th className="text-center" scope="col">
+                    Mejoras
+                  </th>
+                  <th className="text-center" scope="col">
                     Puntaje global
                   </th>
                   <th className="text-end" scope="col">
@@ -447,7 +450,7 @@ const ProjectDashboard = () => {
               <tbody>
                 {files.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center text-secondary py-5">
+                    <td colSpan={7} className="text-center text-secondary py-5">
                       No hay archivos subidos. Usa &quot;Subir archivos&quot; para añadir HTML o CSS.
                     </td>
                   </tr>
@@ -482,6 +485,13 @@ const ProjectDashboard = () => {
                       <td className="text-center">
                         {file.warnings > 0 ? (
                           <span className="fw-medium text-warning">{file.warnings}</span>
+                        ) : (
+                          <span className="text-secondary">0</span>
+                        )}
+                      </td>
+                      <td className="text-center">
+                        {file.improvements > 0 ? (
+                          <span className="fw-medium" style={{ color: 'var(--oc-royal)' }}>{file.improvements}</span>
                         ) : (
                           <span className="text-secondary">0</span>
                         )}

@@ -17,32 +17,37 @@ from features.audit.rules import HTML_RULES, CSS_RULES
 
 
 def _normalize_severity(raw: str | None) -> str:
-    """Alinea severidades de reglas con Finding.Severity (error | warning)."""
+    """Alinea severidades de reglas con Finding.Severity (error | warning | improvement)."""
     if not raw:
         return Finding.Severity.WARNING
     s = str(raw).lower()
     if s in ("error", "critical"):
         return Finding.Severity.ERROR
+    if s == "improvement":
+        return Finding.Severity.IMPROVEMENT
     return Finding.Severity.WARNING
 
 
-def _count_severities(findings: Iterable[dict[str, Any]]) -> tuple[int, int]:
+def _count_severities(findings: Iterable[dict[str, Any]]) -> tuple[int, int, int]:
     """
-    Cuenta críticas (error|critical) y advertencias (warning) en la salida de reglas.
+    Cuenta errores, advertencias y mejoras en la salida de reglas.
 
-    :returns: (critical_count, warning_count)
+    :returns: (critical_count, warning_count, improvement_count)
     """
     critical = 0
     warning = 0
+    improvement = 0
     for f in findings:
         if not isinstance(f, dict):
             continue
         sev = _normalize_severity(f.get("severity"))
         if sev == Finding.Severity.ERROR:
             critical += 1
+        elif sev == Finding.Severity.IMPROVEMENT:
+            improvement += 1
         else:
             warning += 1
-    return critical, warning
+    return critical, warning, improvement
 
 
 def _compute_score(critical_count: int, warning_count: int) -> float:
@@ -78,10 +83,14 @@ def persist_findings(audit_result: AuditResult, findings: list[dict[str, Any]]) 
             line = 1
         line_number = max(1, line)
 
+        raw_level = str(f.get("wcag_level", "A") or "A").upper()
+        wcag_level = raw_level if raw_level in Finding.WcagLevel.values else Finding.WcagLevel.A
+
         to_create.append(
             Finding(
                 audit_result=audit_result,
                 severity=_normalize_severity(f.get("severity")),
+                wcag_level=wcag_level,
                 wcag_rule=str(f.get("wcag_rule", "") or "")[:50],
                 message=str(f.get("message", f.get("description", "")) or ""),
                 line_number=line_number,
@@ -133,7 +142,7 @@ def run_audit(
             if isinstance(out, list):
                 findings.extend([f for f in out if isinstance(f, dict)])
 
-    critical_count, warning_count = _count_severities(findings)
+    critical_count, warning_count, improvement_count = _count_severities(findings)
     score = _compute_score(critical_count, warning_count)
 
     status = AuditResult.Status.FAILED if critical_count > 0 else AuditResult.Status.APPROVED
@@ -155,4 +164,5 @@ def run_audit(
         "score": score,
         "critical_count": critical_count,
         "warning_count": warning_count,
+        "improvement_count": improvement_count,
     }
