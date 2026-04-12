@@ -166,6 +166,24 @@ function messageFromErrorBody(data) {
   return null;
 }
 
+function firstStringFromValue(value) {
+  if (typeof value === 'string' && value.trim()) return value;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = firstStringFromValue(item);
+      if (nested) return nested;
+    }
+    return null;
+  }
+  if (value && typeof value === 'object') {
+    for (const nestedValue of Object.values(value)) {
+      const nested = firstStringFromValue(nestedValue);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
 /**
  * Primer mensaje en cuerpos DRF tipo `{ email: ["ya existe"], ... }`.
  * @param {unknown} data
@@ -174,10 +192,18 @@ function messageFromErrorBody(data) {
 function firstFieldValidationMessage(data) {
   if (data == null || typeof data !== 'object' || Array.isArray(data)) return null;
   for (const val of Object.values(data)) {
-    if (Array.isArray(val) && val.length) return String(val[0]);
-    if (typeof val === 'string' && val.trim()) return val;
+    const nested = firstStringFromValue(val);
+    if (nested) return nested;
   }
   return null;
+}
+
+function isGenericHttpMessage(message) {
+  if (!message || typeof message !== 'string') return true;
+  const raw = message.trim();
+  if (!raw) return true;
+  const generic = /^(?:\d{3}\s+)?(?:bad request|unauthorized|forbidden|not found|method not allowed|conflict|unprocessable entity|internal server error|service unavailable)[.!: ]*$/i;
+  return generic.test(raw);
 }
 
 /**
@@ -190,11 +216,11 @@ export function getApiErrorMessage(err, fallback = 'Ocurrió un error. Intenta d
   if (!err || typeof err !== 'object') return fallback;
   const data = err.data;
   const fromBody = messageFromErrorBody(data);
-  if (fromBody) return fromBody;
+  if (fromBody && !isGenericHttpMessage(fromBody)) return fromBody;
   const fieldMsg = firstFieldValidationMessage(data);
-  if (fieldMsg) return fieldMsg;
+  if (fieldMsg && !isGenericHttpMessage(fieldMsg)) return fieldMsg;
   const msg = err.message;
-  if (msg && !/^(Bad Request|Unauthorized|Forbidden|Not Found)$/i.test(msg)) return msg;
+  if (msg && !isGenericHttpMessage(msg)) return String(msg).trim();
   return fallback;
 }
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import UserTable from '../components/UserTable';
 import { getUsers } from '../../../api/admin-services';
+import { getApiErrorMessage } from '../../../api/fetch-wrapper';
+import { notifyError } from '../../../utils/toast';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -15,7 +17,10 @@ const AdminDashboard = () => {
         const data = await getUsers();
         setUsers(data);
       } catch (error) {
-        console.error('Failed to fetch users', error);
+        notifyError(
+          getApiErrorMessage(error, 'No se pudo cargar el listado de usuarios. Intenta de nuevo.'),
+          { toastId: 'admin-users-load-error' },
+        );
       } finally {
         setLoading(false);
       }
