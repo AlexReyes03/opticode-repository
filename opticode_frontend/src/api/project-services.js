@@ -14,13 +14,50 @@ import request from './fetch-wrapper';
  */
 
 /**
+ * @param {string|undefined|null} iso
+ */
+function formatProjectDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
+}
+
+/**
+ * Adapta la respuesta DRF al shape que usa `ProjectCard` (camelCase).
+ *
+ * @param {object} raw
+ */
+function normalizeProject(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const created = raw.created_at ?? raw.updated_at;
+  return {
+    id: raw.id,
+    name: raw.name ?? '',
+    description: raw.description ?? '',
+    fileCount: raw.file_count ?? 0,
+    date: formatProjectDate(created),
+  };
+}
+
+/**
  * Lista de proyectos del usuario autenticado.
  *
- * @returns {Promise<Array<object>>} Lista de proyectos. Si el backend pagina (DRF), se devuelve response.results.
+ * @returns {Promise<Array<object>>} Lista normalizada para la UI.
  */
 export const getProjects = async () => {
-  const response = await request('/api/projects/');
-  return response?.results ?? response ?? [];
+  try {
+    const response = await request('/api/projects/');
+    const list = Array.isArray(response) ? response : response?.results ?? [];
+    if (!Array.isArray(list)) return [];
+    return list.map(normalizeProject).filter(Boolean);
+  } catch (err) {
+    /* Lista vacía o ruta antigua: no tratar como fallo crítico en dashboard */
+    if (err && typeof err === 'object' && err.status === 404) return [];
+    throw err;
+  }
 };
 
 /**

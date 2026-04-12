@@ -5,21 +5,46 @@ import openpyxl
 from django.core.files.base import ContentFile
 from django.http import FileResponse
 from rest_framework import status
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
 from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from features.audit.engine import run_audit
 from features.audit.models import UploadedFile
 from features.projects.models import Project
+from features.projects.serializers import ProjectSerializer
 
 ALLOWED_EXTENSIONS = {"html", "css"}
 MIN_SIZE = 1_024           # 1 KB
 MAX_SIZE = 10_485_760      # 10 MB
 ZIP_MAX_SIZE = 52_428_800  # 50 MB
 ZIP_MAX_FILES = 50
-MIN_SIZE = 1_024          # 1 KB
-MAX_SIZE = 10_485_760     # 10 MB
+
+
+class ProjectListCreateView(ListCreateAPIView):
+    """GET lista proyectos del usuario; POST crea uno (owner = request.user)."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProjectSerializer
+
+    def get_queryset(self):
+        return Project.objects.filter(owner=self.request.user).order_by("-updated_at")
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class ProjectRetrieveUpdateView(RetrieveUpdateAPIView):
+    """GET/PATCH de un proyecto propio."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProjectSerializer
+    lookup_url_kwarg = "pk"
+
+    def get_queryset(self):
+        return Project.objects.filter(owner=self.request.user)
 
 
 def _detect_file_type(content: bytes) -> str | None:

@@ -41,7 +41,7 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated }) => {
     setLoading(true);
 
     try {
-      await createProject(name, description);
+      await createProject({ name, description });
       setName('');
       setDescription('');
       onClose();
