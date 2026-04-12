@@ -12,6 +12,14 @@ Plataforma de auditoría de accesibilidad WCAG que permite a los desarrolladores
 - Dashboard de resultados con sistema de semáforo y puntaje por archivo (0-100)
 - Detalle de errores con severidad, regla WCAG violada y fragmento de código
 
+## Niveles WCAG (A, AA, AAA) y la interfaz
+
+En el cliente pueden mostrarse **tarjetas o totales** alineados con los niveles de conformidad **A**, **AA** y **AAA** de WCAG con fin **pedagógico**: ayudan a situar el resultado dentro del marco del estándar.
+
+Eso **no equivale** a decir que “nivel WCAG = severidad del hallazgo”. Los niveles de conformidad los define el W3C con criterios propios del estándar (p. ej. aplicabilidad, testabilidad, factores para autores); la **severidad** en el informe (error, advertencia, etc.) responde a la **lógica del motor de análisis** y al impacto que se quiera priorizar. Por tanto, un criterio clasificado como **AA** en WCAG puede figurar como error en el producto si la regla lo trata así.
+
+Documentación oficial sobre niveles de conformidad: [Understanding Conformance (W3C/WAI)](https://www.w3.org/WAI/WCAG21/Understanding/conformance#levels-of-guidance).
+
 ## BACKEND
 
 ### Tecnologías Backend
@@ -120,7 +128,43 @@ LOG_DIR=logs
 python manage.py migrate
 ```
 
-#### 7. Inicia el servidor de desarrollo
+#### 7. Superusuario de desarrollo
+
+Para acceder al panel de administración de Django (`/admin/`), crea el superusuario de desarrollo desde la carpeta `opticode_backend` con el entorno virtual activado:
+
+```bash
+python manage.py create_dev_superuser
+```
+
+En Windows, si usas el lanzador de Python, puedes sustituir `python` por `py` (por ejemplo `py manage.py create_dev_superuser`).
+
+Configura las credenciales en el `.env`. Las **claves** deben coincidir con las de `opticode_backend/.env.example` y con lo que lee `create_dev_superuser` (`DEV_ADMIN_EMAIL`, `DEV_ADMIN_USERNAME`, `DEV_SEED_PASSWORD`). Los **valores** del siguiente bloque son solo ilustrativos; en tu entorno real usa los que defina el equipo.
+
+```env
+# Credenciales de desarrollo (seeds y superusuario)
+DEV_ADMIN_EMAIL=correo@ejemplo.com
+DEV_ADMIN_USERNAME=usuarioejemplo
+DEV_SEED_PASSWORD=ContraseñaSegura123!
+```
+
+La contraseña del superusuario y de las semillas toma la variable **`DEV_SEED_PASSWORD`** (no existe `DEV_ADMIN_PASSWORD` en este proyecto).
+
+Si el comando falla con `Table '…auditlog_auditlog' doesn't exist`, la base de datos **no tiene aplicadas todas las migraciones** (incluida la app interna `auditlog`). Ejecuta de nuevo `python manage.py migrate` desde `opticode_backend` usando el mismo `.env` (misma `DB_NAME` y credenciales) y repite `create_dev_superuser`.
+
+En Windows, el lanzador `py` solo existe si lo instalaste con Python; si `py` no se reconoce, usa `python manage.py …` o instala/repara el *Python Launcher for Windows* desde el instalador oficial.
+
+#### 8. Datos de prueba
+
+Para cargar datos de desarrollo en la base de datos:
+
+```bash
+python manage.py seed_data
+python manage.py seed_realistic
+```
+
+Ejecútalos en ese orden si quieres primero datos mínimos y después un conjunto más completo (según lo definido en cada comando).
+
+#### 9. Inicia el servidor de desarrollo
 
 ```bash
 python manage.py runserver
