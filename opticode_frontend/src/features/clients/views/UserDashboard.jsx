@@ -7,6 +7,7 @@ import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
 import { deleteProject, getProjects } from '../../../api/project-services';
 import { getApiErrorMessage } from '../../../api/fetch-wrapper';
+import { notifyError, notifySuccess } from '../../../utils/toast';
 
 const UserDashboard = () => {
   const [projectModal, setProjectModal] = useState({ open: false, editProject: null });
@@ -15,7 +16,6 @@ const UserDashboard = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [actionError, setActionError] = useState(null);
 
   const refreshProjects = useCallback(() => {
     setLoadError(null);
@@ -38,12 +38,10 @@ const UserDashboard = () => {
   }, [refreshProjects]);
 
   const openCreateModal = () => {
-    setActionError(null);
     setProjectModal({ open: true, editProject: null });
   };
 
   const openEditModal = (proj) => {
-    setActionError(null);
     setProjectModal({ open: true, editProject: proj });
   };
 
@@ -53,14 +51,14 @@ const UserDashboard = () => {
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget?.id) return;
-    setActionError(null);
     try {
       await deleteProject(deleteTarget.id);
       setDeleteTarget(null);
       await refreshProjects();
+      notifySuccess('Proyecto eliminado correctamente.');
     } catch (err) {
       setDeleteTarget(null);
-      setActionError(getApiErrorMessage(err, 'No se pudo eliminar el proyecto.'));
+      notifyError(getApiErrorMessage(err, 'No se pudo eliminar el proyecto.'));
     }
   };
 
@@ -150,16 +148,6 @@ const UserDashboard = () => {
             </div>
           )}
 
-          {actionError && (
-            <div
-              className="alert alert-danger d-flex align-items-start gap-2 py-2 small mb-4"
-              role="alert"
-            >
-              <ErrorOutlineIcon className="flex-shrink-0" style={{ fontSize: '1.25rem', marginTop: '0.1rem' }} />
-              <span>{actionError}</span>
-            </div>
-          )}
-
           {loading ? (
             <div className="oc-dashboard-loading d-flex flex-column align-items-center justify-content-center gap-3 py-4">
               <div className="spinner-border text-primary" role="status">
@@ -188,7 +176,6 @@ const UserDashboard = () => {
                     project={project}
                     onEdit={openEditModal}
                     onDelete={(p) => {
-                      setActionError(null);
                       setDeleteTarget(p);
                     }}
                   />
@@ -203,9 +190,14 @@ const UserDashboard = () => {
         show={projectModal.open}
         projectToEdit={projectModal.editProject}
         onClose={closeProjectModal}
-        onProjectCreated={() => {
+        onProjectCreated={({ mode } = {}) => {
           closeProjectModal();
           refreshProjects();
+          if (mode === 'edit') {
+            notifySuccess('Proyecto actualizado correctamente.');
+          } else {
+            notifySuccess('Proyecto creado correctamente.');
+          }
         }}
       />
       {deleteModal}

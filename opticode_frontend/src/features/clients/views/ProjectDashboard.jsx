@@ -15,6 +15,7 @@ import {
   updateProject,
 } from '../../../api/project-services';
 import { getApiErrorMessage } from '../../../api/fetch-wrapper';
+import { notifyError, notifySuccess } from '../../../utils/toast';
 
 function resizeDescriptionField(el) {
   if (!el) return;
@@ -135,7 +136,6 @@ const ProjectDashboard = () => {
       return;
     }
     setSaving(true);
-    setLoadError(null);
     try {
       const updated = await updateProject(project.id, { name: trimmed });
       setProject((p) => ({
@@ -143,8 +143,9 @@ const ProjectDashboard = () => {
         name: updated?.name ?? trimmed,
         description: updated?.description ?? p.description,
       }));
+      notifySuccess('Nombre del proyecto actualizado.');
     } catch (err) {
-      setLoadError(getApiErrorMessage(err, 'No se pudo actualizar el nombre.'));
+      notifyError(getApiErrorMessage(err, 'No se pudo actualizar el nombre.'));
       setDraftName(project.name ?? '');
     } finally {
       setSaving(false);
@@ -158,7 +159,6 @@ const ProjectDashboard = () => {
     const current = (project.description ?? '').trim();
     if (next === current) return;
     setSaving(true);
-    setLoadError(null);
     try {
       const updated = await updateProject(project.id, { description: next });
       setProject((p) => ({
@@ -166,8 +166,9 @@ const ProjectDashboard = () => {
         name: updated?.name ?? p.name,
         description: updated?.description ?? next,
       }));
+      notifySuccess('Descripción actualizada.');
     } catch (err) {
-      setLoadError(getApiErrorMessage(err, 'No se pudo actualizar la descripción.'));
+      notifyError(getApiErrorMessage(err, 'No se pudo actualizar la descripción.'));
       setDraftDesc(project.description ?? '');
     } finally {
       setSaving(false);
@@ -177,14 +178,14 @@ const ProjectDashboard = () => {
   const handleConfirmDeleteFile = useCallback(async () => {
     if (!fileDeleteTarget?.id || projectId == null || projectId === '') return;
     setFileDeleting(true);
-    setLoadError(null);
     try {
       await deleteProjectFile(projectId, fileDeleteTarget.id);
       setFileDeleteTarget(null);
       const reload = loadData();
       if (reload) await reload;
+      notifySuccess('Archivo eliminado correctamente.');
     } catch (err) {
-      setLoadError(getApiErrorMessage(err, 'No se pudo eliminar el archivo.'));
+      notifyError(getApiErrorMessage(err, 'No se pudo eliminar el archivo.'));
     } finally {
       setFileDeleting(false);
     }

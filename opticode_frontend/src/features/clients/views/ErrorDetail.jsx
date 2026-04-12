@@ -6,6 +6,7 @@ import ErrorFilter from '../components/ErrorFilter';
 import { getFileFindings } from '../../../api/file-services';
 import { loadAuditResult } from '../utils/auditStorage';
 import { sanitizeDescriptionText, sanitizeSnippetLine } from '../utils/snippetSanitize';
+import { notifyInfo } from '../../../utils/toast';
 
 /**
  * QA manual (sin recarga): con datos mixtos (críticos + advertencias), comprobar que
@@ -83,6 +84,12 @@ const ErrorDetail = () => {
         const result = loadAuditResult(projectId, fileId);
         const findings = result?.findings ?? [];
         if (mounted) {
+          if (result !== null) {
+            notifyInfo(
+              'No se pudo consultar el servidor. Mostrando resultados guardados localmente.',
+              { toastId: `findings-cache-${projectId}-${fileId}` },
+            );
+          }
           setErrors(findings.map(normalizeFinding));
           setHasData(result !== null);
         }
