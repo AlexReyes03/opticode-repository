@@ -1,4 +1,4 @@
-import { useMemo, useState, useId } from 'react';
+import { useCallback, useMemo, useState, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import FolderCopyOutlinedIcon from '@mui/icons-material/FolderCopyOutlined';
@@ -7,7 +7,7 @@ import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import logo from '../../assets/img/ack_logo.png';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserRole } from '../../utils/userRole';
+import { getSidebarUserPresentation, getUserRole } from '../../utils/userRole';
 
 /**
  * Tabla de navegación (mejor que `switch` para menús: un solo arreglo, filtro por rol y `.map`).
@@ -82,6 +82,33 @@ function filterSidebarNavByRole(config, role) {
   });
 }
 
+/** Cierra el offcanvas en viewport móvil (Bootstrap). */
+function closeMobileOffcanvas() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (!window.matchMedia('(max-width: 767.98px)').matches) return;
+  const el = document.getElementById('sidebarMenu');
+  const Offcanvas = window.bootstrap?.Offcanvas;
+  if (!el || !Offcanvas) return;
+
+  const hide = () => {
+    const instance = Offcanvas.getInstance(el) ?? Offcanvas.getOrCreateInstance(el);
+    instance.hide();
+  };
+  // Tras el clic en NavLink, dejar que React Router procese y luego cerrar (evita condiciones de carrera).
+  queueMicrotask(hide);
+}
+
+/**
+ * Ítem de navegación que corresponde a la ruta actual (misma lógica que el resaltado activo).
+ *
+ * @param {string} pathname
+ * @param {typeof SIDEBAR_NAV_CONFIG} items
+ */
+function getActiveNavItemId(pathname, items) {
+  const active = items.find((navItem) => isNavLinkActive(navItem, pathname));
+  return active?.id ?? null;
+}
+
 const Sidebar = () => {
   const location = useLocation();
   const { logout, user } = useAuth();
@@ -92,6 +119,19 @@ const Sidebar = () => {
     const role = getUserRole(user);
     return filterSidebarNavByRole(SIDEBAR_NAV_CONFIG, role);
   }, [user]);
+
+  const sidebarUser = useMemo(() => getSidebarUserPresentation(user), [user]);
+
+  /** En móvil, cierra el drawer solo si el enlace no es el de la sección ya visible. */
+  const handleMainNavClick = useCallback(
+    (clickedItem) => {
+      const currentSectionId = getActiveNavItemId(location.pathname, mainNavItems);
+      if (clickedItem.id !== currentSectionId) {
+        closeMobileOffcanvas();
+      }
+    },
+    [location.pathname, mainNavItems],
+  );
 
   const handleConfirmLogout = async () => {
     setLogoutModalOpen(false);
@@ -146,7 +186,11 @@ const Sidebar = () => {
               const { to, label, icon: Icon } = item;
               return (
                 <li key={item.id} className="navbar-sidebar__item">
-                  <NavLink to={to} className={`rounded-3 navbar-sidebar__link ${isNavLinkActive(item, location.pathname) ? 'navbar-sidebar__link--active' : ''}`}>
+                  <NavLink
+                    to={to}
+                    onClick={() => handleMainNavClick(item)}
+                    className={`rounded-3 navbar-sidebar__link ${isNavLinkActive(item, location.pathname) ? 'navbar-sidebar__link--active' : ''}`}
+                  >
                     <Icon />
                     {label}
                   </NavLink>
@@ -157,7 +201,23 @@ const Sidebar = () => {
 
           <ul className="navbar-sidebar__section navbar-sidebar__section--bottom">
             <li className="navbar-sidebar__item">
-              <button type="button" className="navbar-sidebar__link" onClick={() => setLogoutModalOpen(true)} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}>
+              <div className="navbar-sidebar__user navbar-sidebar__user--footer mb-0 pb-0">
+                <p className="navbar-sidebar__user-label">Sesión activa</p>
+                <p className="navbar-sidebar__user-name" title={sidebarUser.title}>
+                  {sidebarUser.shortLabel}
+                </p>
+              </div>
+            </li>
+            <li className="navbar-sidebar__item">
+              <button
+                type="button"
+                className="navbar-sidebar__link"
+                onClick={() => {
+                  closeMobileOffcanvas();
+                  setLogoutModalOpen(true);
+                }}
+                style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}
+              >
                 <LogoutOutlinedIcon />
                 Cerrar sesión
               </button>

@@ -394,7 +394,8 @@ input[type='password']::-ms-clear {
   display: flex;
   flex-direction: column;
   padding: 0;
-  z-index: 100;
+  /* Por encima del backdrop del offcanvas (BS5 ~1040); si no, el backdrop roba el clic y cierra sin navegar */
+  z-index: var(--bs-offcanvas-zindex, 1045);
   overflow-y: auto;
 }
 
@@ -417,6 +418,31 @@ input[type='password']::-ms-clear {
   font-weight: 700;
   color: var(--oc-white);
   letter-spacing: -0.02em;
+}
+
+.navbar-sidebar__user--footer {
+  padding: 0 0.25rem 0.875rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.navbar-sidebar__user-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.navbar-sidebar__user-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--oc-white);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .navbar-sidebar__nav {
@@ -480,4 +506,36 @@ input[type='password']::-ms-clear {
 
 .navbar-sidebar__link .MuiSvgIcon-root {
   font-size: 1.25rem;
+}
+
+/* ---------- Dashboard (cliente) ---------- */
+.oc-dashboard-page .oc-dashboard-hero {
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .oc-dashboard-page .oc-dashboard-hero {
+    margin-bottom: 1.75rem;
+  }
+}
+
+.oc-dashboard-card {
+  border-radius: var(--oc-radius-md, 0.5rem);
+}
+
+.oc-dashboard-empty-icon {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(37, 99, 235, 0.08);
+  color: var(--oc-primary);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.oc-dashboard-loading {
+  min-height: 16rem;
 }

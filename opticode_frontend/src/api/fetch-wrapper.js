@@ -331,12 +331,13 @@ export default async function request(
         }
       }
 
-      if ((error.status === 401 || error.status === 403) && !isAnonymousAuthEndpoint) {
+      /* Solo 401 implica sesión inválida; 403 es permiso sobre el recurso y no debe borrar tokens. */
+      if (error.status === 401 && !isAnonymousAuthEndpoint) {
         authHandlers?.handleAuthError?.(
           error.status,
           error.message ?? 'No autorizado.',
           normalizedEndpoint,
-          !!tokenProvider?.getAccessToken?.()
+          Boolean(tokenProvider?.getAccessToken?.())
         );
       }
 
