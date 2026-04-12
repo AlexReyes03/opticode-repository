@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import ScoreBadge from '../components/ScoreBadge';
 import {
+  deleteProjectFile,
   getProjectById,
   getProjectFiles,
   PROJECT_DESCRIPTION_MAX_LENGTH,
@@ -32,6 +35,10 @@ const ProjectDashboard = () => {
   const [draftName, setDraftName] = useState('');
   const [draftDesc, setDraftDesc] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [fileDeleteTarget, setFileDeleteTarget] = useState(null);
+  const [fileDeleting, setFileDeleting] = useState(false);
+  const fileDeleteTitleId = useId();
 
   const nameInputRef = useRef(null);
   const descInputRef = useRef(null);
@@ -167,6 +174,22 @@ const ProjectDashboard = () => {
     }
   }, [project, draftDesc]);
 
+  const handleConfirmDeleteFile = useCallback(async () => {
+    if (!fileDeleteTarget?.id || projectId == null || projectId === '') return;
+    setFileDeleting(true);
+    setLoadError(null);
+    try {
+      await deleteProjectFile(projectId, fileDeleteTarget.id);
+      setFileDeleteTarget(null);
+      const reload = loadData();
+      if (reload) await reload;
+    } catch (err) {
+      setLoadError(getApiErrorMessage(err, 'No se pudo eliminar el archivo.'));
+    } finally {
+      setFileDeleting(false);
+    }
+  }, [fileDeleteTarget, projectId, loadData]);
+
   if (notFound) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -174,6 +197,72 @@ const ProjectDashboard = () => {
   const projectName = project?.name ?? 'Proyecto';
   const projectDescription = project?.description ?? '';
   const breadcrumbLabel = loading ? '…' : editing === 'name' ? draftName.trim() || '…' : projectName;
+
+  const fileDeleteModal =
+    typeof document !== 'undefined' && fileDeleteTarget
+      ? createPortal(
+          <>
+            <div
+              className="modal-backdrop fade show"
+              aria-hidden="true"
+              onClick={() => !fileDeleting && setFileDeleteTarget(null)}
+            />
+            <div
+              className="modal fade show d-block"
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={fileDeleteTitleId}
+            >
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title" id={fileDeleteTitleId}>
+                      Eliminar archivo
+                    </h5>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      aria-label="Cerrar"
+                      disabled={fileDeleting}
+                      onClick={() => setFileDeleteTarget(null)}
+                    >
+                    </button>
+                  </div>
+                  <div className="modal-body">
+                    ¿Seguro que deseas eliminar{' '}
+                    <span className="fw-semibold">&quot;{fileDeleteTarget.name}&quot;</span> de este proyecto? Esta
+                    acción es irreversible. Si más adelante subes otro archivo con el mismo nombre, se creará un
+                    registro nuevo (no restaura este).
+                  </div>
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      disabled={fileDeleting}
+                      onClick={() => setFileDeleteTarget(null)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger d-inline-flex align-items-center gap-2"
+                      disabled={fileDeleting}
+                      onClick={handleConfirmDeleteFile}
+                    >
+                      {fileDeleting && (
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                      )}
+                      Eliminar archivo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>,
+          document.body,
+        )
+      : null;
 
   return (
     <section>
@@ -339,17 +428,26 @@ const ProjectDashboard = () => {
             <table className="table table-hover mb-0">
               <thead className="table-light">
                 <tr>
-                  <th>Archivo</th>
-                  <th>Última modificación</th>
-                  <th className="text-center">Críticas</th>
-                  <th className="text-center">Advertencias</th>
-                  <th className="text-center">Puntaje global</th>
+                  <th scope="col">Archivo</th>
+                  <th scope="col">Última modificación</th>
+                  <th className="text-center" scope="col">
+                    Críticas
+                  </th>
+                  <th className="text-center" scope="col">
+                    Advertencias
+                  </th>
+                  <th className="text-center" scope="col">
+                    Puntaje global
+                  </th>
+                  <th className="text-end" scope="col">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {files.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center text-secondary py-5">
+                    <td colSpan={6} className="text-center text-secondary py-5">
                       No hay archivos subidos. Usa &quot;Subir archivos&quot; para añadir HTML o CSS.
                     </td>
                   </tr>
@@ -358,21 +456,20 @@ const ProjectDashboard = () => {
                     <tr
                       key={file.id}
                       onClick={() => navigate(`/projects/${projectId}/files/${file.id}`)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          navigate(`/projects/${projectId}/files/${file.id}`);
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
                       style={{ cursor: 'pointer' }}
                     >
-                      <td className="fw-medium text-break" style={{ color: 'var(--oc-royal)' }}>
-                        {file.name}
-                        {file.fileType ? (
-                          <span className="text-secondary fw-normal small ms-1">({file.fileType})</span>
-                        ) : null}
+                      <td className="fw-medium text-break p-0" style={{ color: 'var(--oc-royal)' }}>
+                        <Link
+                          className="d-block px-3 py-2 text-decoration-none text-break"
+                          style={{ color: 'var(--oc-royal)' }}
+                          to={`/projects/${projectId}/files/${file.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {file.name}
+                          {file.fileType ? (
+                            <span className="text-secondary fw-normal small ms-1">({file.fileType})</span>
+                          ) : null}
+                        </Link>
                       </td>
                       <td className="text-secondary text-nowrap">{file.date}</td>
                       <td className="text-center">
@@ -398,6 +495,24 @@ const ProjectDashboard = () => {
                           )}
                         </div>
                       </td>
+                      <td
+                        className="text-end align-middle"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
+                          aria-label={`Eliminar archivo ${file.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFileDeleteTarget({ id: file.id, name: file.name });
+                          }}
+                        >
+                          <DeleteOutlineIcon style={{ fontSize: '1.125rem' }} aria-hidden />
+                          <span className="d-none d-md-inline">Eliminar</span>
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -406,6 +521,7 @@ const ProjectDashboard = () => {
           </div>
         )}
       </div>
+      {fileDeleteModal}
     </section>
   );
 };

@@ -14,7 +14,8 @@ export const PROJECT_DESCRIPTION_MAX_LENGTH = 500;
  *   POST   /api/projects/              — crear.
  *   GET    /api/projects/:id/          — detalle.
  *   PATCH  /api/projects/:id/          — actualización parcial y/o desactivar (is_active: false).
- *   GET    /api/projects/:id/files/    — archivos del proyecto.
+ *   GET    /api/projects/:id/files/         — archivos del proyecto.
+ *   DELETE /api/projects/:id/files/:fileId/ — eliminar un archivo del proyecto.
  */
 
 /**
@@ -119,6 +120,16 @@ export const getProjectFiles = async (projectId) => {
     throw err;
   }
 };
+
+/**
+ * Elimina un archivo subido del proyecto (no confundir con subir otro con el mismo nombre, que lo reemplaza).
+ *
+ * @param {string|number} projectId
+ * @param {string|number} fileId
+ * @returns {Promise<unknown>}
+ */
+export const deleteProjectFile = (projectId, fileId) =>
+  request(`/api/projects/${projectId}/files/${fileId}/`, { method: 'DELETE' });
 
 /**
  * Actualización parcial del proyecto (name, description, etc.).
