@@ -44,8 +44,8 @@
   /* Typography */
   --oc-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* Layout */
-  --oc-sidebar-width: 260px;
+  /* Layout (ancho sidebar: ~16.25rem ≈ 260px a 16px root) */
+  --oc-sidebar-width: 16.25rem;
 
   /* ---- Bootstrap overrides ---- */
   --bs-font-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -373,13 +373,26 @@ input[type='password']::-ms-clear {
 .app-main-content {
   margin-left: 0;
   padding: 1.5rem 1rem;
+  /* Páginas cortas: al menos una pantalla; el alto crece con el contenido (el padre ya no usa height:100vh fijo) */
   min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 @media (min-width: 768px) {
   .app-main-content {
     margin-left: var(--oc-sidebar-width);
     padding: 2rem 2.5rem;
+    /*
+      El aside (.navbar-sidebar) está position:fixed y no consume ancho en el flex;
+      sin acotar width, el main puede medir ~100% del viewport y el margin-left
+      desplaza el contenido más allá del ancho útil → scroll horizontal en toda la app.
+    */
+    width: calc(100% - var(--oc-sidebar-width));
+    max-width: min(100%, calc(100vw - var(--oc-sidebar-width)));
   }
 }
 
