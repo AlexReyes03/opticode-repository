@@ -149,6 +149,32 @@ _RL_SEVERITY   = "warning"
 _MAX_GRADE_LEVEL = 9.0  # nivel de lectura secundaria básica
 
 
+def _ensure_cmudict() -> bool:
+    """
+    Descarga el corpus cmudict de NLTK si no está disponible.
+    Devuelve True si el corpus está listo, False si no se pudo obtener.
+    """
+    import ssl  # noqa: PLC0415
+    try:
+        import nltk  # noqa: PLC0415
+        try:
+            nltk.data.find("corpora/cmudict")
+            return True
+        except LookupError:
+            pass
+        # Intentar descarga desactivando SSL (necesario en macOS con Python del sistema)
+        try:
+            _create_unverified = ssl._create_unverified_context
+        except AttributeError:
+            pass
+        else:
+            ssl._create_default_https_context = _create_unverified
+        nltk.download("cmudict", quiet=True)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def detect_reading_level_findings(html_content: str) -> list[WcagFinding]:
     """
     Calcula el nivel de lectura del texto visible usando Flesch-Kincaid Grade Level.
@@ -165,6 +191,9 @@ def detect_reading_level_findings(html_content: str) -> list[WcagFinding]:
     try:
         import textstat  # noqa: PLC0415
     except ImportError:
+        return []
+
+    if not _ensure_cmudict():
         return []
 
     soup = BeautifulSoup(html_content, "html5lib", store_line_numbers=True)

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!-- PRUEBA: errores WCAG Nivel AA
+     Errores esperados:
+     - 1.3.4  @media orientation bloquea orientación (en CSS vinculado)
+     - 1.3.5  inputs sin autocomplete apropiado
+     - 1.4.10 viewport con user-scalable=no
+     - 2.4.6  jerarquía de encabezados rota (h2→h5, h1 múltiples)
+     - 4.1.3  toast/alerta de estado sin role="status" ni aria-live
+     Nota: errores de contraste y focus se detectan desde el CSS adjunto.
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <!-- 1.4.10: zoom desactivado -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Panel de Control — Errores Nivel AA</title>
+  <link rel="stylesheet" href="nivel_aa_errores.css">
+</head>
+<body>
+  <header>
+    <nav aria-label="Navegación principal">
+      <a href="/">Inicio</a>
+      <a href="/dashboard">Panel</a>
+      <a href="/perfil">Perfil</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 2.4.6: múltiples h1 y salto de nivel (h2 → h5) -->
+    <h1>Panel de Administración</h1>
+    <h1>Resumen del día</h1>
+
+    <h2>Estadísticas</h2>
+    <h5>Datos del último mes</h5><!-- salto: debería ser h3 -->
+
+    <h2>Configuración</h2>
+    <h4>Preferencias de usuario</h4><!-- salto: debería ser h3 -->
+
+    <!-- 4.1.3: mensaje de estado sin live region -->
+    <div id="toast" style="background:#d4edda; padding:10px;">
+      Cambios guardados correctamente.
+    </div>
+    <div id="alerta-error" style="background:#f8d7da; padding:10px;">
+      Error al procesar la solicitud.
+    </div>
+
+    <!-- 1.3.5: formulario de perfil sin autocomplete -->
+    <form action="#" method="post">
+      <h2>Actualizar perfil</h2>
+
+      <label for="nombre">Nombre</label>
+      <!-- sin autocomplete="name" -->
+      <input type="text" id="nombre" name="nombre">
+
+      <label for="email">Correo</label>
+      <!-- sin autocomplete="email" -->
+      <input type="email" id="email" name="email">
+
+      <label for="telefono">Teléfono</label>
+      <!-- sin autocomplete="tel" -->
+      <input type="tel" id="telefono" name="telefono">
+
+      <label for="direccion">Dirección</label>
+      <!-- sin autocomplete="street-address" -->
+      <input type="text" id="direccion" name="direccion">
+
+      <label for="tarjeta">Número de tarjeta</label>
+      <!-- sin autocomplete="cc-number" -->
+      <input type="text" id="tarjeta" name="tarjeta">
+
+      <button type="submit">Guardar</button>
+    </form>
+  </main>
+
+  <footer>
+    <p>© 2026 Mi Empresa</p>
+  </footer>
+</body>
+</html>
