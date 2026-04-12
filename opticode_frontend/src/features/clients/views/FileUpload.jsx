@@ -1,12 +1,35 @@
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import DropZone from '../components/DropZone';
 import FileStatusList from '../components/FileStatusList';
 import { useFileUpload } from '../hooks/useFileUpload';
+import { getProjectById } from '../../../api/project-services';
 
 const FileUpload = () => {
   const { projectId } = useParams();
   const { files, handleFile } = useFileUpload(projectId);
+  const [projectName, setProjectName] = useState('Proyecto');
+
+  useEffect(() => {
+    if (!projectId) return;
+    let mounted = true;
+    getProjectById(projectId)
+      .then((project) => {
+        if (!mounted) return;
+        const name =
+          project && typeof project.name === 'string' && project.name.trim()
+            ? project.name.trim()
+            : 'Proyecto';
+        setProjectName(name);
+      })
+      .catch(() => {
+        if (mounted) setProjectName('Proyecto');
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [projectId]);
 
   return (
     <section>
@@ -20,7 +43,7 @@ const FileUpload = () => {
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
           </li>
           <li className="breadcrumb-item">
-            <Link to={`/projects/${projectId}`}>Portal Educativo</Link>
+            <Link to={`/projects/${projectId}`}>{projectName}</Link>
           </li>
           <li className="breadcrumb-item">
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />

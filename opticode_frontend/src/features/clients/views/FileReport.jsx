@@ -7,6 +7,7 @@ import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import OpenInNewOutlinedIcon from '@mui/icons-material/OpenInNewOutlined';
 import ScoreDonutChart from '../components/ScoreDonutChart';
 import { getFileReport } from '../../../api/file-services';
+import { getProjectById } from '../../../api/project-services';
 
 /** Niveles de conformidad WCAG — W3C / WAI (fuente oficial) */
 const WCAG_LEVELS_DOC = 'https://www.w3.org/WAI/WCAG21/Understanding/conformance#levels-of-guidance';
@@ -157,6 +158,7 @@ const FileReport = () => {
   const navigate = useNavigate();
   const [report, setReport] = useState(null);
   const [reportLabel, setReportLabel] = useState('');
+  const [projectName, setProjectName] = useState('Proyecto');
   const [isLoading, setIsLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState(() => ({
     critical: false,
@@ -192,6 +194,26 @@ const FileReport = () => {
       window.removeEventListener('resize', sync);
     };
   }, [report, isLoading]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    let mounted = true;
+    getProjectById(projectId)
+      .then((project) => {
+        if (!mounted) return;
+        const name =
+          project && typeof project.name === 'string' && project.name.trim()
+            ? project.name.trim()
+            : 'Proyecto';
+        setProjectName(name);
+      })
+      .catch(() => {
+        if (mounted) setProjectName('Proyecto');
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [projectId]);
 
   useEffect(() => {
     let mounted = true;
@@ -275,7 +297,7 @@ const FileReport = () => {
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} aria-hidden />
           </li>
           <li className="breadcrumb-item">
-            <Link to={`/projects/${projectId}`}>Portal Educativo</Link>
+            <Link to={`/projects/${projectId}`}>{projectName}</Link>
           </li>
           <li className="breadcrumb-item">
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} aria-hidden />
