@@ -1,15 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import OpenInNewOutlinedIcon from '@mui/icons-material/OpenInNewOutlined';
 import ScoreDonutChart from '../components/ScoreDonutChart';
 import { getFileReport } from '../../../api/file-services';
+
+/** Niveles de conformidad WCAG — W3C / WAI (fuente oficial) */
+const WCAG_LEVELS_DOC = 'https://www.w3.org/WAI/WCAG21/Understanding/conformance#levels-of-guidance';
+const WCAG_CONFORMANCE_LINK_LABEL = 'Niveles de conformidad (W3C / WAI)';
 
 /**
  * Normaliza la respuesta del backend al shape esperado por la vista.
  * Contrato esperado: GET /api/audit/:fileId/report/
- * { filename?, score, critical_count, warning_count }
+ * { filename?, score, critical_count, warning_count, aaa_count? }
  */
 const normalizeReportShape = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
@@ -17,9 +23,130 @@ const normalizeReportShape = (raw) => {
     score: Number(raw.score ?? 0),
     criticalCount: Number(raw.critical_count ?? raw.critical ?? 0),
     warningCount: Number(raw.warning_count ?? raw.warnings ?? 0),
+    /** Reservado si el backend etiqueta hallazgos AAA por separado (p. ej. criterios 1.4.6, 1.4.8). */
+    aaaCount: Number(raw.aaa_count ?? raw.aaa ?? 0),
     filename: raw.filename ?? null,
   };
 };
+
+const METRIC_COPY = {
+  critical: {
+    title: 'Faltas críticas (nivel A)',
+    explanation:
+      'El nivel A aborda barreras que suelen impedir usar el contenido: por ejemplo alternativas al contenido no textual (1.1.1), operación mediante teclado (2.1.1) o nombre, rol y valor expuestos correctamente a las tecnologías de asistencia (4.1.2). Las faltas críticas aquí corresponden a reglas de severidad «error» del analizador.',
+  },
+  warning: {
+    title: 'Advertencias (nivel AA)',
+    explanation:
+      'El nivel AA incorpora criterios que refuerzan percepción, operación y comprensión: por ejemplo contraste mínimo de texto (1.4.3), reflujo sin desplazamiento horizontal a 400 % (1.4.10), orden de foco predecible (2.4.3) o encabezados y etiquetas que describan el propósito (2.4.6). Las advertencias aquí se alinean con hallazgos «warning» del analizador.',
+  },
+  aaa: {
+    title: 'Mejoras (nivel AAA)',
+    explanation:
+      'El nivel AAA añade requisitos más estrictos; ejemplos frecuentes en la especificación son el contraste reforzado de texto (1.4.6), la presentación visual de bloques de texto (1.4.8) o la imagen de texto sin excepción (1.4.9). El contador refleja hallazgos etiquetados como AAA cuando el backend los expone.',
+  },
+};
+
+/**
+ * Tarjeta de métrica expandible al clic; varias pueden permanecer abiertas a la vez.
+ *
+ * @param {object} props
+ * @param {'critical'|'warning'|'aaa'} props.metricKey
+ * @param {boolean} props.isOpen
+ * @param {(k: 'critical'|'warning'|'aaa') => void} props.onToggle
+ * @param {number} props.count
+ * @param {import('react').ElementType} props.Icon
+ * @param {typeof METRIC_COPY.critical} props.copy
+ * @param {{ bg: string, border: string, iconBg: string, iconColor: string, numberColor: string, labelColor: string }} props.theme
+ */
+function ExpandableMetricCard({ metricKey, isOpen, onToggle, count, Icon, copy, theme }) {
+  const handleActivate = useCallback(() => {
+    onToggle(metricKey);
+  }, [metricKey, onToggle]);
+
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleActivate();
+      }
+    },
+    [handleActivate],
+  );
+
+  const stopCardToggle = useCallback((e) => {
+    e.stopPropagation();
+  }, []);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-expanded={isOpen}
+      aria-label={`${copy.title}: ${count}. Clic o Enter para ${isOpen ? 'ocultar' : 'mostrar'} la explicación.`}
+      className={`card w-100 h-100 min-h-0 oc-file-report-card-hover d-flex flex-column ${isOpen ? 'overflow-y-auto' : ''}`}
+      style={{
+        backgroundColor: theme.bg,
+        border: theme.border,
+        cursor: 'pointer',
+      }}
+      onClick={handleActivate}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="d-flex flex-column p-3 min-w-0 align-items-stretch">
+        <div className={`d-flex gap-3 min-w-0 align-items-start ${isOpen ? 'mb-2' : ''}`}>
+          <div
+            className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+            style={{
+              width: isOpen ? '2.25rem' : '3rem',
+              height: isOpen ? '2.25rem' : '3rem',
+              backgroundColor: theme.iconBg,
+              color: theme.iconColor,
+              transition: 'width 0.2s ease, height 0.2s ease',
+            }}
+          >
+            <Icon style={{ fontSize: isOpen ? '1.05rem' : '1.25rem' }} aria-hidden />
+          </div>
+          <div className="min-w-0 text-start">
+            <div
+              className={`fw-bold ${isOpen ? 'fs-4' : 'fs-3'} lh-1`}
+              style={{ color: theme.numberColor, transition: 'font-size 0.2s ease' }}
+            >
+              {count}
+            </div>
+            <div
+              className={`fw-semibold ${isOpen ? 'small' : 'small'} mt-1`}
+              style={{ color: theme.labelColor, lineHeight: 1.35 }}
+            >
+              {copy.title}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={`oc-file-report-expand-panel small text-start ${isOpen ? 'oc-file-report-expand-panel--open' : ''}`}
+          aria-hidden={!isOpen}
+        >
+          <p className="mb-2" style={{ color: theme.labelColor, lineHeight: 1.55 }}>
+            {copy.explanation}
+          </p>
+          <a
+            href={WCAG_LEVELS_DOC}
+            target="_blank"
+            rel="noopener noreferrer"
+            tabIndex={isOpen ? 0 : -1}
+            className="d-inline-flex align-items-center gap-1 fw-semibold text-decoration-none"
+            style={{ color: 'var(--oc-royal)', fontSize: '0.8125rem' }}
+            onClick={stopCardToggle}
+          >
+            {WCAG_CONFORMANCE_LINK_LABEL}
+            <OpenInNewOutlinedIcon style={{ fontSize: '1rem' }} aria-hidden />
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Reporte de accesibilidad de un archivo analizado.
@@ -31,6 +158,40 @@ const FileReport = () => {
   const [report, setReport] = useState(null);
   const [reportLabel, setReportLabel] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedSections, setExpandedSections] = useState(() => ({
+    critical: false,
+    warning: false,
+    aaa: false,
+  }));
+
+  const scoreCardRef = useRef(null);
+  /** Alto intrínseco de la tarjeta de puntuación (px): la columna de métricas usa al menos esto; la puntuación no se estira con la fila. */
+  const [scoreBlockMinPx, setScoreBlockMinPx] = useState(null);
+
+  useLayoutEffect(() => {
+    const el = scoreCardRef.current;
+    if (!el || typeof window === 'undefined') return undefined;
+
+    const isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
+
+    const sync = () => {
+      if (!isDesktop()) {
+        setScoreBlockMinPx(null);
+        return;
+      }
+      const h = el.getBoundingClientRect().height;
+      setScoreBlockMinPx(Number.isFinite(h) ? Math.round(h) : null);
+    };
+
+    sync();
+    const ro = new ResizeObserver(() => sync());
+    ro.observe(el);
+    window.addEventListener('resize', sync);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', sync);
+    };
+  }, [report, isLoading]);
 
   useEffect(() => {
     let mounted = true;
@@ -54,30 +215,70 @@ const FileReport = () => {
     };
 
     load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [projectId, fileId]);
+
+  const toggleSection = useCallback((key) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   const reportScore = Number(report?.score ?? 0);
   const reportCritical = Number(report?.criticalCount ?? 0);
   const reportWarnings = Number(report?.warningCount ?? 0);
+  const reportAaa = Number(report?.aaaCount ?? 0);
   const breadcrumbTitle = reportLabel || `Archivo ${fileId}`;
 
+  const criticalTheme = {
+    bg: 'var(--oc-danger-light)',
+    border: '1px solid rgba(239, 68, 68, 0.15)',
+    iconBg: 'rgba(239, 68, 68, 0.15)',
+    iconColor: 'var(--oc-danger)',
+    numberColor: 'var(--oc-danger-dark)',
+    labelColor: '#7f1d1d',
+  };
+
+  const warningTheme = {
+    bg: 'var(--oc-warning-light)',
+    border: '1px solid rgba(249, 115, 22, 0.15)',
+    iconBg: 'rgba(249, 115, 22, 0.15)',
+    iconColor: 'var(--oc-warning)',
+    numberColor: 'var(--oc-warning-dark)',
+    labelColor: '#7c2d12',
+  };
+
+  const aaaTheme = {
+    bg: 'var(--oc-info-light)',
+    border: '1px solid rgba(37, 99, 235, 0.15)',
+    iconBg: 'rgba(37, 99, 235, 0.12)',
+    iconColor: 'var(--oc-royal)',
+    numberColor: '#1e3a8a',
+    labelColor: '#1e293b',
+  };
+
+  const cOpen = expandedSections.critical;
+  const wOpen = expandedSections.warning;
+  const aOpen = expandedSections.aaa;
+  const flexCritical = `${cOpen ? 2 : 1} 1 0`;
+  const flexWarning = `${wOpen ? 2 : 1} 1 0`;
+  const flexAaa = `${aOpen ? 2 : 1} 1 0`;
+
   return (
-    <section>
-      {/* Breadcrumb */}
-      <nav aria-label="breadcrumb">
-        <ol className="breadcrumb">
+    <section className="min-w-0">
+      <nav aria-label="breadcrumb" className="min-w-0">
+        <ol className="breadcrumb flex-wrap">
           <li className="breadcrumb-item">
             <Link to="/dashboard">Mis Proyectos</Link>
           </li>
           <li className="breadcrumb-item">
-            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
+            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} aria-hidden />
           </li>
           <li className="breadcrumb-item">
             <Link to={`/projects/${projectId}`}>Portal Educativo</Link>
           </li>
           <li className="breadcrumb-item">
-            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
+            <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} aria-hidden />
           </li>
           <li className="breadcrumb-item active" aria-current="page">
             {breadcrumbTitle}
@@ -85,15 +286,14 @@ const FileReport = () => {
         </ol>
       </nav>
 
-      {/* Disclaimer */}
-      <div className="alert alert-info d-flex gap-2 mb-4">
-        <span className="fw-bold fs-5 lh-1" style={{ color: 'var(--oc-royal)' }}>i</span>
-        <p className="mb-0 small" style={{ color: '#1e3a5f' }}>
-          <strong>Este es un análisis estático.</strong> Para garantizar la accesibilidad completa,
-          realice pruebas manuales complementarias utilizando teclado y lectores de pantalla en su
-          sitio renderizado en vivo.
-        </p>
-      </div>
+      <p className="text-secondary small mb-4" style={{ maxWidth: '42rem', lineHeight: 1.55 }}>
+        Los totales resumen lo detectado en este archivo según el analizador. La definición oficial de los niveles de
+        conformidad está en{' '}
+        <a href={WCAG_LEVELS_DOC} target="_blank" rel="noopener noreferrer">
+          {WCAG_CONFORMANCE_LINK_LABEL}
+        </a>
+        . Para cada incidencia concreta y sugerencias de corrección, usa «Ver hallazgos detectados».
+      </p>
 
       {isLoading && (
         <div className="alert alert-secondary" role="status">
@@ -110,88 +310,62 @@ const FileReport = () => {
         </div>
       )}
 
-      {/* Score + Counts Grid */}
-      <div className="row g-4 mb-4" aria-busy={isLoading}>
-        {/* Donut */}
-        <div className="col-md-4">
-          <div className="card h-100 d-flex flex-column align-items-center justify-content-center p-4">
-            <h3
-              className="text-uppercase small fw-semibold text-secondary mb-3"
-              style={{ letterSpacing: '0.05em' }}
-            >
-              Puntuación Final
-            </h3>
+      <div className="oc-file-report-summary-grid mb-4" aria-busy={isLoading}>
+        <div
+          ref={scoreCardRef}
+          className="card w-100 border oc-file-report-card-hover oc-file-report-summary-score d-flex flex-column p-3 min-h-0"
+        >
+          <h3
+            className="text-uppercase small fw-semibold text-secondary mb-2 text-center"
+            style={{ letterSpacing: '0.05em' }}
+          >
+            Puntuación Final
+          </h3>
+          <div className="flex-grow-1 d-flex align-items-center justify-content-center min-h-0 w-100 py-1">
             <ScoreDonutChart score={reportScore} />
           </div>
         </div>
 
-        {/* Counts */}
-        <div className="col-md-8">
-          <div className="row row-cols-1 row-cols-sm-2 g-3 h-100">
-            <div className="col">
-              <div
-                className="card h-100 d-flex flex-row align-items-center gap-3 p-4"
-                style={{
-                  backgroundColor: 'var(--oc-danger-light)',
-                  border: '1px solid rgba(239, 68, 68, 0.15)',
-                }}
-              >
-                <div
-                  className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                  style={{
-                    width: '3rem',
-                    height: '3rem',
-                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                    color: 'var(--oc-danger)',
-                  }}
-                >
-                  <CloseOutlinedIcon style={{ fontSize: '1.25rem' }} />
-                </div>
-                <div>
-                  <div className="fw-bold fs-3" style={{ color: 'var(--oc-danger-dark)' }}>
-                    {reportCritical}
-                  </div>
-                  <div className="fw-medium small" style={{ color: '#7f1d1d' }}>
-                    Faltas Críticas (Nivel A)
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col">
-              <div
-                className="card h-100 d-flex flex-row align-items-center gap-3 p-4"
-                style={{
-                  backgroundColor: 'var(--oc-warning-light)',
-                  border: '1px solid rgba(249, 115, 22, 0.15)',
-                }}
-              >
-                <div
-                  className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                  style={{
-                    width: '3rem',
-                    height: '3rem',
-                    backgroundColor: 'rgba(249, 115, 22, 0.15)',
-                    color: 'var(--oc-warning)',
-                  }}
-                >
-                  <WarningAmberOutlinedIcon style={{ fontSize: '1.25rem' }} />
-                </div>
-                <div>
-                  <div className="fw-bold fs-3" style={{ color: 'var(--oc-warning-dark)' }}>
-                    {reportWarnings}
-                  </div>
-                  <div className="fw-medium small" style={{ color: '#7c2d12' }}>
-                    Advertencias (Nivel AA)
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div
+          className="oc-file-report-metrics-stack w-100"
+          style={scoreBlockMinPx != null ? { minHeight: `${scoreBlockMinPx}px` } : undefined}
+        >
+          <div className="d-flex flex-column min-h-0" style={{ flex: flexCritical }}>
+            <ExpandableMetricCard
+              metricKey="critical"
+              isOpen={expandedSections.critical}
+              onToggle={toggleSection}
+              count={reportCritical}
+              Icon={CloseOutlinedIcon}
+              copy={METRIC_COPY.critical}
+              theme={criticalTheme}
+            />
+          </div>
+          <div className="d-flex flex-column min-h-0" style={{ flex: flexWarning }}>
+            <ExpandableMetricCard
+              metricKey="warning"
+              isOpen={expandedSections.warning}
+              onToggle={toggleSection}
+              count={reportWarnings}
+              Icon={WarningAmberOutlinedIcon}
+              copy={METRIC_COPY.warning}
+              theme={warningTheme}
+            />
+          </div>
+          <div className="d-flex flex-column min-h-0" style={{ flex: flexAaa }}>
+            <ExpandableMetricCard
+              metricKey="aaa"
+              isOpen={expandedSections.aaa}
+              onToggle={toggleSection}
+              count={reportAaa}
+              Icon={AutoAwesomeOutlinedIcon}
+              copy={METRIC_COPY.aaa}
+              theme={aaaTheme}
+            />
           </div>
         </div>
       </div>
 
-      {/* Link to errors */}
       <div className="text-center mt-3">
         <button
           type="button"

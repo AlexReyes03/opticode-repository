@@ -605,3 +605,64 @@ input[type='password']::-ms-clear {
   color: rgba(100, 116, 139, 0.75);
   font-style: italic;
 }
+
+/* ---------- FileReport: métricas sin sombra fija; sombra solo al hover ---------- */
+.oc-file-report-card-hover {
+  box-shadow: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.oc-file-report-card-hover:hover {
+  box-shadow: 0 0.35rem 1.1rem rgba(15, 23, 42, 0.1);
+}
+
+.oc-file-report-card-hover:focus-within {
+  box-shadow: 0 0.35rem 1.1rem rgba(15, 23, 42, 0.1);
+}
+
+.oc-file-report-expand-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.45s ease, opacity 0.3s ease;
+}
+
+.oc-file-report-expand-panel.oc-file-report-expand-panel--open {
+  max-height: 22rem;
+  opacity: 1;
+}
+
+/*
+ * FileReport: grid con align-items start → la tarjeta de puntuación no crece con la fila.
+ * La columna de métricas usa min-height medido (ResizeObserver) para igualar al menos el alto
+ * de la puntuación; si el contenido exige más, la fila crece y la puntuación sigue igual.
+ */
+.oc-file-report-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 1.5rem;
+  align-items: start;
+  justify-items: stretch;
+  min-width: 0;
+}
+
+@media (max-width: 767.98px) {
+  .oc-file-report-summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.oc-file-report-summary-grid > .card.oc-file-report-summary-score {
+  align-self: start;
+  min-width: 0;
+}
+
+.oc-file-report-summary-grid > .oc-file-report-metrics-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-sizing: border-box;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+}
