@@ -4,6 +4,7 @@ Reglas de contraste de color.
 Criterios cubiertos:
 - WCAG 1.4.3 — Contrast (Minimum) · Nivel AA  (texto, umbral 4.5:1)
 - WCAG 1.4.11 — Non-text Contrast · Nivel AA  (bordes de UI, umbral 3:1)
+- WCAG 1.4.6 — Contrast (Enhanced) · Nivel AAA (texto, umbral 7:1)
 
 Formatos de color soportados: hex (#rgb, #rrggbb, #rrggbbaa), nombres CSS,
 rgb(), rgba().
@@ -160,6 +161,83 @@ def detect_contrast_findings(css_content: str) -> list[WcagFinding]:
             line_number=line_num,
             code_snippet=build_snippet(source_lines, line_num),
             category="color-contrast",
+        ))
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# WCAG 1.4.6 — Contrast (Enhanced) · Nivel AAA
+# ---------------------------------------------------------------------------
+
+_ENH_RULE_CODE  = "WCAG 1.4.6"
+_ENH_WCAG_LEVEL = "AAA"
+_ENH_SEVERITY   = "warning"
+_ENH_THRESHOLD  = 7.0
+
+
+def detect_contrast_enhanced_findings(css_content: str) -> list[WcagFinding]:
+    """
+    Detecta reglas CSS cuyo ratio de contraste texto/fondo es inferior a 7:1.
+
+    Es la versión reforzada de 1.4.3 (umbral 4.5:1). Aplica a texto normal;
+    el nivel AAA exige mayor contraste para personas con visión muy reducida.
+    Solo reporta reglas que ya pasaron el umbral AA (4.5:1) pero no alcanzan
+    el nivel AAA (7:1), evitando duplicar hallazgos con detect_contrast_findings.
+    """
+    if not css_content or not str(css_content).strip():
+        return []
+
+    source_lines = css_content.splitlines()
+    findings: list[WcagFinding] = []
+
+    for rule in tinycss2.parse_stylesheet(css_content, skip_whitespace=True, skip_comments=True):
+        if rule.type != "qualified-rule":
+            continue
+
+        declarations = tinycss2.parse_declaration_list(
+            rule.content, skip_whitespace=True, skip_comments=True
+        )
+
+        foreground: tuple[int, int, int] | None = None
+        bg_explicit: tuple[int, int, int] | None = None
+        bg_shorthand: tuple[int, int, int] | None = None
+
+        for decl in declarations:
+            if decl.type != "declaration":
+                continue
+            if decl.lower_name == "color":
+                foreground = _extract_color(decl.value)
+            elif decl.lower_name == "background-color":
+                bg_explicit = _extract_color(decl.value)
+            elif decl.lower_name == "background":
+                bg_shorthand = _extract_color(decl.value)
+
+        background = bg_explicit if bg_explicit is not None else bg_shorthand
+
+        if foreground is None or background is None:
+            continue
+
+        ratio = contrast_ratio(foreground, background)
+        # Solo reporta el rango "pasa AA pero falla AAA" para evitar duplicados
+        if ratio < _MIN_THRESHOLD or ratio >= _ENH_THRESHOLD:
+            continue
+
+        selector = "".join(t.serialize() for t in rule.prelude).strip()
+        line_num  = max(1, rule.source_line)
+
+        findings.append(WcagFinding(
+            severity=_ENH_SEVERITY,
+            wcag_level=_ENH_WCAG_LEVEL,
+            wcag_rule=_ENH_RULE_CODE,
+            message=(
+                f'Contraste mejorado insuficiente en "{selector}": '
+                f"ratio {ratio:.2f}:1 (mínimo AAA: {_ENH_THRESHOLD}:1). "
+                "Aumenta el contraste para máxima accesibilidad."
+            ),
+            line_number=line_num,
+            code_snippet=build_snippet(source_lines, line_num),
+            category="color-contrast-enhanced",
         ))
 
     return findings

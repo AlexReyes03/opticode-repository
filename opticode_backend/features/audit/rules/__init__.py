@@ -19,8 +19,13 @@ from .structure import (
     detect_page_title_findings,                               # 2.4.2
     detect_page_language_findings,                            # 3.1.1
     detect_reflow_findings,                                   # 1.4.10 (AA)
+    detect_section_headings_findings,                         # 2.4.10 (AAA)
+    detect_identify_purpose_findings,                         # 1.3.6 (AAA)
 )
-from .links     import detect_link_purpose_findings           # 2.4.4
+from .links     import (
+    detect_link_purpose_findings,                             # 2.4.4
+    detect_link_purpose_strict_findings,                      # 2.4.9 (AAA)
+)
 from .aria      import (
     detect_name_role_value_findings,                          # 4.1.2
     detect_label_in_name_findings,                            # 2.5.3
@@ -29,6 +34,14 @@ from .aria      import (
 
 # ── Reglas HTML — Nivel AA ─────────────────────────────────────────────────
 from .headings  import detect_heading_structure_findings      # 2.4.6
+
+# ── Reglas HTML — Nivel AAA ────────────────────────────────────────────────
+from .text import (
+    detect_unusual_words_findings,                            # 3.1.3
+    detect_abbreviations_findings,                            # 3.1.4
+    detect_reading_level_findings,                            # 3.1.5
+    detect_pronunciation_findings,                            # 3.1.6
+)
 
 # ── Reglas CSS — Nivel AA ──────────────────────────────────────────────────
 from .contrast   import (
@@ -41,6 +54,15 @@ from .css_checks import (
     detect_text_spacing_findings,                             # 1.4.12
     detect_orientation_lock_findings,                         # 1.3.4
     detect_target_size_findings,                              # 2.5.8
+)
+
+# ── Reglas CSS — Nivel AAA ─────────────────────────────────────────────────
+from .contrast   import detect_contrast_enhanced_findings     # 1.4.6
+from .css_checks import (
+    detect_visual_presentation_findings,                      # 1.4.8
+    detect_animation_findings,                                # 2.3.3
+    detect_focus_appearance_findings,                         # 2.4.13
+    detect_target_size_enhanced_findings,                     # 2.5.5
 )
 
 # ---------------------------------------------------------------------------
@@ -71,6 +93,14 @@ HTML_RULES = [
     detect_input_purpose_findings,          # 1.3.5 — input sin autocomplete
     detect_heading_structure_findings,      # 2.4.6 — jerarquía de encabezados
     detect_status_messages_findings,        # 4.1.3 — mensajes de estado sin live region
+    # ── Nivel AAA ────────────────────────────────────────────────────────
+    detect_link_purpose_strict_findings,    # 2.4.9 — enlace sin nombre accesible
+    detect_section_headings_findings,       # 2.4.10 — section/article sin encabezado
+    detect_identify_purpose_findings,       # 1.3.6 — sin landmarks semánticos
+    detect_unusual_words_findings,          # 3.1.3 — sin mecanismo de definición
+    detect_abbreviations_findings,          # 3.1.4 — siglas sin <abbr title>
+    detect_reading_level_findings,          # 3.1.5 — nivel de lectura elevado
+    detect_pronunciation_findings,          # 3.1.6 — palabras ambiguas sin <ruby>
 ]
 
 CSS_RULES = [
@@ -82,4 +112,10 @@ CSS_RULES = [
     detect_text_spacing_findings,           # 1.4.12 — espaciado con !important
     detect_orientation_lock_findings,       # 1.3.4 — bloqueo de orientación
     detect_target_size_findings,            # 2.5.8 — área de toque < 24px
+    # ── Nivel AAA ────────────────────────────────────────────────────────
+    detect_contrast_enhanced_findings,      # 1.4.6 — contraste texto 7:1
+    detect_visual_presentation_findings,    # 1.4.8 — line-height, justify, max-width
+    detect_animation_findings,              # 2.3.3 — animaciones sin reduced-motion
+    detect_focus_appearance_findings,       # 2.4.13 — foco sin offset ni shadow
+    detect_target_size_enhanced_findings,   # 2.5.5 — área de toque < 44px
 ]

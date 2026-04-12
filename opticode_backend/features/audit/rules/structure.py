@@ -6,6 +6,8 @@ Criterios cubiertos:
 - WCAG 3.1.1 — Language of Page · Nivel A
 - WCAG 2.4.1 — Bypass Blocks · Nivel A
 - WCAG 1.4.10 — Reflow · Nivel AA
+- WCAG 2.4.10 — Section Headings · Nivel AAA
+- WCAG 1.3.6 — Identify Purpose · Nivel AAA
 """
 
 from __future__ import annotations
@@ -268,3 +270,113 @@ def detect_reflow_findings(html_content: str) -> list[WcagFinding]:
                 ))
 
     return findings
+
+
+# ---------------------------------------------------------------------------
+# WCAG 2.4.10 — Section Headings · Nivel AAA
+# ---------------------------------------------------------------------------
+
+_SH_RULE_CODE  = "WCAG 2.4.10"
+_SH_WCAG_LEVEL = "AAA"
+_SH_SEVERITY   = "warning"
+
+_HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
+_SECTION_TAGS = {"section", "article"}
+
+
+def detect_section_headings_findings(html_content: str) -> list[WcagFinding]:
+    """
+    Detecta <section> y <article> sin un encabezado hijo directo (h1-h6)
+    ni aria-label ni aria-labelledby.
+
+    Las secciones sin encabezado son opacas para los lectores de pantalla:
+    el usuario no puede entender la organización del documento navegando
+    por encabezados.
+    """
+    if not html_content or not str(html_content).strip():
+        return []
+
+    soup = BeautifulSoup(html_content, "html5lib", store_line_numbers=True)
+    source_lines = html_content.splitlines()
+    findings: list[WcagFinding] = []
+
+    for tag in soup.find_all(_SECTION_TAGS):
+        # La sección tiene nombre accesible via ARIA → aceptable
+        if tag.get("aria-label", "").strip() or tag.get("aria-labelledby", "").strip():
+            continue
+
+        # Busca encabezado como hijo directo
+        has_heading = any(child.name in _HEADING_TAGS for child in tag.children if hasattr(child, "name"))
+
+        if not has_heading:
+            findings.append(make_finding(
+                tag=tag,
+                source_lines=source_lines,
+                wcag_rule=_SH_RULE_CODE,
+                wcag_level=_SH_WCAG_LEVEL,
+                severity=_SH_SEVERITY,
+                message=(
+                    f"<{tag.name}> sin encabezado hijo (h1-h6) ni aria-label. "
+                    "Añade un encabezado descriptivo o usa aria-label para identificar la sección."
+                ),
+                category="section-without-heading",
+            ))
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# WCAG 1.3.6 — Identify Purpose · Nivel AAA
+# ---------------------------------------------------------------------------
+
+_IP_RULE_CODE  = "WCAG 1.3.6"
+_IP_WCAG_LEVEL = "AAA"
+_IP_SEVERITY   = "warning"
+
+_LANDMARK_ROLES = {
+    "banner", "navigation", "main", "complementary",
+    "contentinfo", "search", "form", "region",
+}
+_SEMANTIC_LANDMARKS = {"header", "nav", "main", "aside", "footer", "section", "form", "search"}
+
+
+def detect_identify_purpose_findings(html_content: str) -> list[WcagFinding]:
+    """
+    Detecta ausencia de landmarks semánticos HTML5 y ARIA en el documento.
+
+    WCAG 1.3.6 requiere que la finalidad de los componentes de la interfaz
+    pueda determinarse programáticamente para que herramientas de asistencia
+    puedan personalizar la presentación (iconos, símbolos, etc.).
+
+    Heurística: reporta si el documento carece de elementos landmark
+    (<main>, <nav>, <header>, <footer>) y no usa roles ARIA equivalentes.
+    """
+    if not html_content or not str(html_content).strip():
+        return []
+
+    soup = BeautifulSoup(html_content, "html5lib", store_line_numbers=True)
+    source_lines = html_content.splitlines()
+
+    has_semantic = bool(soup.find(list(_SEMANTIC_LANDMARKS)))
+    if not has_semantic:
+        has_semantic = bool(
+            soup.find(attrs={"role": lambda r: r and r.lower() in _LANDMARK_ROLES})
+        )
+
+    if has_semantic:
+        return []
+
+    return [make_finding(
+        line_number=1,
+        source_lines=source_lines,
+        wcag_rule=_IP_RULE_CODE,
+        wcag_level=_IP_WCAG_LEVEL,
+        severity=_IP_SEVERITY,
+        message=(
+            "El documento no usa elementos landmark semánticos HTML5 "
+            "(<main>, <nav>, <header>, <footer>) ni roles ARIA equivalentes. "
+            "Los landmarks permiten a las herramientas de asistencia identificar "
+            "la función de cada región de la página."
+        ),
+        category="identify-purpose-no-landmarks",
+    )]
