@@ -12,9 +12,28 @@ from __future__ import annotations
 
 import re
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 
 from ._utils import WcagFinding, make_finding
+
+
+def _visible_text(soup: BeautifulSoup) -> str:
+    """
+    Extrae solo el texto visible del documento: excluye comentarios HTML,
+    contenido de <script> y <style>, y cualquier NavigableString que no
+    sea texto real del usuario.
+    """
+    _SKIP_TAGS = {"script", "style"}
+    parts: list[str] = []
+    for node in soup.find_all(string=True):
+        if isinstance(node, Comment):
+            continue
+        if node.parent and node.parent.name in _SKIP_TAGS:
+            continue
+        text = str(node).strip()
+        if text:
+            parts.append(text)
+    return " ".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -48,9 +67,8 @@ def detect_unusual_words_findings(html_content: str) -> list[WcagFinding]:
     if has_dfn or has_dl or has_role_def:
         return []
 
-    # Solo reporta si el documento tiene texto de cierta longitud
-    body = soup.find("body")
-    text = body.get_text(strip=True) if body else soup.get_text(strip=True)
+    # Solo reporta si el documento tiene texto visible de cierta longitud
+    text = _visible_text(soup)
     if len(text.split()) < 50:
         return []
 
@@ -106,6 +124,8 @@ def detect_abbreviations_findings(html_content: str) -> list[WcagFinding]:
     # Buscar siglas en nodos de texto (fuera de <abbr>, <script>, <style>)
     seen_uncovered: set[str] = set()
     for text_node in soup.find_all(string=True):
+        if isinstance(text_node, Comment):
+            continue
         parent = text_node.parent
         if parent and parent.name in {"script", "style", "abbr"}:
             continue
@@ -146,7 +166,10 @@ _RL_RULE_CODE  = "WCAG 3.1.5"
 _RL_WCAG_LEVEL = "AAA"
 _RL_SEVERITY   = "warning"
 
-_MAX_GRADE_LEVEL = 9.0  # nivel de lectura secundaria básica
+_MAX_GRADE_LEVEL = 13.0  # umbral ajustado para español: Flesch-Kincaid infla el
+                         # score en lenguas romances por su mayor densidad silábica.
+                         # Grado 13 equivale aproximadamente a bachillerato en inglés,
+                         # que corresponde a secundaria completa en español.
 
 
 def _ensure_cmudict() -> bool:
@@ -199,8 +222,7 @@ def detect_reading_level_findings(html_content: str) -> list[WcagFinding]:
     soup = BeautifulSoup(html_content, "html5lib", store_line_numbers=True)
     source_lines = html_content.splitlines()
 
-    body = soup.find("body")
-    text = body.get_text(separator=" ", strip=True) if body else soup.get_text(separator=" ", strip=True)
+    text = _visible_text(soup)
 
     # Mínimo de palabras para que el análisis sea significativo
     word_count = len(text.split())
@@ -263,8 +285,7 @@ def detect_pronunciation_findings(html_content: str) -> list[WcagFinding]:
     if soup.find("ruby"):
         return []
 
-    body = soup.find("body")
-    text = (body.get_text(strip=True) if body else soup.get_text(strip=True)).lower()
+    text = _visible_text(soup).lower()
 
     # Verificar si el documento tiene palabras que requieren pronunciación explícita
     words_in_text = set(re.findall(r"\b\w+\b", text))
