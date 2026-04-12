@@ -1,5 +1,9 @@
 import request from './fetch-wrapper';
 
+/** Límites alineados con el modelo / UX (nombre en BD: max 100). */
+export const PROJECT_NAME_MAX_LENGTH = 100;
+export const PROJECT_DESCRIPTION_MAX_LENGTH = 500;
+
 /**
  * Servicios de proyectos. Alineado con el modelo backend Project (name, description, owner,
  * created_at, updated_at). El borrado lógico requiere que el backend exponga is_active
@@ -79,14 +83,41 @@ export const getProjectById = (projectId) =>
   request(`/api/projects/${projectId}/`);
 
 /**
- * Lista de archivos del proyecto (auditorías/subidas asociadas).
+ * Fila de tabla de archivos en `ProjectDashboard` (camelCase).
+ *
+ * @param {object} raw
+ */
+function normalizeUploadedFileRow(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const score = raw.score;
+  const scoreNum = score != null && !Number.isNaN(Number(score)) ? Math.round(Number(score)) : null;
+  return {
+    id: raw.id,
+    name: raw.filename ?? '',
+    fileType: raw.file_type ?? '',
+    date: formatProjectDate(raw.updated_at),
+    critical: typeof raw.critical_count === 'number' ? raw.critical_count : 0,
+    warnings: typeof raw.warning_count === 'number' ? raw.warning_count : 0,
+    score: scoreNum,
+  };
+}
+
+/**
+ * Lista de archivos del proyecto (solo del usuario propietario vía backend).
  *
  * @param {string|number} projectId
- * @returns {Promise<Array<object>>} Lista de archivos. Si el backend pagina, se devuelve response.results.
+ * @returns {Promise<Array<object>>} Filas normalizadas; lista vacía si no hay archivos o 404 legado.
  */
 export const getProjectFiles = async (projectId) => {
-  const response = await request(`/api/projects/${projectId}/files/`);
-  return response?.results ?? response ?? [];
+  try {
+    const response = await request(`/api/projects/${projectId}/files/`);
+    const list = Array.isArray(response) ? response : response?.results ?? [];
+    if (!Array.isArray(list)) return [];
+    return list.map(normalizeUploadedFileRow).filter(Boolean);
+  } catch (err) {
+    if (err && typeof err === 'object' && err.status === 404) return [];
+    throw err;
+  }
 };
 
 /**
@@ -98,6 +129,15 @@ export const getProjectFiles = async (projectId) => {
  */
 export const updateProject = (projectId, data) =>
   request(`/api/projects/${projectId}/`, { method: 'PATCH', body: data });
+
+/**
+ * Elimina el proyecto de forma permanente (cascada en archivos asociados según el modelo).
+ *
+ * @param {string|number} projectId
+ * @returns {Promise<unknown>}
+ */
+export const deleteProject = (projectId) =>
+  request(`/api/projects/${projectId}/`, { method: 'DELETE' });
 
 /**
  * Desactiva el proyecto (borrado lógico). Requiere en el backend un campo is_active
