@@ -1,46 +1,44 @@
 import threading
 
-# Thread-local storage para guardar los datos del request actual
+# Thread-local storage para guardar el request en memoriaRAM
 _thread_locals = threading.local()
 
+def get_current_request():
+    return getattr(_thread_locals, 'request', None)
+
 def get_current_user():
-    """Obtiene el usuario del request actual."""
-    return getattr(_thread_locals, 'user', None)
+    """Obtiene el usuario verificando dinámicamente el request para leer el JWT de DRF."""
+    request = get_current_request()
+    if request:
+        return getattr(request, 'user', None)
+    return None
 
 def get_current_ip():
-    """Obtiene la IP del request actual."""
-    return getattr(_thread_locals, 'ip_address', None)
+    """Obtiene la IP de manera dinámica desde el request completo."""
+    request = get_current_request()
+    if request:
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR')
+    return None
 
 class AuditLogMiddleware:
     """
-    Middleware que intercepta cada request para guardar el usuario actual 
-    y la dirección IP en thread-local storage, de modo que las señales (signals)
-    puedan acceder a esta información sin necesidad de recibir el request empírico.
+    Middleware moderno para guardar el punte al request de forma que las Vistas 
+    posteriores (DRF JWT) de React/Angular puedan actualizar al request.user dinámicamente.
     """
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # Guardamos en thread-local el usuario y la IP antes de procesar la vista
-        # Nota: para el usuario, asume que AuthenticationMiddleware ya corrió.
-        _thread_locals.user = getattr(request, 'user', None)
-        _thread_locals.ip_address = self.get_client_ip(request)
+        # En vez de copiar el numero, ponemos el Request en memoria local
+        _thread_locals.request = request
         
         response = self.get_response(request)
         
-        # Limpieza para evitar fugas de memoria si se reúsan los hilos (workers)
-        if hasattr(_thread_locals, 'user'):
-            del _thread_locals.user
-        if hasattr(_thread_locals, 'ip_address'):
-            del _thread_locals.ip_address
+        # Super importante: Siempre limpiar la basura para evitar fugas de RAM
+        if hasattr(_thread_locals, 'request'):
+            del _thread_locals.request
             
         return response
-
-    def get_client_ip(self, request):
-        """Extrae la dirección IP real del cliente."""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0].strip()
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
