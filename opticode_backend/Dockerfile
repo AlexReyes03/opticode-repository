@@ -11,23 +11,19 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Dependencias de sistema
-# - WeasyPrint necesita cairo, pango, gdk-pixbuf
-# - mysqlclient necesita libmysqlclient-dev + build tools
-# - pkg-config requerido por mysqlclient
+# Dependencias de sistema:
+#   WeasyPrint: cairo, pango, gdk-pixbuf
+#   mysqlclient: libmysqlclient-dev + build tools + pkg-config
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # WeasyPrint
     libcairo2 \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
     libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
-    # mysqlclient
     default-libmysqlclient-dev \
     build-essential \
     pkg-config \
-    # Limpieza
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
