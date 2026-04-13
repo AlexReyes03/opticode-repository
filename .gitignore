@@ -1,11 +1,7 @@
 # ── macOS ────────────────────────────────────────────────
 .DS_Store
 
-# ── Variables de entorno (nunca al repo) ─────────────────
+# ── Variables de entorno ─────────────────
 deploy/.env
 opticode_backend/.env
 opticode_frontend/.env
-
-# ── Notas privadas de desarrollo ─────────────────────────
-memory/
-CLAUDE.md
