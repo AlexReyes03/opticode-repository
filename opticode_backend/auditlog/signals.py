@@ -58,7 +58,8 @@ def audit_post_save(sender, instance, created, **kwargs):
                     old_value=None,
                     new_value=final_value,
                     user=user,
-                    ip_address=ip
+                    ip_address=ip,
+                    record_id=str(instance.pk)
                 )
     else:
         # ACTUALIZACIÓN: Comparar rigurosamente campo VS campo
@@ -84,7 +85,8 @@ def audit_post_save(sender, instance, created, **kwargs):
                         old_value=old_str,
                         new_value=new_str,
                         user=user,
-                        ip_address=ip
+                        ip_address=ip,
+                        record_id=str(instance.pk)
                     )
 
 def audit_post_delete(sender, instance, **kwargs):
@@ -116,5 +118,6 @@ def audit_post_delete(sender, instance, **kwargs):
         old_value=str(pk_value) if pk_value is not None else None,
         new_value=None,
         user=user,
-        ip_address=ip
+        ip_address=ip,
+        record_id=str(instance.pk)
     )
