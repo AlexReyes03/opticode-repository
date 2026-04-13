@@ -102,6 +102,11 @@ AUTH_USER_MODEL = "authentication.User"
 
 JWT_ENABLED = env.bool("JWT_ENABLED", default=True)
 
+# Cifrado opcional de contraseñas en login/registro (RSA-OAEP SHA-256).
+# PEM en una sola línea usando \n como salto de línea, o dejar vacío para solo texto plano.
+AUTH_RSA_PRIVATE_KEY = env.str("AUTH_RSA_PRIVATE_KEY", default="").replace("\\n", "\n")
+AUTH_RSA_KEY_ID = env.str("AUTH_RSA_KEY_ID", default="v1")
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         ["rest_framework_simplejwt.authentication.JWTAuthentication"]

@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .crypto_rsa import public_key_bundle
 from .serializers import (
     ChangePasswordSerializer,
     ForgotPasswordSerializer,
@@ -19,6 +20,21 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+
+class AuthPublicKeyView(views.APIView):
+    """
+    Expone la clave pública RSA (SPKI PEM) para cifrado OAEP-SHA256 en el cliente.
+    Si AUTH_RSA_PRIVATE_KEY no está definida, devuelve enabled=false (solo contraseña en claro).
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        bundle = public_key_bundle()
+        if bundle is None:
+            return Response({"enabled": False}, status=status.HTTP_200_OK)
+        return Response(bundle, status=status.HTTP_200_OK)
 
 
 class RegisterView(generics.CreateAPIView):
