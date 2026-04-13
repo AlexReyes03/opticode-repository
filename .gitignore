@@ -5,3 +5,8 @@
 deploy/.env
 opticode_backend/.env
 opticode_frontend/.env
+.cursor/
+
+# RSA
+auth_rsa.pe
+opticode_backend/auth_rsa.pem
