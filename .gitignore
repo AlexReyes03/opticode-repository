@@ -1,0 +1,7 @@
+# ── macOS ────────────────────────────────────────────────
+.DS_Store
+
+# ── Variables de entorno ─────────────────
+deploy/.env
+opticode_backend/.env
+opticode_frontend/.env

@@ -15,8 +15,10 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# SSL redirect desactivado: Nginx termina las conexiones y no hay HTTPS aún.
+# Activar cuando se configure certificado SSL en Nginx.
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
 setup_logging(LOGURU_CONFIG)
