@@ -7,7 +7,7 @@
 #   nginx           — Proxy inverso      :80   (público)
 #   mysqld_exporter — Métricas de RDS    :9104 (interno)
 #   prometheus      — Recolector         :9090 (solo tu IP)
-#   grafana         — Dashboards         :3000 (público, con login)
+#   grafana         — Dashboards         /grafana/ vía Nginx (interno)
 #
 # RDS corre en AWS — no está en este archivo
 # ============================================================
@@ -74,13 +74,14 @@ services:
   # ── Grafana ───────────────────────────────────────────────
   grafana:
     image: grafana/grafana:latest
-    ports:
-      - "3000:3000"             # público, protegido con login
+    expose:
+      - "3000"                  # solo accesible dentro de la red Docker, vía Nginx en /grafana/
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme}
       GF_AUTH_ANONYMOUS_ENABLED: "false"
-      GF_SERVER_ROOT_URL: "http://%(domain)s:3000/"
+      GF_SERVER_ROOT_URL: "http://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:
       - grafana_data:/var/lib/grafana
     depends_on:
