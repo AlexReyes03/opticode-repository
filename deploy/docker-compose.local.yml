@@ -1,0 +1,24 @@
+# ============================================================
+# docker-compose.local.yml — Override para pruebas en local
+#
+# Uso (desde la carpeta deploy/):
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# La BD sigue siendo RDS — el .env del backend apunta al mismo endpoint.
+#
+# Diferencias con producción:
+#   - Django en modo development (sin HTTPS forzado)
+#   - Nginx en puerto 8080 (el 80 requiere sudo en Mac)
+# ============================================================
+
+services:
+
+  # ── Django sin HTTPS forzado ──────────────────────────────
+  web:
+    environment:
+      DJANGO_ENV: development
+
+  # ── Nginx en 8080 para no necesitar sudo en Mac ───────────
+  nginx:
+    ports:
+      - "8080:80"

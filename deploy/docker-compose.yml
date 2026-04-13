@@ -1,0 +1,96 @@
+# ============================================================
+# docker-compose.yml — Opticode en producción (AWS EC2)
+# Uso: docker compose up -d
+#
+# Servicios:
+#   web             — Django + Gunicorn  :8000 (interno)
+#   nginx           — Proxy inverso      :80   (público)
+#   mysqld_exporter — Métricas de RDS    :9104 (interno)
+#   prometheus      — Recolector         :9090 (solo tu IP)
+#   grafana         — Dashboards         :3000 (público, con login)
+#
+# RDS corre en AWS — no está en este archivo
+# ============================================================
+
+services:
+
+  # ── Backend Django ────────────────────────────────────────
+  web:
+    build:
+      context: ../opticode_backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env     # deploy/.env, cargado automáticamente por Docker Compose
+    environment:
+      DJANGO_ENV: production
+    volumes:
+      # Media persiste aunque se reconstruya el contenedor
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    restart: unless-stopped
+    mem_limit: 380m
+    depends_on:
+      - mysqld_exporter   # asegura que el exporter inicie antes
+
+  # ── Nginx ─────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.docker.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
+    depends_on:
+      - web
+    restart: unless-stopped
+    mem_limit: 50m
+
+  # ── mysqld_exporter (métricas de RDS para Prometheus) ─────
+  mysqld_exporter:
+    image: prom/mysqld-exporter:v0.14.0
+    environment:
+      DATA_SOURCE_NAME: ${DATA_SOURCE_NAME}   # leído de deploy/.env por Docker Compose
+    ports:
+      - "127.0.0.1:9104:9104"   # solo accesible desde localhost
+    restart: unless-stopped
+    mem_limit: 50m
+
+  # ── Prometheus ────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"             # abierto solo a tu IP via Security Group
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+    restart: unless-stopped
+    mem_limit: 150m
+
+  # ── Grafana ───────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"             # público, protegido con login
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: "http://%(domain)s:3000/"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    mem_limit: 200m
+
+# ── Volúmenes persistentes ────────────────────────────────
+volumes:
+  media_data:
+  static_data:
+  prometheus_data:
+  grafana_data:
