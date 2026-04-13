@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 
 class UploadedFile(models.Model):
@@ -18,6 +19,18 @@ class UploadedFile(models.Model):
     score = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Campos de Tabla Auditable
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name='created_files', verbose_name="creado por"
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name='updated_files', verbose_name="actualizado por"
+    )
 
     class Meta:
         db_table = "uploaded_files"
