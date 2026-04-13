@@ -55,6 +55,12 @@ class Finding(models.Model):
     class Severity(models.TextChoices):
         ERROR = "error", "Error"
         WARNING = "warning", "Warning"
+        IMPROVEMENT = "improvement", "Improvement"
+
+    class WcagLevel(models.TextChoices):
+        A = "A", "A"
+        AA = "AA", "AA"
+        AAA = "AAA", "AAA"
 
     audit_result = models.ForeignKey(
         AuditResult,
@@ -62,6 +68,7 @@ class Finding(models.Model):
         related_name="findings",
     )
     severity = models.CharField(max_length=20, choices=Severity.choices)
+    wcag_level = models.CharField(max_length=3, choices=WcagLevel.choices, default=WcagLevel.A)
     wcag_rule = models.CharField(max_length=50)
     message = models.TextField()
     line_number = models.PositiveIntegerField()

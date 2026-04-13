@@ -1,0 +1,39 @@
+# ============================================================
+# Prometheus — Configuración para monitoreo de Opticode
+# Ruta en el servidor: /home/ubuntu/prometheus/prometheus.yml
+#
+# Métricas recolectadas:
+#   - node_exporter   (CPU, RAM, disco de la EC2)
+#   - mysqld_exporter (queries, conexiones, InnoDB de RDS)
+# ============================================================
+
+global:
+  scrape_interval: 30s       # Cada cuánto recoge métricas (30s es suficiente)
+  evaluation_interval: 30s
+  # Etiqueta para identificar este servidor en Grafana
+  external_labels:
+    instance: 'opticode-ec2'
+    environment: 'production'
+
+scrape_configs:
+
+  # ── 1. Prometheus mismo ─────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['prometheus:9090']
+
+  # ── 2. MySQL / RDS ──────────────────────────────────────
+  - job_name: 'mysql'
+    static_configs:
+      # En Docker, el servicio se llama "mysqld_exporter"
+      - targets: ['mysqld_exporter:9104']
+    # Mostrar el host real de RDS en las métricas
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'rds-opticode'
+
+# ── Retención de datos ───────────────────────────────────
+# Se configura al iniciar prometheus con:
+# --storage.tsdb.retention.time=7d
+# (7 días es suficiente y no llena el disco de t2.micro)

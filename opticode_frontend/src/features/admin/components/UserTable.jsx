@@ -1,15 +1,20 @@
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import StatusBadge from '../../../components/shared/StatusBadge';
+import { getApiErrorMessage } from '../../../api/fetch-wrapper';
 import { suspendUser } from '../../../api/admin-services';
+import { notifyError, notifySuccess } from '../../../utils/toast';
 
 const UserTable = ({ users = [], onRefresh }) => {
   const handleSuspend = async (id) => {
     try {
       await suspendUser(id);
       if (onRefresh) await onRefresh();
+      notifySuccess('Usuario suspendido correctamente.');
     } catch (error) {
-      console.error('Failed to suspend user', error);
+      notifyError(
+        getApiErrorMessage(error, 'No se pudo suspender el usuario. Intenta de nuevo.'),
+      );
     }
   };
 

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Archivo de prueba con errores WCAG</title>
+</head>
+<body>
+  <!-- Error intencional: más de un h1 -->
+  <h1>Portal de Servicios</h1>
+  <h1>Bienvenido al portal</h1>
+
+  <!-- Error intencional: salto de jerarquía (de h2 a h4) -->
+  <h2>Sección principal</h2>
+  <h4>Subsección mal estructurada</h4>
+
+  <p>Este archivo está hecho para pruebas del analizador WCAG de Opticode.</p>
+
+  <form action="#" method="post">
+    <h2>Formulario de registro</h2>
+
+    <!-- Error intencional: input sin label ni atributos aria -->
+    <input type="text" placeholder="Nombre completo">
+
+    <!-- Error intencional: input sin label ni atributos aria -->
+    <input type="email" placeholder="Correo electrónico">
+
+    <!-- Error intencional: input sin label ni atributos aria -->
+    <input type="password" placeholder="Contraseña">
+
+    <!-- Este sí está bien (control de comparación) -->
+    <input type="search" aria-label="Buscar en el portal">
+
+    <button type="submit">Enviar</button>
+  </form>
+
+  <!-- Error adicional para pruebas futuras: imagen sin alt -->
+  <img src="banner-prueba.jpg">
+</body>
+</html>

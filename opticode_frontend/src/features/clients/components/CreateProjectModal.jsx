@@ -4,18 +4,19 @@ import {
   PROJECT_DESCRIPTION_MAX_LENGTH,
   updateProject,
 } from '../../../api/project-services';
+import { getApiErrorMessage } from '../../../api/fetch-wrapper';
+import { notifyError } from '../../../utils/toast';
 
 /**
  * @param {boolean} show
  * @param {() => void} onClose
- * @param {() => void} [onProjectCreated] Tras crear o guardar edición.
+ * @param {(meta?: { mode: 'create' | 'edit' }) => void} [onProjectCreated] Tras crear o guardar edición.
  * @param {{ id: number|string, name?: string, description?: string }|null} [projectToEdit] Si viene definido, modo edición.
  */
 const CreateProjectModal = ({ show, onClose, onProjectCreated, projectToEdit = null }) => {
   const isEdit = Boolean(projectToEdit?.id);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const modalRef = useRef(null);
 
@@ -28,7 +29,6 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated, projectToEdit = n
       setName('');
       setDescription('');
     }
-    setError(null);
   }, [show, isEdit, projectToEdit]);
 
   useEffect(() => {
@@ -59,7 +59,6 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated, projectToEdit = n
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
     try {
@@ -70,13 +69,16 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated, projectToEdit = n
       }
       onClose();
       if (onProjectCreated) {
-        onProjectCreated();
+        onProjectCreated({ mode: isEdit ? 'edit' : 'create' });
       }
-    } catch {
-      setError(
-        isEdit
-          ? 'No se pudieron guardar los cambios. Intenta de nuevo.'
-          : 'Ocurrió un error al crear el proyecto. Intenta de nuevo.',
+    } catch (err) {
+      notifyError(
+        getApiErrorMessage(
+          err,
+          isEdit
+            ? 'No se pudieron guardar los cambios. Intenta de nuevo.'
+            : 'Ocurrió un error al crear el proyecto. Intenta de nuevo.',
+        ),
       );
     } finally {
       setLoading(false);
@@ -102,11 +104,6 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated, projectToEdit = n
 
           <form onSubmit={handleSubmit}>
             <div className="modal-body">
-              {error && (
-                <div className="alert alert-danger py-2" role="alert">
-                  {error}
-                </div>
-              )}
               <div className="mb-3">
                 <label htmlFor="project-name" className="form-label">
                   Nombre del proyecto <span className="text-danger">*</span>

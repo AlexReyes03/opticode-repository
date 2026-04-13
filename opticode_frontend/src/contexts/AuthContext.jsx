@@ -1,7 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { loginUser } from '../api/auth-services';
 import { setAuthHandlers, setErrorHandlers, setTokenProvider } from '../api/fetch-wrapper';
-import request from '../api/fetch-wrapper';
+import request, {
+  getApiErrorMessage,
+  setAuthHandlers,
+  setErrorHandlers,
+  setTokenProvider,
+} from '../api/fetch-wrapper';
+import { notifyError, notifyInfo } from '../utils/toast';
 
 /**
  * Claves de localStorage para persistencia de tokens.
@@ -42,6 +48,8 @@ function isTokenExpired(token) {
 }
 
 const AuthContext = createContext(null);
+const GENERIC_HTTP_MESSAGE_REGEX =
+  /^(?:\d{3}\s+)?(?:internal server error|bad request|unauthorized|forbidden|not found|service unavailable)[.!: ]*$/i;
 
 /**
  * Provider de autenticaci?n. Debe envolverse dentro de BrowserRouter para
@@ -106,15 +114,37 @@ export const AuthProvider = ({ children }) => {
       handleAuthError: (_status, _message, _endpoint, hadToken) => {
         if (hadToken) {
           clearTokens();
-          window.location.replace('/login');
+          notifyInfo('Tu sesión expiró. Inicia sesión nuevamente.', {
+            toastId: 'session-expired',
+            autoClose: 2500,
+          });
+          window.setTimeout(() => {
+            window.location.replace('/login');
+          }, 250);
         }
       },
     });
 
     setErrorHandlers({
-      handleServerError: (_status, _message) => {
-        // Efecto secundario global ante errores 500/503/red.
-        // Extensible con un sistema de notificaciones (toasts, etc.).
+      handleServerError: (status, message) => {
+        const friendlyByStatus = {
+          0: 'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.',
+          500: 'Tuvimos un problema interno. Intenta de nuevo en unos momentos.',
+          503: 'El servicio no está disponible por el momento. Intenta de nuevo más tarde.',
+        };
+        const safeMessage = typeof message === 'string' ? message.trim() : '';
+        const shouldReplace = !safeMessage || GENERIC_HTTP_MESSAGE_REGEX.test(safeMessage);
+        const userMessage = shouldReplace
+          ? friendlyByStatus[status] ?? 'Ocurrió un error inesperado. Intenta de nuevo.'
+          : safeMessage;
+        const toastIdByStatus = {
+          0: 'server-error-network',
+          500: 'server-error-500',
+          503: 'server-error-503',
+        };
+        notifyError(userMessage, {
+          toastId: toastIdByStatus[status] ?? `server-error-${status}`,
+        });
       },
     });
   }, [storeTokens, clearTokens]);
@@ -158,8 +188,13 @@ export const AuthProvider = ({ children }) => {
           }
         }
       } catch (err) {
-        const message = err?.message || (typeof err?.data?.detail === 'string' ? err.data.detail : null) || (typeof err?.data?.error === 'string' ? err.data.error : null) || 'No se pudo iniciar sesi?n. Verifica correo y contrase?a.';
-        setError(message);
+        const status = Number(err?.status ?? 0);
+        const isGlobalInfraError = status === 0 || status === 500 || status === 503;
+        if (!isGlobalInfraError) {
+          setError(
+            getApiErrorMessage(err, 'No se pudo iniciar sesión. Verifica correo y contraseña.'),
+          );
+        }
         throw err;
       } finally {
         setLoading(false);

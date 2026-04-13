@@ -4,8 +4,10 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ErrorCard from '../components/ErrorCard';
 import ErrorFilter from '../components/ErrorFilter';
 import { getFileFindings } from '../../../api/file-services';
+import { getProjectById } from '../../../api/project-services';
 import { loadAuditResult } from '../utils/auditStorage';
 import { sanitizeDescriptionText, sanitizeSnippetLine } from '../utils/snippetSanitize';
+import { notifyInfo } from '../../../utils/toast';
 
 /**
  * QA manual (sin recarga): con datos mixtos (críticos + advertencias), comprobar que
@@ -41,11 +43,18 @@ const normalizeCodeLines = (finding) => {
  */
 const normalizeFinding = (finding, index) => {
   const rawSeverity = String(finding?.severity ?? '').toLowerCase();
-  const severity = rawSeverity === 'error' || rawSeverity === 'critical' ? 'critical' : 'warning';
+  const severity =
+    rawSeverity === 'error' || rawSeverity === 'critical'
+      ? 'critical'
+      : rawSeverity === 'improvement'
+        ? 'improvement'
+        : 'warning';
+  const rawLevel = finding?.wcag_level ?? finding?.level ?? null;
+  const level = rawLevel ? `Nivel ${rawLevel}` : null;
   return {
     id: finding?.id ?? `finding-${index}`,
     severity,
-    level: finding?.level ?? (severity === 'critical' ? 'Nivel A' : 'Nivel AA'),
+    level,
     title: finding?.title ?? finding?.wcag_rule ?? 'Hallazgo WCAG',
     description: sanitizeDescriptionText(
       finding?.message ?? finding?.description ?? 'Sin descripción disponible.'
@@ -65,6 +74,27 @@ const ErrorDetail = () => {
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
+  const [projectName, setProjectName] = useState('Proyecto');
+
+  useEffect(() => {
+    if (!projectId) return;
+    let mounted = true;
+    getProjectById(projectId)
+      .then((project) => {
+        if (!mounted) return;
+        const name =
+          project && typeof project.name === 'string' && project.name.trim()
+            ? project.name.trim()
+            : 'Proyecto';
+        setProjectName(name);
+      })
+      .catch(() => {
+        if (mounted) setProjectName('Proyecto');
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [projectId]);
 
   useEffect(() => {
     let mounted = true;
@@ -83,6 +113,12 @@ const ErrorDetail = () => {
         const result = loadAuditResult(projectId, fileId);
         const findings = result?.findings ?? [];
         if (mounted) {
+          if (result !== null) {
+            notifyInfo(
+              'No se pudo consultar el servidor. Mostrando resultados guardados localmente.',
+              { toastId: `findings-cache-${projectId}-${fileId}` },
+            );
+          }
           setErrors(findings.map(normalizeFinding));
           setHasData(result !== null);
         }
@@ -106,6 +142,7 @@ const ErrorDetail = () => {
     all: errors.length,
     critical: errors.filter((e) => e.severity === 'critical').length,
     warning: errors.filter((e) => e.severity === 'warning').length,
+    improvement: errors.filter((e) => e.severity === 'improvement').length,
   };
 
   return (
@@ -119,7 +156,7 @@ const ErrorDetail = () => {
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />
           </li>
           <li className="breadcrumb-item">
-            <Link to={`/projects/${projectId}`}>Portal Educativo</Link>
+            <Link to={`/projects/${projectId}`}>{projectName}</Link>
           </li>
           <li className="breadcrumb-item">
             <NavigateNextIcon style={{ fontSize: '1rem', verticalAlign: 'middle' }} />

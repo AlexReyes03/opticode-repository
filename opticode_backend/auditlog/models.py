@@ -13,6 +13,13 @@ class AuditLog(models.Model):
         ('DELETE', 'Delete'),
     ])
     
+    record_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Primary key of the modified record in its original table"
+    )
+    
     # Valor(es)
     old_value = models.TextField(null=True, blank=True)
     new_value = models.TextField(null=True, blank=True)
