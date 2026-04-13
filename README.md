@@ -98,29 +98,71 @@ CREATE DATABASE opticode_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 #### 5. Configura las variables de entorno
 
+Django lee **únicamente** el archivo [`opticode_backend/.env`](opticode_backend/.env) (`config/settings/base.py`). No se carga ningún `.env.development` en el backend; el modo `development` o `production` se elige con la variable `DJANGO_ENV` dentro de ese mismo `.env`.
+
 ```bash
 cp .env.example .env
 ```
 
-Edita el archivo `.env` con tus credenciales:
+Edita `.env` con tus valores. La plantilla [`opticode_backend/.env.example`](opticode_backend/.env.example) debe contener **las mismas claves** que tu `.env` (incluidas las opcionales vacías); si falta alguna en tu copia local, añádela desde el ejemplo para evitar desalineaciones.
+
+**Referencia de variables (detalle aquí, no en el `.env`):**
+
+| Variable | Uso |
+|----------|-----|
+| `SECRET_KEY` | Clave secreta de Django. |
+| `ALLOWED_HOSTS` | Hosts permitidos, separados por coma. |
+| `DJANGO_ENV` | `development` o `production` (elige settings en `config/settings/__init__.py`). |
+| `DB_*` | Conexión MySQL (`NAME`, `USER`, `PASSWORD`, `HOST`, `PORT`). |
+| `CORS_ALLOWED_ORIGINS` | Orígenes del frontend permitidos (p. ej. `http://localhost:5173`). |
+| `JWT_ENABLED` | Activa o desactiva autenticación JWT (solo `False` en entornos controlados). |
+| `AUTH_RSA_PRIVATE_KEY` | Opcional. PEM de clave **privada** RSA en **una línea**, con saltos de línea del PEM sustituidos por la secuencia `\n` (el código expande `\\n` al leer). Si está vacío, login/registro aceptan contraseña en claro (en producción usa HTTPS). |
+| `AUTH_RSA_KEY_ID` | Identificador de la clave (p. ej. `v1`); debe coincidir con lo que devuelve el endpoint de clave pública. |
+| `LOG_LEVEL`, `LOG_DIR` | Configuración de Loguru. |
+| `DEV_ADMIN_EMAIL`, `DEV_ADMIN_USERNAME`, `DEV_SEED_PASSWORD` | Credenciales usadas por `create_dev_superuser` y seeds (ver paso 7). |
+
+**Cifrado RSA (opcional):** el archivo de clave debe generarse en la **raíz de `opticode_backend`** (junto a `manage.py`), con el nombre sugerido `auth_rsa.pem`.
+
+1. Abre una terminal **Bash** (por ejemplo **Git Bash**), sitúate en el backend y genera la clave privada:
+
+```bash
+cd opticode-repository/opticode_backend
+openssl genrsa -out auth_rsa.pem 2048
+```
+
+Ese comando **solo crea** `auth_rsa.pem` si termina bien; no imprime la clave en pantalla (es el comportamiento esperado). **No subas** el `.pem` al repositorio (figura en `.gitignore`).
+
+2. Para poner el PEM en `.env` como **una sola línea** con la secuencia `\n` entre las líneas del PEM, en **PowerShell** (en la misma carpeta `opticode_backend` donde está `auth_rsa.pem`):
+
+```powershell
+(Get-Content -Raw auth_rsa.pem).Trim() -replace "`r?`n", '\n' | Set-Clipboard
+```
+
+Abre `opticode_backend/.env` y asigna:
 
 ```env
-SECRET_KEY=una-clave-secreta-segura
-ALLOWED_HOSTS=localhost,127.0.0.1
-
-DJANGO_ENV=development
-
-DB_NAME=opticode_db
-DB_USER=tu-usuario-mysql
-DB_PASSWORD=tu-contraseña-mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-
-CORS_ALLOWED_ORIGINS=http://localhost:5173
-
-LOG_LEVEL=DEBUG
-LOG_DIR=logs
+AUTH_RSA_PRIVATE_KEY=<pegar el contenido del portapapeles>
 ```
+
+3. **Alternativa en Bash** (imprime la línea lista para copiar):
+
+```bash
+awk 'NF {sub(/\r$/,""); printf "%s\\n",$0;}' auth_rsa.pem
+```
+
+#### Cifrado de credenciales (RSA-OAEP SHA-256)
+
+Si `AUTH_RSA_PRIVATE_KEY` está definido en el servidor, el cliente puede cifrar datos sensibles antes del `POST` sin compartir nunca la clave **privada**: solo el servidor puede descifrar.
+
+**¿Por qué aparece primero un `GET /api/auth/crypto/public-key/` al iniciar sesión o registrarse?** El navegador necesita la **clave pública** (derivada de la privada en el servidor) para cifrar con **RSA-OAEP** y **SHA-256** (Web Crypto API). Esa respuesta **no se guarda en disco en el servidor** para ese endpoint: se calcula al vuelo y se envía al cliente. En el frontend la respuesta se **cachea unos minutos** en memoria para no pedirla en cada pulsación.
+
+**¿Dónde “vive” la clave pública?** No se almacena en una tabla de base de datos: se expone solo por HTTP. La clave privada permanece en el `.env` del backend (o en el material que uses en producción).
+
+**Flujo resumido:** el cliente pide la clave pública → cifra en el navegador cada campo acordado (correo y contraseña en login y registro; las tres contraseñas en “Cambiar contraseña”) → envía **solo** `*_cipher` en Base64 más `key_id` → el backend descifra en memoria con `cryptography` → valida o autentica y, en el caso de contraseñas, Django las guarda como **hash** (`set_password` / `create_user`), no en texto plano en la base de datos.
+
+**Límite de tamaño:** con RSA 2048 bits y OAEP-SHA256, cada valor cifrado por separado admite como mucho unos **190 bytes en UTF-8** por campo. Correos y contraseñas habituales entran; textos muy largos fallarían (en ese caso habría que plantear otro esquema, p. ej. híbrido AES+RSA).
+
+Si `AUTH_RSA_PRIVATE_KEY` está vacío, el mismo código envía correo y contraseña en claro (solo aceptable con **HTTPS** en producción).
 
 #### 6. Aplica las migraciones
 
@@ -138,16 +180,15 @@ python manage.py create_dev_superuser
 
 En Windows, si usas el lanzador de Python, puedes sustituir `python` por `py` (por ejemplo `py manage.py create_dev_superuser`).
 
-Configura las credenciales en el `.env`. Las **claves** deben coincidir con las de `opticode_backend/.env.example` y con lo que lee `create_dev_superuser` (`DEV_ADMIN_EMAIL`, `DEV_ADMIN_USERNAME`, `DEV_SEED_PASSWORD`). Los **valores** del siguiente bloque son solo ilustrativos; en tu entorno real usa los que defina el equipo.
+Las variables `DEV_ADMIN_EMAIL`, `DEV_ADMIN_USERNAME` y `DEV_SEED_PASSWORD` deben estar definidas en el mismo `opticode_backend/.env` (ya figuran en `.env.example`). Los valores son los tuyos; el siguiente bloque es solo ilustrativo.
 
 ```env
-# Credenciales de desarrollo (seeds y superusuario)
 DEV_ADMIN_EMAIL=correo@ejemplo.com
-DEV_ADMIN_USERNAME=usuarioejemplo
-DEV_SEED_PASSWORD=ContraseñaSegura123!
+DEV_ADMIN_USERNAME=usuario-ejemplo
+DEV_SEED_PASSWORD=ContraseñaDeEjemploSegura123!
 ```
 
-La contraseña del superusuario y de las semillas toma la variable **`DEV_SEED_PASSWORD`** (no existe `DEV_ADMIN_PASSWORD` en este proyecto).
+La contraseña del superusuario y de las semillas usa **`DEV_SEED_PASSWORD`** (no existe `DEV_ADMIN_PASSWORD` en este proyecto).
 
 Si el comando falla con `Table '…auditlog_auditlog' doesn't exist`, la base de datos **no tiene aplicadas todas las migraciones** (incluida la app interna `auditlog`). Ejecuta de nuevo `python manage.py migrate` desde `opticode_backend` usando el mismo `.env` (misma `DB_NAME` y credenciales) y repite `create_dev_superuser`.
 
@@ -187,6 +228,10 @@ El servidor quedará disponible en `http://127.0.0.1:8000`.
 cd opticode_frontend
 npm install
 ```
+
+Variables de entorno (opcional): copia [`opticode_frontend/.env.example`](opticode_frontend/.env.example) a `.env` (o a `.env.development` si prefieres el modo *development* de Vite). Las explicaciones están en esta sección, no en el archivo de ejemplo.
+
+**`VITE_API_URL`:** vacío → las peticiones van a rutas relativas `/api/...` en el mismo origen que Vite (`http://localhost:5173`) y el proxy de [`vite.config.js`](opticode_frontend/vite.config.js) las reenvía a `http://localhost:8000`. Si pones la URL completa del API (p. ej. `http://127.0.0.1:8000`), el navegador llama directo al backend y debe coincidir con `CORS_ALLOWED_ORIGINS` en Django.
 
 ### Uso
 
