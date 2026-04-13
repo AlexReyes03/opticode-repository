@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { loginUser } from '../api/auth-services';
 import { setAuthHandlers, setErrorHandlers, setTokenProvider } from '../api/fetch-wrapper';
 import request from '../api/fetch-wrapper';
 
@@ -146,10 +147,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       try {
-        const data = await request('/api/auth/login/', {
-          method: 'POST',
-          body: credentials,
-        });
+        const data = await loginUser(credentials);
         storeTokens(data?.access, data?.refresh);
         if (data?.access) {
           try {
@@ -190,6 +188,21 @@ export const AuthProvider = ({ children }) => {
   }, [clearTokens]);
 
   /**
+   * Actualiza el perfil en memoria desde GET /api/auth/me/ (p. ej. tras cambiar contraseña).
+   * @returns {Promise<void>}
+   */
+  const refreshUser = useCallback(async () => {
+    const access = localStorage.getItem(TOKEN_KEYS.ACCESS);
+    if (!access || isTokenExpired(access)) return;
+    try {
+      const profile = await request('/api/auth/me/', { method: 'GET' });
+      if (profile && typeof profile === 'object') setUser(profile);
+    } catch {
+      // Sin efecto si la sesión ya no es válida.
+    }
+  }, []);
+
+  /**
    * Indica si el usuario tiene un access token v?lido y no expirado.
    * Usar para guardias de ruta o renderizado condicional.
    * @returns {boolean}
@@ -202,12 +215,13 @@ export const AuthProvider = ({ children }) => {
       token: accessToken,
       login,
       logout,
+      refreshUser,
       clearError,
       isAuthenticated,
       loading,
       error,
     }),
-    [user, accessToken, login, logout, clearError, isAuthenticated, loading, error],
+    [user, accessToken, login, logout, refreshUser, clearError, isAuthenticated, loading, error],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -221,6 +235,7 @@ export const AuthProvider = ({ children }) => {
  *   token: string|null,
  *   login: (credentials: { email: string, password: string }) => Promise<void>,
  *   logout: () => Promise<void>,
+ *   refreshUser: () => Promise<void>,
  *   clearError: () => void,
  *   isAuthenticated: () => boolean,
  *   loading: boolean,

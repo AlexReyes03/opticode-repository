@@ -1,10 +1,17 @@
-import { useMemo } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import AuthFormField from '../../auth/components/AuthFormField';
+import PasswordStrengthIndicator from '../../auth/components/PasswordStrengthIndicator';
+import { changePassword } from '../../../api/auth-services';
+import { getApiErrorMessage } from '../../../api/fetch-wrapper';
 
 /**
  * @param {string|undefined|null} iso
@@ -40,7 +47,18 @@ function formatDateTimeEs(iso) {
 }
 
 const UserProfile = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const passwordModalTitleId = useId();
+
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdError, setPwdError] = useState('');
+  const [pwdForm, setPwdForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: '',
+  });
 
   const profile = useMemo(() => {
     if (!user || typeof user !== 'object') {
@@ -49,7 +67,7 @@ const UserProfile = () => {
         email: '—',
         roleLabel: '—',
         dateJoined: '—',
-        lastPasswordChanged: '—',
+        lastPasswordLabel: '—',
       };
     }
 
@@ -59,17 +77,231 @@ const UserProfile = () => {
     const email = typeof user.email === 'string' ? user.email : '';
     const displayName = fromNames || email || 'Usuario';
 
-    const isStaff = user.is_staff === true || user.is_superuser === true;
-    const roleLabel = isStaff ? 'Personal / administración' : 'Usuario';
+    const isAdmin = user.is_staff === true || user.is_superuser === true;
+    const roleLabel = isAdmin ? 'Administrador' : 'Usuario';
+
+    const lastPasswordLabel = user.last_password_changed
+      ? formatDateTimeEs(user.last_password_changed)
+      : 'Aún no se ha cambiado';
 
     return {
       displayName,
       email: email || '—',
       roleLabel,
       dateJoined: formatDateEs(user.date_joined),
-      lastPasswordChanged: formatDateTimeEs(user.last_password_changed),
+      lastPasswordLabel,
     };
   }, [user]);
+
+  const confirmFeedback = useMemo(() => {
+    const confirm = pwdForm.confirm_password;
+    if (!confirm) return null;
+    if (pwdForm.new_password !== confirm) return 'mismatch';
+    return 'match';
+  }, [pwdForm.new_password, pwdForm.confirm_password]);
+
+  const openPasswordModal = useCallback(() => {
+    setPwdForm({ current_password: '', new_password: '', confirm_password: '' });
+    setPwdError('');
+    setPasswordFocused(false);
+    setPasswordModalOpen(true);
+  }, []);
+
+  const handlePwdFieldChange = useCallback((field) => (e) => {
+    setPwdForm((prev) => ({ ...prev, [field]: e.target.value }));
+    if (pwdError) setPwdError('');
+  }, [pwdError]);
+
+  const handlePasswordSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      const current = pwdForm.current_password.trim();
+      const next = pwdForm.new_password.trim();
+      const confirm = pwdForm.confirm_password.trim();
+
+      if (!current || !next || !confirm) {
+        setPwdError('Por favor completa todos los campos.');
+        return;
+      }
+      if (next !== confirm) {
+        setPwdError('Las contraseñas no coinciden.');
+        return;
+      }
+
+      setPwdError('');
+      setPwdLoading(true);
+      try {
+        await changePassword({
+          currentPassword: current,
+          newPassword: next,
+          confirmPassword: confirm,
+        });
+        setPasswordModalOpen(false);
+        setPwdForm({ current_password: '', new_password: '', confirm_password: '' });
+        await refreshUser();
+      } catch (err) {
+        setPwdError(
+          getApiErrorMessage(err, 'No se pudo actualizar la contraseña. Intenta de nuevo.'),
+        );
+      } finally {
+        setPwdLoading(false);
+      }
+    },
+    [pwdForm, refreshUser],
+  );
+
+  const passwordModal =
+    typeof document !== 'undefined' && passwordModalOpen
+      ? createPortal(
+          <>
+            <div
+              className="modal-backdrop fade show"
+              aria-hidden="true"
+              onClick={() => !pwdLoading && setPasswordModalOpen(false)}
+            />
+            <div
+              className="modal fade show d-block"
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={passwordModalTitleId}
+            >
+              <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title" id={passwordModalTitleId}>
+                      Cambiar contraseña
+                    </h5>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      aria-label="Cerrar"
+                      disabled={pwdLoading}
+                      onClick={() => setPasswordModalOpen(false)}
+                    />
+                  </div>
+                  <form onSubmit={handlePasswordSubmit} noValidate>
+                    <div className="modal-body">
+                      {pwdError && (
+                        <div
+                          className="alert alert-danger d-flex align-items-center gap-2 py-2 small mb-3"
+                          role="alert"
+                        >
+                          <ErrorOutlineIcon style={{ fontSize: '1.125rem' }} />
+                          {pwdError}
+                        </div>
+                      )}
+
+                      <AuthFormField
+                        id="profile-current-password"
+                        label="Contraseña actual"
+                        type="password"
+                        placeholder="••••••••"
+                        value={pwdForm.current_password}
+                        onChange={handlePwdFieldChange('current_password')}
+                        required
+                        icon={LockOutlinedIcon}
+                        autoComplete="current-password"
+                      />
+
+                      <AuthFormField
+                        id="profile-new-password"
+                        label="Nueva contraseña"
+                        type="password"
+                        placeholder="••••••••"
+                        value={pwdForm.new_password}
+                        onChange={handlePwdFieldChange('new_password')}
+                        onFocus={() => setPasswordFocused(true)}
+                        onBlur={() => setPasswordFocused(false)}
+                        required
+                        icon={LockOutlinedIcon}
+                        autoComplete="new-password"
+                      />
+
+                      <PasswordStrengthIndicator
+                        password={pwdForm.new_password}
+                        visible={passwordFocused}
+                      />
+
+                      <div className="mt-3">
+                        <AuthFormField
+                          id="profile-confirm-password"
+                          label="Confirmar contraseña"
+                          type="password"
+                          placeholder="••••••••"
+                          value={pwdForm.confirm_password}
+                          onChange={handlePwdFieldChange('confirm_password')}
+                          required
+                          icon={LockOutlinedIcon}
+                          autoComplete="new-password"
+                        />
+                      </div>
+
+                      {confirmFeedback === 'mismatch' && (
+                        <ul className="list-unstyled mt-2 mb-0" role="status">
+                          <li
+                            className="d-flex align-items-center gap-2 mb-1 text-danger"
+                            style={{ fontSize: '0.75rem' }}
+                          >
+                            <ErrorOutlineIcon style={{ fontSize: '0.875rem' }} />
+                            Las contraseñas no coinciden.
+                          </li>
+                        </ul>
+                      )}
+                      {confirmFeedback === 'match' && (
+                        <ul className="list-unstyled mt-2 mb-0" role="status">
+                          <li
+                            className="d-flex align-items-center gap-2 mb-1 text-success"
+                            style={{ fontSize: '0.75rem' }}
+                          >
+                            <CheckCircleOutlineIcon style={{ fontSize: '0.875rem' }} />
+                            Las contraseñas coinciden.
+                          </li>
+                        </ul>
+                      )}
+                    </div>
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        disabled={pwdLoading}
+                        onClick={() => setPasswordModalOpen(false)}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={
+                          pwdLoading ||
+                          confirmFeedback === 'mismatch' ||
+                          !pwdForm.current_password.trim() ||
+                          !pwdForm.new_password.trim() ||
+                          !pwdForm.confirm_password.trim()
+                        }
+                      >
+                        {pwdLoading ? (
+                          <>
+                            <span
+                              className="spinner-border spinner-border-sm me-2"
+                              role="status"
+                              aria-hidden="true"
+                            />
+                            Guardando...
+                          </>
+                        ) : (
+                          'Guardar contraseña'
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </>,
+          document.body,
+        )
+      : null;
 
   return (
     <section>
@@ -78,10 +310,8 @@ const UserProfile = () => {
       </div>
 
       <div className="row justify-content-center">
-        {/* Profile Card */}
         <div className="col-12 mb-4">
           <div className="card border-0 shadow-sm p-4 p-md-5 w-100">
-            {/* Avatar & Header */}
             <div className="d-flex flex-column flex-sm-row align-items-center align-items-sm-center gap-4 mb-5 border-bottom pb-4">
               <div
                 className="rounded-circle d-flex align-items-center justify-content-center bg-light"
@@ -96,7 +326,6 @@ const UserProfile = () => {
               </div>
             </div>
 
-            {/* Details */}
             <h4 className="fw-bold fs-6 mb-4" style={{ color: 'var(--oc-navy)' }}>Información Personal</h4>
 
             <div className="row g-4 mb-5">
@@ -149,7 +378,6 @@ const UserProfile = () => {
               </div>
             </div>
 
-            {/* Security */}
             <h4 className="fw-bold fs-6 mb-4" style={{ color: 'var(--oc-navy)' }}>Seguridad</h4>
             <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between p-3 rounded gap-3" style={{ backgroundColor: 'var(--oc-gray-100)' }}>
               <div className="d-flex align-items-center gap-3">
@@ -160,11 +388,16 @@ const UserProfile = () => {
                   <h5 className="fs-6 fw-medium mb-1">Contraseña</h5>
                   <small className="text-muted d-block">
                     Último cambio:{' '}
-                    <span className="text-body-secondary fw-medium">{profile.lastPasswordChanged}</span>
+                    <span className="text-body-secondary fw-medium">{profile.lastPasswordLabel}</span>
                   </small>
                 </div>
               </div>
-              <button className="btn btn-outline-secondary btn-sm flex-shrink-0 w-100" style={{ maxWidth: '120px' }}>
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm flex-shrink-0 w-100"
+                style={{ maxWidth: '120px' }}
+                onClick={openPasswordModal}
+              >
                 Cambiar
               </button>
             </div>
@@ -172,6 +405,7 @@ const UserProfile = () => {
           </div>
         </div>
       </div>
+      {passwordModal}
     </section>
   );
 };

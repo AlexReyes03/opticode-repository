@@ -6,7 +6,8 @@
  *   const data = await request('/api/...', { method: 'POST', files: [{ field: 'file', file }] }); // multipart
  *
  * Endpoints que este módulo consume internamente:
- *   POST /api/auth/login/     — LoginView: recibe { email, password },
+ *   GET  /api/auth/crypto/public-key/ — AuthPublicKeyView: { enabled, public_key_pem?, key_id? }.
+ *   POST /api/auth/login/     — LoginView: { email, password } o { email_cipher, password_cipher, key_id },
  *                               devuelve { access, refresh }. No se envía Authorization.
  *   POST /api/token/refresh/  — TokenRefreshView: recibe { refresh },
  *                               devuelve { access } y { refresh } si ROTATE_REFRESH_TOKENS=True.
@@ -263,6 +264,7 @@ export default async function request(
    * Tampoco deben disparar refresh automático ante 401.
    */
   const isAnonymousAuthEndpoint =
+    normalizedEndpoint.includes('/api/auth/crypto/public-key') ||
     normalizedEndpoint.includes('/api/auth/login') ||
     normalizedEndpoint.includes('/api/auth/register') ||
     normalizedEndpoint.includes('/api/auth/forgot-password') ||
