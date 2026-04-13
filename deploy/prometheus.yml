@@ -20,13 +20,13 @@ scrape_configs:
   # ── 1. Prometheus mismo ─────────────────────────────────
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['prometheus:9090']
 
   # ── 2. MySQL / RDS ──────────────────────────────────────
   - job_name: 'mysql'
     static_configs:
-      # mysqld_exporter corre localmente y se conecta a RDS
-      - targets: ['localhost:9104']
+      # En Docker, el servicio se llama "mysqld_exporter"
+      - targets: ['mysqld_exporter:9104']
     # Mostrar el host real de RDS en las métricas
     relabel_configs:
       - source_labels: [__address__]

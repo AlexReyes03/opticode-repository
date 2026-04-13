@@ -25,4 +25,3 @@ docker compose ps
 
 echo ""
 echo "=== Deploy completado ==="
-echo "Recuerda: si hubo cambios en el frontend, súbelos manualmente a Cloudflare Pages."
