@@ -24,11 +24,12 @@ const AdminDashboard = () => {
     fetchUsers();
   }, [refreshKey]);
 
-  const filtered = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()),
-  );
+  const q = search.trim().toLowerCase();
+  const filtered = users.filter((u) => {
+    const name = String(u?.name ?? '').toLowerCase();
+    const email = String(u?.email ?? '').toLowerCase();
+    return !q || name.includes(q) || email.includes(q);
+  });
 
   return (
     <section>
