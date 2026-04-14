@@ -12,6 +12,19 @@ from features.projects.models import Project
 
 env = environ.Env()
 
+# Códigos WCAG y fragmentos reutilizados en hallazgos de seed (Sonar: literales duplicados)
+_WCAG_111 = "WCAG 1.1.1"
+_WCAG_131 = "WCAG 1.3.1"
+_WCAG_211 = "WCAG 2.1.1"
+_WCAG_311 = "WCAG 3.1.1"
+_WCAG_143 = "WCAG 1.4.3"
+_WCAG_412 = "WCAG 4.1.2"
+_MSG_FALTA_LANG_HTML = "Falta atributo lang en elemento html"
+_SNIPPET_HTML_TAG = "<html>"
+_SNIPPET_IMG_CHART = '<img src="chart.png">'
+_SNIPPET_TABLE_OPEN = "<table>"
+_SNIPPET_INPUT_TEXT = '<input type="text">'
+
 
 # ── Contenido HTML/CSS realista ──────────────────────────────────────────
 
@@ -443,82 +456,82 @@ class Command(BaseCommand):
         # ── Hallazgos WCAG detallados por archivo ───────
         findings_map = {
             "formulario-tramite.html": [
-                ("error", "WCAG 1.1.1", "Imagen sin atributo alt", 14, "<img src=\"banner.jpg\">", "img"),
-                ("error", "WCAG 1.3.1", "Input sin label asociado: campo nombre", 7, "<input type=\"text\" placeholder=\"Nombre\">", "input[type=text]"),
-                ("error", "WCAG 1.3.1", "Input sin label asociado: campo correo", 8, "<input type=\"email\" placeholder=\"Correo\">", "input[type=email]"),
-                ("error", "WCAG 1.3.1", "Input sin label asociado: campo password", 9, "<input type=\"password\">", "input[type=password]"),
-                ("error", "WCAG 2.1.1", "Elemento div con onclick no es accesible por teclado", 15, "<div onclick=\"abrir()\">", "div"),
-                ("error", "WCAG 3.1.1", "Falta atributo lang en elemento html", 2, "<html>", "html"),
-                ("warning", "WCAG 1.4.3", "Contraste insuficiente: #aaa sobre #fff = 2.32:1", 15, "style=\"color: #aaa; background: #fff;\"", "div"),
-                ("warning", "WCAG 4.1.2", "Select sin label asociado", 10, "<select>", "select"),
+                ("error", _WCAG_111, "Imagen sin atributo alt", 14, "<img src=\"banner.jpg\">", "img"),
+                ("error", _WCAG_131, "Input sin label asociado: campo nombre", 7, "<input type=\"text\" placeholder=\"Nombre\">", "input[type=text]"),
+                ("error", _WCAG_131, "Input sin label asociado: campo correo", 8, "<input type=\"email\" placeholder=\"Correo\">", "input[type=email]"),
+                ("error", _WCAG_131, "Input sin label asociado: campo password", 9, "<input type=\"password\">", "input[type=password]"),
+                ("error", _WCAG_211, "Elemento div con onclick no es accesible por teclado", 15, "<div onclick=\"abrir()\">", "div"),
+                ("error", _WCAG_311, _MSG_FALTA_LANG_HTML, 2, _SNIPPET_HTML_TAG, "html"),
+                ("warning", _WCAG_143, "Contraste insuficiente: #aaa sobre #fff = 2.32:1", 15, "style=\"color: #aaa; background: #fff;\"", "div"),
+                ("warning", _WCAG_412, "Select sin label asociado", 10, "<select>", "select"),
             ],
             "reporte-gastos.html": [
-                ("error", "WCAG 1.1.1", "Imagen chart.png sin atributo alt", 11, "<img src=\"chart.png\">", "img"),
-                ("error", "WCAG 1.3.1", "Tabla sin elementos th para encabezados", 6, "<tr><td>Concepto</td>...", "table"),
-                ("warning", "WCAG 1.3.1", "Tabla sin caption o aria-label descriptivo", 5, "<table>", "table"),
+                ("error", _WCAG_111, "Imagen chart.png sin atributo alt", 11, _SNIPPET_IMG_CHART, "img"),
+                ("error", _WCAG_131, "Tabla sin elementos th para encabezados", 6, "<tr><td>Concepto</td>...", "table"),
+                ("warning", _WCAG_131, "Tabla sin caption o aria-label descriptivo", 5, _SNIPPET_TABLE_OPEN, "table"),
             ],
             "carrito-compras.html": [
-                ("error", "WCAG 1.1.1", "Imagen prod1.jpg sin atributo alt", 9, "<img src=\"prod1.jpg\">", "img"),
-                ("error", "WCAG 1.1.1", "Imagen prod2.jpg sin atributo alt", 14, "<img src=\"prod2.jpg\">", "img"),
-                ("error", "WCAG 2.1.1", "Div con onclick no accesible: boton eliminar producto 1", 12, "<div onclick=\"removeItem(1)\">", "div"),
-                ("error", "WCAG 2.1.1", "Div con onclick no accesible: boton eliminar producto 2", 17, "<div onclick=\"removeItem(2)\">", "div"),
-                ("error", "WCAG 2.1.1", "Div con onclick como boton de pago no accesible por teclado", 20, "<div onclick=\"checkout()\">", "div"),
-                ("error", "WCAG 3.1.1", "Falta atributo lang en elemento html", 2, "<html>", "html"),
-                ("error", "WCAG 4.1.2", "Elemento interactivo sin rol ARIA: boton eliminar", 12, "<div onclick=\"removeItem(1)\">X</div>", "div"),
-                ("warning", "WCAG 4.1.2", "Boton de pago deberia ser <button> en lugar de <div>", 20, "<div onclick=\"checkout()\">Pagar</div>", "div"),
+                ("error", _WCAG_111, "Imagen prod1.jpg sin atributo alt", 9, "<img src=\"prod1.jpg\">", "img"),
+                ("error", _WCAG_111, "Imagen prod2.jpg sin atributo alt", 14, "<img src=\"prod2.jpg\">", "img"),
+                ("error", _WCAG_211, "Div con onclick no accesible: boton eliminar producto 1", 12, "<div onclick=\"removeItem(1)\">", "div"),
+                ("error", _WCAG_211, "Div con onclick no accesible: boton eliminar producto 2", 17, "<div onclick=\"removeItem(2)\">", "div"),
+                ("error", _WCAG_211, "Div con onclick como boton de pago no accesible por teclado", 20, "<div onclick=\"checkout()\">", "div"),
+                ("error", _WCAG_311, _MSG_FALTA_LANG_HTML, 2, _SNIPPET_HTML_TAG, "html"),
+                ("error", _WCAG_412, "Elemento interactivo sin rol ARIA: boton eliminar", 12, "<div onclick=\"removeItem(1)\">X</div>", "div"),
+                ("warning", _WCAG_412, "Boton de pago deberia ser <button> en lugar de <div>", 20, "<div onclick=\"checkout()\">Pagar</div>", "div"),
             ],
             "dashboard-estudiante.html": [
-                ("error", "WCAG 1.1.1", "Imagen math-icon.png sin atributo alt", 12, "<img src=\"math-icon.png\">", "img"),
-                ("error", "WCAG 1.1.1", "Imagen science-icon.png sin atributo alt", 17, "<img src=\"science-icon.png\">", "img"),
-                ("error", "WCAG 2.1.1", "Navegacion con divs onclick no accesible por teclado", 4, "<div onclick=\"navigate('home')\">", "div.sidebar"),
-                ("error", "WCAG 3.1.1", "Falta atributo lang en elemento html", 2, "<html>", "html"),
-                ("error", "WCAG 4.1.2", "Items de navegacion sin rol adecuado", 4, "<div onclick=\"navigate()\">", "div"),
-                ("warning", "WCAG 1.4.3", "Contraste insuficiente: #999 sobre #f5f5f5 = 2.58:1", 14, "style=\"color: #999; background: #f5f5f5;\"", "span"),
-                ("warning", "WCAG 1.4.3", "Contraste insuficiente: #bbb sobre fondo heredado", 19, "style=\"color: #bbb;\"", "span"),
+                ("error", _WCAG_111, "Imagen math-icon.png sin atributo alt", 12, "<img src=\"math-icon.png\">", "img"),
+                ("error", _WCAG_111, "Imagen science-icon.png sin atributo alt", 17, "<img src=\"science-icon.png\">", "img"),
+                ("error", _WCAG_211, "Navegacion con divs onclick no accesible por teclado", 4, "<div onclick=\"navigate('home')\">", "div.sidebar"),
+                ("error", _WCAG_311, _MSG_FALTA_LANG_HTML, 2, _SNIPPET_HTML_TAG, "html"),
+                ("error", _WCAG_412, "Items de navegacion sin rol adecuado", 4, "<div onclick=\"navigate()\">", "div"),
+                ("warning", _WCAG_143, "Contraste insuficiente: #999 sobre #f5f5f5 = 2.58:1", 14, "style=\"color: #999; background: #f5f5f5;\"", "span"),
+                ("warning", _WCAG_143, "Contraste insuficiente: #bbb sobre fondo heredado", 19, "style=\"color: #bbb;\"", "span"),
                 ("warning", "WCAG 4.1.3", "Notificacion oculta sin mecanismo accesible", 21, "<div id=\"notification\" style=\"display:none\">", "div#notification"),
             ],
             "print-styles.css": [
-                ("error", "WCAG 1.4.3", "Contraste insuficiente: #999999 sobre #ffffff = 2.85:1", 4, "color: #999999; background: #ffffff;", "body"),
-                ("error", "WCAG 1.4.3", "Contraste insuficiente: #aaaaaa sobre fondo blanco = 2.32:1", 8, "color: #aaaaaa;", ".subtitle"),
-                ("error", "WCAG 1.4.3", "Contraste insuficiente: #cccccc sobre #f0f0f0 = 1.47:1", 11, "color: #cccccc; background: #f0f0f0;", ".muted-text"),
+                ("error", _WCAG_143, "Contraste insuficiente: #999999 sobre #ffffff = 2.85:1", 4, "color: #999999; background: #ffffff;", "body"),
+                ("error", _WCAG_143, "Contraste insuficiente: #aaaaaa sobre fondo blanco = 2.32:1", 8, "color: #aaaaaa;", ".subtitle"),
+                ("error", _WCAG_143, "Contraste insuficiente: #cccccc sobre #f0f0f0 = 1.47:1", 11, "color: #cccccc; background: #f0f0f0;", ".muted-text"),
                 ("warning", "WCAG 1.4.12", "Font-size de 10px puede dificultar la lectura", 16, "font-size: 10px;", ".small-text"),
                 ("warning", "WCAG 2.3.3", "Animacion infinita sin respetar prefers-reduced-motion", 24, "animation: slide 0.5s infinite;", ".fancy-animation"),
             ],
             "tema-tienda.css": [
-                ("error", "WCAG 1.4.3", "Contraste insuficiente: #585b70 sobre #1e1e2e = 2.4:1", 18, "color: #585b70;", ".disabled-text"),
+                ("error", _WCAG_143, "Contraste insuficiente: #585b70 sobre #1e1e2e = 2.4:1", 18, "color: #585b70;", ".disabled-text"),
                 ("warning", "WCAG 2.4.7", "Elemento interactivo .nav-item sin estilos de focus visible", 22, ".nav-item { cursor: pointer; }", ".nav-item"),
             ],
             "tema-oscuro.css": [
-                ("error", "WCAG 1.4.3", "Contraste insuficiente: #585b70 sobre #1e1e2e = 2.4:1", 18, "color: #585b70;", ".disabled-text"),
+                ("error", _WCAG_143, "Contraste insuficiente: #585b70 sobre #1e1e2e = 2.4:1", 18, "color: #585b70;", ".disabled-text"),
                 ("warning", "WCAG 2.4.7", "Elemento interactivo .nav-item sin estilos de focus visible", 22, ".nav-item { cursor: pointer; }", ".nav-item"),
             ],
             "citas-medicas.html": [
-                ("error", "WCAG 1.1.1", "Imagen sin atributo alt", 14, "<img src=\"banner.jpg\">", "img"),
-                ("error", "WCAG 1.3.1", "Inputs de formulario sin labels asociados", 7, "<input type=\"text\">", "input"),
-                ("error", "WCAG 3.1.1", "Falta atributo lang en elemento html", 2, "<html>", "html"),
-                ("error", "WCAG 2.1.1", "Div con onclick no accesible por teclado", 15, "<div onclick=\"abrir()\">", "div"),
-                ("warning", "WCAG 1.4.3", "Contraste insuficiente en elemento informativo", 15, "color: #aaa", "div"),
+                ("error", _WCAG_111, "Imagen sin atributo alt", 14, "<img src=\"banner.jpg\">", "img"),
+                ("error", _WCAG_131, "Inputs de formulario sin labels asociados", 7, _SNIPPET_INPUT_TEXT, "input"),
+                ("error", _WCAG_311, _MSG_FALTA_LANG_HTML, 2, _SNIPPET_HTML_TAG, "html"),
+                ("error", _WCAG_211, "Div con onclick no accesible por teclado", 15, "<div onclick=\"abrir()\">", "div"),
+                ("warning", _WCAG_143, "Contraste insuficiente en elemento informativo", 15, "color: #aaa", "div"),
             ],
             "resultados-lab.html": [
-                ("error", "WCAG 1.1.1", "Imagen de graficas sin texto alternativo", 11, "<img src=\"chart.png\">", "img"),
-                ("error", "WCAG 1.3.1", "Tabla de resultados sin encabezados th", 6, "<table>", "table"),
+                ("error", _WCAG_111, "Imagen de graficas sin texto alternativo", 11, _SNIPPET_IMG_CHART, "img"),
+                ("error", _WCAG_131, "Tabla de resultados sin encabezados th", 6, _SNIPPET_TABLE_OPEN, "table"),
             ],
             "estilos-clinica.css": [
-                ("error", "WCAG 1.4.3", "Contraste insuficiente en texto principal: 2.85:1", 4, "color: #999999;", "body"),
-                ("error", "WCAG 1.4.3", "Contraste insuficiente en subtitulos: 2.32:1", 8, "color: #aaaaaa;", ".subtitle"),
+                ("error", _WCAG_143, "Contraste insuficiente en texto principal: 2.85:1", 4, "color: #999999;", "body"),
+                ("error", _WCAG_143, "Contraste insuficiente en subtitulos: 2.32:1", 8, "color: #aaaaaa;", ".subtitle"),
                 ("warning", "WCAG 1.4.12", "Font-size de 10px dificulta lectura", 16, "font-size: 10px;", ".small-text"),
             ],
             "transferencia.html": [
-                ("error", "WCAG 1.3.1", "Campo de monto sin label accesible", 7, "<input type=\"text\">", "input"),
-                ("error", "WCAG 1.3.1", "Campo de cuenta destino sin label", 8, "<input type=\"text\">", "input"),
-                ("error", "WCAG 3.1.1", "Falta atributo lang", 2, "<html>", "html"),
-                ("error", "WCAG 2.1.1", "Boton critico de transferencia no accesible por teclado", 15, "<div onclick>", "div"),
-                ("warning", "WCAG 1.4.3", "Contraste insuficiente en informacion de cuenta", 15, "color: #aaa", "div"),
+                ("error", _WCAG_131, "Campo de monto sin label accesible", 7, _SNIPPET_INPUT_TEXT, "input"),
+                ("error", _WCAG_131, "Campo de cuenta destino sin label", 8, _SNIPPET_INPUT_TEXT, "input"),
+                ("error", _WCAG_311, "Falta atributo lang", 2, _SNIPPET_HTML_TAG, "html"),
+                ("error", _WCAG_211, "Boton critico de transferencia no accesible por teclado", 15, "<div onclick>", "div"),
+                ("warning", _WCAG_143, "Contraste insuficiente en informacion de cuenta", 15, "color: #aaa", "div"),
             ],
             "estado-cuenta.html": [
-                ("error", "WCAG 1.1.1", "Grafica de movimientos sin alt", 11, "<img src=\"chart.png\">", "img"),
-                ("error", "WCAG 1.3.1", "Tabla de movimientos sin th", 6, "<table>", "table"),
-                ("warning", "WCAG 1.3.1", "Tabla sin descripcion accesible", 5, "<table>", "table"),
+                ("error", _WCAG_111, "Grafica de movimientos sin alt", 11, _SNIPPET_IMG_CHART, "img"),
+                ("error", _WCAG_131, "Tabla de movimientos sin th", 6, _SNIPPET_TABLE_OPEN, "table"),
+                ("warning", _WCAG_131, "Tabla sin descripcion accesible", 5, _SNIPPET_TABLE_OPEN, "table"),
             ],
         }
 

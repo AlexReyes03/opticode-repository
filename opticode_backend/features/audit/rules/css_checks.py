@@ -42,6 +42,248 @@ def _parsed_rules(css_content: str) -> list[Any]:
     )
 
 
+def _is_blank_css(css_content: str) -> bool:
+    return not css_content or not str(css_content).strip()
+
+
+def _iter_qualified_rules(css_content: str) -> list[Any]:
+    return [rule for rule in _parsed_rules(css_content) if rule.type == "qualified-rule"]
+
+
+def _line_num(rule: Any) -> int:
+    return max(1, rule.source_line)
+
+
+def _build_finding(
+    *,
+    severity: str,
+    wcag_level: str,
+    wcag_rule: str,
+    message: str,
+    line_number: int,
+    source_lines: list[str],
+    category: str,
+) -> WcagFinding:
+    return WcagFinding(
+        severity=severity,
+        wcag_level=wcag_level,
+        wcag_rule=wcag_rule,
+        message=message,
+        line_number=line_number,
+        code_snippet=build_snippet(source_lines, line_number),
+        category=category,
+    )
+
+
+def _selector_has_interactive_pattern(selector: str) -> bool:
+    selector_lc = selector.lower()
+    return any(pattern in selector_lc for pattern in _INTERACTIVE_PATTERNS)
+
+
+def _extract_px_dimension(tokens: list[Any]) -> float | None:
+    for token in tokens:
+        if token.type != "dimension" or token.lower_unit != "px":
+            continue
+        try:
+            return float(token.value)
+        except (ValueError, TypeError):
+            return None
+    return None
+
+
+def _collect_small_dimensions(rule: Any, *, min_px: float, max_px: float | None = None) -> list[str]:
+    small_dims: list[str] = []
+    for decl in _declarations(rule):
+        if decl.type != "declaration" or decl.lower_name not in _SIZE_PROPS:
+            continue
+        px = _extract_px_dimension(decl.value)
+        if px is None:
+            continue
+        if px < min_px:
+            small_dims.append(f"{decl.lower_name}: {px}px")
+            continue
+        if max_px is not None and min_px <= px < max_px:
+            small_dims.append(f"{decl.lower_name}: {px}px")
+    return small_dims
+
+
+def _iter_orientation_media_rules(css_content: str) -> list[tuple[str, list[Any]]]:
+    orientation_rules: list[tuple[str, list[Any]]] = []
+    for rule in _parsed_rules(css_content):
+        if rule.type != "at-rule" or rule.lower_at_keyword != "media" or rule.content is None:
+            continue
+        prelude = "".join(t.serialize() for t in rule.prelude).lower()
+        if "orientation" not in prelude:
+            continue
+        nested = tinycss2.parse_rule_list(rule.content, skip_whitespace=True, skip_comments=True)
+        orientation_rules.append((prelude, nested))
+    return orientation_rules
+
+
+def _orientation_is_blocking(decl_name: str, value: str) -> bool:
+    return (
+        (decl_name == "display" and value == "none")
+        or (decl_name == "visibility" and value == "hidden")
+        or (decl_name == "transform" and "rotate" in value)
+    )
+
+
+def _orientation_rule_findings(
+    *,
+    prelude: str,
+    nested_rule: Any,
+    source_lines: list[str],
+) -> list[WcagFinding]:
+    nested_sel = _selector(nested_rule)
+    line_num = _line_num(nested_rule)
+    findings: list[WcagFinding] = []
+
+    for decl in _declarations(nested_rule):
+        if decl.type != "declaration" or decl.lower_name not in _BLOCKING_PROPS:
+            continue
+        value = _serialize_value(decl.value)
+        if not _orientation_is_blocking(decl.lower_name, value):
+            continue
+        findings.append(_build_finding(
+            severity=_ORIENT_SEVERITY,
+            wcag_level=_ORIENT_WCAG_LEVEL,
+            wcag_rule=_ORIENT_RULE_CODE,
+            message=(
+                f'@media ({prelude.strip()}) — "{nested_sel}" '
+                f"declara {decl.lower_name}: {value}, "
+                "bloqueando el contenido en esa orientación."
+            ),
+            line_number=line_num,
+            source_lines=source_lines,
+            category="orientation-lock",
+        ))
+    return findings
+
+
+def _line_height_finding(
+    *,
+    sel: str,
+    decl: Any,
+    line_num: int,
+    source_lines: list[str],
+) -> WcagFinding | None:
+    if decl.lower_name != "line-height":
+        return None
+    for token in decl.value:
+        if token.type != "number":
+            continue
+        try:
+            lh = float(token.value)
+        except (ValueError, TypeError):
+            return None
+        if lh < 1.5:
+            return _build_finding(
+                severity=_VP_SEVERITY,
+                wcag_level=_VP_WCAG_LEVEL,
+                wcag_rule=_VP_RULE_CODE,
+                message=(
+                    f'"{sel}" tiene line-height: {lh} '
+                    "(inferior a 1.5). Aumenta el interlineado para mejorar la legibilidad."
+                ),
+                line_number=line_num,
+                source_lines=source_lines,
+                category="line-height-too-small",
+            )
+        return None
+    return None
+
+
+def _text_align_finding(
+    *,
+    sel: str,
+    decl: Any,
+    line_num: int,
+    source_lines: list[str],
+) -> WcagFinding | None:
+    if decl.lower_name != "text-align":
+        return None
+    if _serialize_value(decl.value) != "justify":
+        return None
+    return _build_finding(
+        severity=_VP_SEVERITY,
+        wcag_level=_VP_WCAG_LEVEL,
+        wcag_rule=_VP_RULE_CODE,
+        message=(
+            f'"{sel}" usa text-align: justify. '
+            "El texto justificado crea espacios irregulares que dificultan la lectura "
+            "para personas con dislexia."
+        ),
+        line_number=line_num,
+        source_lines=source_lines,
+        category="text-align-justify",
+    )
+
+
+def _max_width_finding(
+    *,
+    sel: str,
+    decl: Any,
+    line_num: int,
+    source_lines: list[str],
+) -> WcagFinding | None:
+    if decl.lower_name != "max-width":
+        return None
+    px = _extract_px_dimension(decl.value)
+    if px is None or px <= 800.0:
+        return None
+    return _build_finding(
+        severity=_VP_SEVERITY,
+        wcag_level=_VP_WCAG_LEVEL,
+        wcag_rule=_VP_RULE_CODE,
+        message=(
+            f'"{sel}" tiene max-width: {px}px. '
+            "Limita el ancho de columnas de texto a ~80 caracteres (≈800px) "
+            "para facilitar la lectura."
+        ),
+        line_number=line_num,
+        source_lines=source_lines,
+        category="max-width-too-wide",
+    )
+
+
+def _collect_protected_selectors(css_content: str) -> set[str]:
+    protected_selectors: set[str] = set()
+    for rule in _parsed_rules(css_content):
+        if rule.type != "at-rule" or rule.lower_at_keyword != "media" or rule.content is None:
+            continue
+        prelude = "".join(t.serialize() for t in rule.prelude).lower()
+        if "prefers-reduced-motion" not in prelude:
+            continue
+        nested_rules = tinycss2.parse_rule_list(rule.content, skip_whitespace=True, skip_comments=True)
+        for nested in nested_rules:
+            if nested.type == "qualified-rule":
+                protected_selectors.add(_selector(nested))
+    return protected_selectors
+
+
+def _visual_decl_finding(
+    *,
+    sel: str,
+    decl: Any,
+    line_num: int,
+    source_lines: list[str],
+) -> WcagFinding | None:
+    finders = (_line_height_finding, _text_align_finding, _max_width_finding)
+    for finder in finders:
+        finding = finder(sel=sel, decl=decl, line_num=line_num, source_lines=source_lines)
+        if finding is not None:
+            return finding
+    return None
+
+
+def _collect_decl_map(rule: Any) -> dict[str, str]:
+    decl_map: dict[str, str] = {}
+    for decl in _declarations(rule):
+        if decl.type == "declaration":
+            decl_map[decl.lower_name] = _serialize_value(decl.value)
+    return decl_map
+
+
 # ---------------------------------------------------------------------------
 # WCAG 2.4.7 — Focus Visible · Nivel AA
 # ---------------------------------------------------------------------------
@@ -61,16 +303,13 @@ def detect_focus_visible_findings(css_content: str) -> list[WcagFinding]:
     Eliminar el indicador de foco es la causa más directa de inaccesibilidad
     por teclado: los usuarios que navegan con Tab no saben dónde están.
     """
-    if not css_content or not str(css_content).strip():
+    if _is_blank_css(css_content):
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in _parsed_rules(css_content):
-        if rule.type != "qualified-rule":
-            continue
-
+    for rule in _iter_qualified_rules(css_content):
         sel = _selector(rule)
         if ":focus" not in sel.lower():
             continue
@@ -78,24 +317,24 @@ def detect_focus_visible_findings(css_content: str) -> list[WcagFinding]:
         for decl in _declarations(rule):
             if decl.type != "declaration":
                 continue
-
             value = _serialize_value(decl.value)
+            if not (decl.lower_name == "outline" and value in _INVISIBLE_OUTLINE):
+                continue
 
-            if decl.lower_name == "outline" and value in _INVISIBLE_OUTLINE:
-                line_num = max(1, rule.source_line)
-                findings.append(WcagFinding(
-                    severity=_FOCUS_SEVERITY,
-                    wcag_level=_FOCUS_WCAG_LEVEL,
-                    wcag_rule=_FOCUS_RULE_CODE,
-                    message=(
-                        f'"{sel}" declara outline: {value}, '
-                        "eliminando el indicador visual de foco. "
-                        "Usa outline: none solo si provees un indicador alternativo visible."
-                    ),
-                    line_number=line_num,
-                    code_snippet=build_snippet(source_lines, line_num),
-                    category="focus-outline-removed",
-                ))
+            line_num = _line_num(rule)
+            findings.append(_build_finding(
+                severity=_FOCUS_SEVERITY,
+                wcag_level=_FOCUS_WCAG_LEVEL,
+                wcag_rule=_FOCUS_RULE_CODE,
+                message=(
+                    f'"{sel}" declara outline: {value}, '
+                    "eliminando el indicador visual de foco. "
+                    "Usa outline: none solo si provees un indicador alternativo visible."
+                ),
+                line_number=line_num,
+                source_lines=source_lines,
+                category="focus-outline-removed",
+            ))
 
     return findings
 
@@ -117,38 +356,37 @@ def detect_resize_text_findings(css_content: str) -> list[WcagFinding]:
     base del navegador, impidiendo que personas con baja visión amplíen el
     texto sin usar el zoom de página completa.
     """
-    if not css_content or not str(css_content).strip():
+    if _is_blank_css(css_content):
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in _parsed_rules(css_content):
-        if rule.type != "qualified-rule":
-            continue
-
+    for rule in _iter_qualified_rules(css_content):
         sel = _selector(rule)
 
         for decl in _declarations(rule):
             if decl.type != "declaration" or decl.lower_name != "font-size":
                 continue
 
-            for token in decl.value:
-                if token.type == "dimension" and token.lower_unit == "px":
-                    line_num = max(1, rule.source_line)
-                    findings.append(WcagFinding(
-                        severity=_RESIZE_SEVERITY,
-                        wcag_level=_RESIZE_WCAG_LEVEL,
-                        wcag_rule=_RESIZE_RULE_CODE,
-                        message=(
-                            f'"{sel}" usa font-size: {token.value}px (unidad fija). '
-                            "Usa rem, em o % para que el texto escale con la preferencia del usuario."
-                        ),
-                        line_number=line_num,
-                        code_snippet=build_snippet(source_lines, line_num),
-                        category="font-size-fixed-px",
-                    ))
-                    break  # un hallazgo por declaración
+            px = _extract_px_dimension(decl.value)
+            if px is None:
+                continue
+
+            line_num = _line_num(rule)
+            findings.append(_build_finding(
+                severity=_RESIZE_SEVERITY,
+                wcag_level=_RESIZE_WCAG_LEVEL,
+                wcag_rule=_RESIZE_RULE_CODE,
+                message=(
+                    f'"{sel}" usa font-size: {px}px (unidad fija). '
+                    "Usa rem, em o % para que el texto escale con la preferencia del usuario."
+                ),
+                line_number=line_num,
+                source_lines=source_lines,
+                category="font-size-fixed-px",
+            ))
+            break
 
     return findings
 
@@ -175,28 +413,25 @@ def detect_text_spacing_findings(css_content: str) -> list[WcagFinding]:
     texto mediante hojas de estilo propias o extensiones del navegador.
     El uso de !important bloquea esos ajustes.
     """
-    if not css_content or not str(css_content).strip():
+    if _is_blank_css(css_content):
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in _parsed_rules(css_content):
-        if rule.type != "qualified-rule":
-            continue
-
+    for rule in _iter_qualified_rules(css_content):
         sel = _selector(rule)
 
         for decl in _declarations(rule):
-            if decl.type != "declaration":
-                continue
-            if not decl.important:
-                continue
-            if decl.lower_name not in _TEXT_SPACING_PROPS:
+            if (
+                decl.type != "declaration"
+                or not decl.important
+                or decl.lower_name not in _TEXT_SPACING_PROPS
+            ):
                 continue
 
-            line_num = max(1, rule.source_line)
-            findings.append(WcagFinding(
+            line_num = _line_num(rule)
+            findings.append(_build_finding(
                 severity=_SPACING_SEVERITY,
                 wcag_level=_SPACING_WCAG_LEVEL,
                 wcag_rule=_SPACING_RULE_CODE,
@@ -206,7 +441,7 @@ def detect_text_spacing_findings(css_content: str) -> list[WcagFinding]:
                     "Elimina !important en propiedades de espaciado de texto."
                 ),
                 line_number=line_num,
-                code_snippet=build_snippet(source_lines, line_num),
+                source_lines=source_lines,
                 category="text-spacing-important",
             ))
 
@@ -233,64 +468,21 @@ def detect_orientation_lock_findings(css_content: str) -> list[WcagFinding]:
     Personas que tienen el dispositivo montado fijo (silla de ruedas, soporte)
     no pueden cambiar la orientación física.
     """
-    if not css_content or not str(css_content).strip():
+    if _is_blank_css(css_content):
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in _parsed_rules(css_content):
-        if rule.type != "at-rule" or rule.lower_at_keyword != "media":
-            continue
-        if rule.content is None:
-            continue
-
-        prelude = "".join(t.serialize() for t in rule.prelude).lower()
-        if "orientation" not in prelude:
-            continue
-
-        nested = tinycss2.parse_rule_list(
-            rule.content, skip_whitespace=True, skip_comments=True
-        )
-
-        for nested_rule in nested:
+    for prelude, nested_rules in _iter_orientation_media_rules(css_content):
+        for nested_rule in nested_rules:
             if nested_rule.type != "qualified-rule":
                 continue
-
-            nested_sel = _selector(nested_rule)
-            nested_decls = tinycss2.parse_declaration_list(
-                nested_rule.content, skip_whitespace=True, skip_comments=True
-            )
-
-            for decl in nested_decls:
-                if decl.type != "declaration":
-                    continue
-                if decl.lower_name not in _BLOCKING_PROPS:
-                    continue
-
-                value = _serialize_value(decl.value)
-
-                blocks = (
-                    (decl.lower_name == "display" and value == "none") or
-                    (decl.lower_name == "visibility" and value == "hidden") or
-                    (decl.lower_name == "transform" and "rotate" in value)
+            findings.extend(
+                _orientation_rule_findings(
+                    prelude=prelude, nested_rule=nested_rule, source_lines=source_lines
                 )
-
-                if blocks:
-                    line_num = max(1, nested_rule.source_line)
-                    findings.append(WcagFinding(
-                        severity=_ORIENT_SEVERITY,
-                        wcag_level=_ORIENT_WCAG_LEVEL,
-                        wcag_rule=_ORIENT_RULE_CODE,
-                        message=(
-                            f'@media ({prelude.strip()}) — "{nested_sel}" '
-                            f"declara {decl.lower_name}: {value}, "
-                            "bloqueando el contenido en esa orientación."
-                        ),
-                        line_number=line_num,
-                        code_snippet=build_snippet(source_lines, line_num),
-                        category="orientation-lock",
-                    ))
+            )
 
     return findings
 
@@ -320,43 +512,21 @@ def detect_target_size_findings(css_content: str) -> list[WcagFinding]:
     Un objetivo de toque pequeño dificulta la interacción a personas con
     temblor, movilidad reducida o que usan dispositivos táctiles.
     """
-    if not css_content or not str(css_content).strip():
+    if _is_blank_css(css_content):
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in _parsed_rules(css_content):
-        if rule.type != "qualified-rule":
-            continue
-
+    for rule in _iter_qualified_rules(css_content):
         sel = _selector(rule)
-        if not any(pattern in sel.lower() for pattern in _INTERACTIVE_PATTERNS):
+        if not _selector_has_interactive_pattern(sel):
             continue
 
-        small_dims: list[str] = []
-        line_num = max(1, rule.source_line)
-
-        for decl in _declarations(rule):
-            if decl.type != "declaration":
-                continue
-            if decl.lower_name not in _SIZE_PROPS:
-                continue
-
-            for token in decl.value:
-                if token.type != "dimension" or token.lower_unit != "px":
-                    continue
-                try:
-                    px = float(token.value)
-                except (ValueError, TypeError):
-                    continue
-
-                if px < _MIN_TARGET_PX:
-                    small_dims.append(f"{decl.lower_name}: {px}px")
-                break
-
+        small_dims = _collect_small_dimensions(rule, min_px=_MIN_TARGET_PX)
         if small_dims:
-            findings.append(WcagFinding(
+            line_num = _line_num(rule)
+            findings.append(_build_finding(
                 severity=_TARGET_SEVERITY,
                 wcag_level=_TARGET_WCAG_LEVEL,
                 wcag_rule=_TARGET_RULE_CODE,
@@ -366,7 +536,7 @@ def detect_target_size_findings(css_content: str) -> list[WcagFinding]:
                     "Amplía el área de toque del elemento interactivo."
                 ),
                 line_number=line_num,
-                code_snippet=build_snippet(source_lines, line_num),
+                source_lines=source_lines,
                 category="target-size-too-small",
             ))
 
@@ -394,85 +564,24 @@ def detect_visual_presentation_findings(css_content: str) -> list[WcagFinding]:
     Personas con dislexia, baja visión o trastornos cognitivos necesitan
     control sobre el ancho de línea, interlineado y alineación del texto.
     """
-    if not css_content or not str(css_content).strip():
+    if _is_blank_css(css_content):
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in _parsed_rules(css_content):
-        if rule.type != "qualified-rule":
-            continue
-
+    for rule in _iter_qualified_rules(css_content):
         sel = _selector(rule)
-        line_num = max(1, rule.source_line)
+        line_num = _line_num(rule)
 
         for decl in _declarations(rule):
             if decl.type != "declaration":
                 continue
-
-            if decl.lower_name == "line-height":
-                value = _serialize_value(decl.value)
-                for token in decl.value:
-                    if token.type == "number":
-                        try:
-                            lh = float(token.value)
-                            if lh < 1.5:
-                                findings.append(WcagFinding(
-                                    severity=_VP_SEVERITY,
-                                    wcag_level=_VP_WCAG_LEVEL,
-                                    wcag_rule=_VP_RULE_CODE,
-                                    message=(
-                                        f'"{sel}" tiene line-height: {lh} '
-                                        "(inferior a 1.5). Aumenta el interlineado para mejorar la legibilidad."
-                                    ),
-                                    line_number=line_num,
-                                    code_snippet=build_snippet(source_lines, line_num),
-                                    category="line-height-too-small",
-                                ))
-                        except (ValueError, TypeError):
-                            pass
-                        break
-
-            elif decl.lower_name == "text-align":
-                value = _serialize_value(decl.value)
-                if value == "justify":
-                    findings.append(WcagFinding(
-                        severity=_VP_SEVERITY,
-                        wcag_level=_VP_WCAG_LEVEL,
-                        wcag_rule=_VP_RULE_CODE,
-                        message=(
-                            f'"{sel}" usa text-align: justify. '
-                            "El texto justificado crea espacios irregulares que dificultan la lectura "
-                            "para personas con dislexia."
-                        ),
-                        line_number=line_num,
-                        code_snippet=build_snippet(source_lines, line_num),
-                        category="text-align-justify",
-                    ))
-
-            elif decl.lower_name == "max-width":
-                for token in decl.value:
-                    if token.type == "dimension" and token.lower_unit == "px":
-                        try:
-                            px = float(token.value)
-                            if px > 800.0:  # aprox >80ch a 10px/ch
-                                findings.append(WcagFinding(
-                                    severity=_VP_SEVERITY,
-                                    wcag_level=_VP_WCAG_LEVEL,
-                                    wcag_rule=_VP_RULE_CODE,
-                                    message=(
-                                        f'"{sel}" tiene max-width: {px}px. '
-                                        "Limita el ancho de columnas de texto a ~80 caracteres (≈800px) "
-                                        "para facilitar la lectura."
-                                    ),
-                                    line_number=line_num,
-                                    code_snippet=build_snippet(source_lines, line_num),
-                                    category="max-width-too-wide",
-                                ))
-                        except (ValueError, TypeError):
-                            pass
-                        break
+            finding = _visual_decl_finding(
+                sel=sel, decl=decl, line_num=line_num, source_lines=source_lines
+            )
+            if finding is not None:
+                findings.append(finding)
 
     return findings
 
@@ -496,47 +605,28 @@ def detect_animation_findings(css_content: str) -> list[WcagFinding]:
     personas con trastornos vestibulares o epilepsia fotosensible. El sistema
     operativo expone la preferencia del usuario via prefers-reduced-motion.
     """
-    if not css_content or not str(css_content).strip():
+    if _is_blank_css(css_content):
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    # Recopilar selectores protegidos dentro de @media (prefers-reduced-motion)
-    protected_selectors: set[str] = set()
-    for rule in _parsed_rules(css_content):
-        if rule.type != "at-rule" or rule.lower_at_keyword != "media":
-            continue
-        if rule.content is None:
-            continue
-        prelude = "".join(t.serialize() for t in rule.prelude).lower()
-        if "prefers-reduced-motion" not in prelude:
-            continue
-        for nested in tinycss2.parse_rule_list(
-            rule.content, skip_whitespace=True, skip_comments=True
-        ):
-            if nested.type == "qualified-rule":
-                protected_selectors.add(_selector(nested))
+    protected_selectors = _collect_protected_selectors(css_content)
 
-    for rule in _parsed_rules(css_content):
-        if rule.type != "qualified-rule":
-            continue
-
+    for rule in _iter_qualified_rules(css_content):
         sel = _selector(rule)
         if sel in protected_selectors:
             continue
 
         for decl in _declarations(rule):
-            if decl.type != "declaration":
-                continue
-            if decl.lower_name not in _ANIM_PROPS:
+            if decl.type != "declaration" or decl.lower_name not in _ANIM_PROPS:
                 continue
             value = _serialize_value(decl.value)
             if value in {"none", "0", "0s", "0ms"}:
                 continue
 
-            line_num = max(1, rule.source_line)
-            findings.append(WcagFinding(
+            line_num = _line_num(rule)
+            findings.append(_build_finding(
                 severity=_ANIM_SEVERITY,
                 wcag_level=_ANIM_WCAG_LEVEL,
                 wcag_rule=_ANIM_RULE_CODE,
@@ -547,7 +637,7 @@ def detect_animation_findings(css_content: str) -> list[WcagFinding]:
                     "la preferencia del usuario."
                 ),
                 line_number=line_num,
-                code_snippet=build_snippet(source_lines, line_num),
+                source_lines=source_lines,
                 category="animation-no-reduced-motion",
             ))
             break  # un hallazgo por regla
@@ -573,32 +663,26 @@ def detect_focus_appearance_findings(css_content: str) -> list[WcagFinding]:
     contraste adecuado. Heurística estática: reporta si el selector :focus
     define outline sin outline-offset, ni box-shadow como refuerzo visual.
     """
-    if not css_content or not str(css_content).strip():
+    if _is_blank_css(css_content):
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in _parsed_rules(css_content):
-        if rule.type != "qualified-rule":
-            continue
-
+    for rule in _iter_qualified_rules(css_content):
         sel = _selector(rule)
         if ":focus" not in sel.lower():
             continue
 
-        decl_map: dict[str, str] = {}
-        for decl in _declarations(rule):
-            if decl.type == "declaration":
-                decl_map[decl.lower_name] = _serialize_value(decl.value)
+        decl_map = _collect_decl_map(rule)
 
         has_outline = "outline" in decl_map and decl_map["outline"] not in _INVISIBLE_OUTLINE
-        has_offset  = "outline-offset" in decl_map
-        has_shadow  = "box-shadow" in decl_map
+        has_offset = "outline-offset" in decl_map
+        has_shadow = "box-shadow" in decl_map
 
         if has_outline and not has_offset and not has_shadow:
-            line_num = max(1, rule.source_line)
-            findings.append(WcagFinding(
+            line_num = _line_num(rule)
+            findings.append(_build_finding(
                 severity=_FA_SEVERITY,
                 wcag_level=_FA_WCAG_LEVEL,
                 wcag_rule=_FA_RULE_CODE,
@@ -608,7 +692,7 @@ def detect_focus_appearance_findings(css_content: str) -> list[WcagFinding]:
                     "Añade outline-offset: 2px o un box-shadow complementario."
                 ),
                 line_number=line_num,
-                code_snippet=build_snippet(source_lines, line_num),
+                source_lines=source_lines,
                 category="focus-appearance-insufficient",
             ))
 
@@ -634,43 +718,23 @@ def detect_target_size_enhanced_findings(css_content: str) -> list[WcagFinding]:
     cómodos para personas con movilidad reducida.
     Solo reporta el rango "pasa 24px pero falla 44px" para evitar duplicados.
     """
-    if not css_content or not str(css_content).strip():
+    if _is_blank_css(css_content):
         return []
 
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in _parsed_rules(css_content):
-        if rule.type != "qualified-rule":
-            continue
-
+    for rule in _iter_qualified_rules(css_content):
         sel = _selector(rule)
-        if not any(pattern in sel.lower() for pattern in _INTERACTIVE_PATTERNS):
+        if not _selector_has_interactive_pattern(sel):
             continue
 
-        small_dims: list[str] = []
-        line_num = max(1, rule.source_line)
-
-        for decl in _declarations(rule):
-            if decl.type != "declaration":
-                continue
-            if decl.lower_name not in _SIZE_PROPS:
-                continue
-
-            for token in decl.value:
-                if token.type != "dimension" or token.lower_unit != "px":
-                    continue
-                try:
-                    px = float(token.value)
-                except (ValueError, TypeError):
-                    continue
-                # Solo reporta si pasa el umbral AA (24px) pero falla AAA (44px)
-                if _MIN_TARGET_PX <= px < _MIN_TARGET_ENH_PX:
-                    small_dims.append(f"{decl.lower_name}: {px}px")
-                break
-
+        small_dims = _collect_small_dimensions(
+            rule, min_px=_MIN_TARGET_PX, max_px=_MIN_TARGET_ENH_PX
+        )
         if small_dims:
-            findings.append(WcagFinding(
+            line_num = _line_num(rule)
+            findings.append(_build_finding(
                 severity=_TARGET_ENH_SEVERITY,
                 wcag_level=_TARGET_ENH_WCAG_LEVEL,
                 wcag_rule=_TARGET_ENH_RULE_CODE,
@@ -680,7 +744,7 @@ def detect_target_size_enhanced_findings(css_content: str) -> list[WcagFinding]:
                     "Amplía el área de toque para máxima accesibilidad."
                 ),
                 line_number=line_num,
-                code_snippet=build_snippet(source_lines, line_num),
+                source_lines=source_lines,
                 category="target-size-enhanced",
             ))
 

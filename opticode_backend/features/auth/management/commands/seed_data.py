@@ -12,6 +12,10 @@ from features.projects.models import Project
 
 env = environ.Env()
 
+# Mensajes y reglas reutilizados (evita literales duplicados en datos de seed)
+_MSG_IMG_SIN_ALT = "Imagen sin atributo alt"
+_WCAG_111 = "WCAG 1.1.1"
+
 
 class Command(BaseCommand):
     help = "Carga datos de prueba: 5 usuarios (1 admin), 3 proyectos, 10+ archivos con scores variados"
@@ -47,7 +51,7 @@ class Command(BaseCommand):
             first_name="Juan",
             last_name="García",
         )
-        user4 = User.objects.create_user(
+        User.objects.create_user(
             username="ana_front",
             email="dev4@opticode.com",
             password=password,
@@ -125,13 +129,13 @@ class Command(BaseCommand):
                 ("warning", "WCAG 2.4.6", "Formulario sin descripción", 1, "<form>", "form"),
             ],
             "servicios.html": [
-                ("error", "WCAG 1.1.1", "Imagen sin atributo alt", 1, "<img src='img.png'>", "img"),
+                ("error", _WCAG_111, _MSG_IMG_SIN_ALT, 1, "<img src='img.png'>", "img"),
                 ("error", "WCAG 2.1.1", "Elemento no accesible por teclado", 1, "<div onclick='fn()'>", "div"),
                 ("warning", "WCAG 4.1.2", "Falta rol ARIA", 1, "<div onclick='fn()'>", "div"),
             ],
             "galeria.html": [
-                ("error", "WCAG 1.1.1", "Imagen sin atributo alt", 1, "<img src='foto1.jpg'>", "img"),
-                ("error", "WCAG 1.1.1", "Imagen sin atributo alt", 1, "<img src='foto2.jpg'>", "img"),
+                ("error", _WCAG_111, _MSG_IMG_SIN_ALT, 1, "<img src='foto1.jpg'>", "img"),
+                ("error", _WCAG_111, _MSG_IMG_SIN_ALT, 1, "<img src='foto2.jpg'>", "img"),
                 ("error", "WCAG 3.1.1", "Falta atributo lang en html", 1, "<html>", "html"),
             ],
             "about.html": [

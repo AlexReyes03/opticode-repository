@@ -31,7 +31,7 @@ User = get_user_model()
 class AuthPublicKeyView(views.APIView):
     """
     Expone la clave pública RSA (SPKI PEM) para cifrado OAEP-SHA256 en el cliente.
-    Si AUTH_RSA_PRIVATE_KEY no está definida, devuelve enabled=false (solo contraseña en claro).
+    Si no hay clave privada (settings.AUTH_RSA_PRIVATE_KEY vacío), devuelve enabled=false (solo contraseña en claro).
     """
 
     permission_classes = [AllowAny]

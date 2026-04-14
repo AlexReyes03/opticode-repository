@@ -99,6 +99,66 @@ _ABB_SEVERITY   = "warning"
 _ACRONYM_RE = re.compile(r"\b[A-ZÁÉÍÓÚÑ]{2,}\b")
 
 
+def _collect_abbr_covered_terms(soup: BeautifulSoup) -> set[str]:
+    covered: set[str] = set()
+    for abbr in soup.find_all("abbr"):
+        term = abbr.get_text(strip=True).upper()
+        if term:
+            covered.add(term)
+    return covered
+
+
+def _skip_abbreviation_text_node(text_node) -> bool:
+    if isinstance(text_node, Comment):
+        return True
+    parent = text_node.parent
+    return bool(parent and parent.name in {"script", "style", "abbr"})
+
+
+def _parent_sourceline(parent) -> int:
+    if hasattr(parent, "sourceline") and parent.sourceline:
+        return parent.sourceline
+    return 1
+
+
+def _make_abbreviation_unexpanded_finding(
+    acronym: str,
+    line_num: int,
+    source_lines: list[str],
+) -> WcagFinding:
+    return make_finding(
+        line_number=line_num,
+        source_lines=source_lines,
+        wcag_rule=_ABB_RULE_CODE,
+        wcag_level=_ABB_WCAG_LEVEL,
+        severity=_ABB_SEVERITY,
+        message=(
+            f'Sigla o acrónimo "{acronym}" sin elemento <abbr title="...">. '
+            'Envuelve la primera aparición en <abbr title="expansión"> para '
+            "que los lectores de pantalla puedan expandirla."
+        ),
+        category="abbreviation-unexpanded",
+    )
+
+
+def _findings_from_acronym_matches_in_text(
+    text: str,
+    parent,
+    covered: set[str],
+    seen_uncovered: set[str],
+    source_lines: list[str],
+) -> list[WcagFinding]:
+    line_num = _parent_sourceline(parent)
+    findings: list[WcagFinding] = []
+    for match in _ACRONYM_RE.finditer(text):
+        acronym = match.group(0)
+        if acronym in covered or acronym in seen_uncovered:
+            continue
+        seen_uncovered.add(acronym)
+        findings.append(_make_abbreviation_unexpanded_finding(acronym, line_num, source_lines))
+    return findings
+
+
 def detect_abbreviations_findings(html_content: str) -> list[WcagFinding]:
     """
     Detecta siglas o acrónimos (secuencias de mayúsculas) en el texto visible
@@ -112,48 +172,23 @@ def detect_abbreviations_findings(html_content: str) -> list[WcagFinding]:
 
     soup = BeautifulSoup(html_content, "html5lib", store_line_numbers=True)
     source_lines = html_content.splitlines()
+    covered = _collect_abbr_covered_terms(soup)
+    seen_uncovered: set[str] = set()
     findings: list[WcagFinding] = []
 
-    # Recopilar siglas ya marcadas con <abbr>
-    covered: set[str] = set()
-    for abbr in soup.find_all("abbr"):
-        term = abbr.get_text(strip=True).upper()
-        if term:
-            covered.add(term)
-
-    # Buscar siglas en nodos de texto (fuera de <abbr>, <script>, <style>)
-    seen_uncovered: set[str] = set()
     for text_node in soup.find_all(string=True):
-        if isinstance(text_node, Comment):
+        if _skip_abbreviation_text_node(text_node):
             continue
         parent = text_node.parent
-        if parent and parent.name in {"script", "style", "abbr"}:
-            continue
-
-        for match in _ACRONYM_RE.finditer(str(text_node)):
-            acronym = match.group(0)
-            if acronym in covered or acronym in seen_uncovered:
-                continue
-            seen_uncovered.add(acronym)
-
-            # Determinar número de línea aproximado
-            line_num = 1
-            if hasattr(parent, "sourceline") and parent.sourceline:
-                line_num = parent.sourceline
-
-            findings.append(make_finding(
-                line_number=line_num,
-                source_lines=source_lines,
-                wcag_rule=_ABB_RULE_CODE,
-                wcag_level=_ABB_WCAG_LEVEL,
-                severity=_ABB_SEVERITY,
-                message=(
-                    f'Sigla o acrónimo "{acronym}" sin elemento <abbr title="...">. '
-                    "Envuelve la primera aparición en <abbr title=\"expansión\"> para "
-                    "que los lectores de pantalla puedan expandirla."
-                ),
-                category="abbreviation-unexpanded",
-            ))
+        findings.extend(
+            _findings_from_acronym_matches_in_text(
+                str(text_node),
+                parent,
+                covered,
+                seen_uncovered,
+                source_lines,
+            )
+        )
 
     return findings
 
