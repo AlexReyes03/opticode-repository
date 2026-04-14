@@ -60,6 +60,10 @@ export async function registerUser(data) {
  * Con RSA: { email_cipher, password_cipher, key_id }.
  * Sin RSA: { email, password }.
  *
+ * Errores (backend / throttling):
+ * - 401 credenciales incorrectas: `{ error: string, failed_attempt?: number }` (`failed_attempt` 1–4; el UI muestra aviso solo para 2–4).
+ * - 403 cuenta bloqueada (5 fallos o ya bloqueada): `{ error: string, locked: true }`.
+ *
  * @param {{ email: string, password: string }} credentials
  * @returns {Promise<{ access: string, refresh: string }>}
  */

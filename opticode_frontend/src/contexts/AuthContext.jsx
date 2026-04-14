@@ -73,9 +73,14 @@ export const AuthProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  /** Aviso de intentos fallidos (solo 2–4); viene del backend en `failed_attempt`. */
+  const [loginAttemptHint, setLoginAttemptHint] = useState(null);
 
   /** Limpia de forma manual el error actual del contexto */
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = useCallback(() => {
+    setError(null);
+    setLoginAttemptHint(null);
+  }, []);
 
   /** Persiste ambos tokens y actualiza el estado React. */
   const storeTokens = useCallback((access, refresh) => {
@@ -175,6 +180,7 @@ export const AuthProvider = ({ children }) => {
     async (credentials) => {
       setLoading(true);
       setError(null);
+      setLoginAttemptHint(null);
       try {
         const data = await loginUser(credentials);
         storeTokens(data?.access, data?.refresh);
@@ -189,10 +195,23 @@ export const AuthProvider = ({ children }) => {
       } catch (err) {
         const status = Number(err?.status ?? 0);
         const isGlobalInfraError = status === 0 || status === 500 || status === 503;
-        if (!isGlobalInfraError) {
+        if (isGlobalInfraError) {
+          setLoginAttemptHint(null);
+        } else {
           setError(
             getApiErrorMessage(err, 'No se pudo iniciar sesión. Verifica correo y contraseña.'),
           );
+          const data = err?.data;
+          if (data && typeof data === 'object' && data.locked === true) {
+            setLoginAttemptHint(null);
+          } else {
+            const n = Number(data?.failed_attempt);
+            if (Number.isInteger(n) && n >= 2 && n <= 4) {
+              setLoginAttemptHint(`Intento ${n}/5`);
+            } else {
+              setLoginAttemptHint(null);
+            }
+          }
         }
         throw err;
       } finally {
@@ -254,8 +273,20 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated,
       loading,
       error,
+      loginAttemptHint,
     }),
-    [user, accessToken, login, logout, refreshUser, clearError, isAuthenticated, loading, error],
+    [
+      user,
+      accessToken,
+      login,
+      logout,
+      refreshUser,
+      clearError,
+      isAuthenticated,
+      loading,
+      error,
+      loginAttemptHint,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -274,6 +305,7 @@ export const AuthProvider = ({ children }) => {
  *   isAuthenticated: () => boolean,
  *   loading: boolean,
  *   error: string|null,
+ *   loginAttemptHint: string|null,
  * }}
  */
 export const useAuth = () => {

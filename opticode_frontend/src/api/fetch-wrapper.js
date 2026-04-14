@@ -216,6 +216,10 @@ function isGenericHttpMessage(message) {
 export function getApiErrorMessage(err, fallback = 'Ocurrió un error. Intenta de nuevo.') {
   if (!err || typeof err !== 'object') return fallback;
   const data = err.data;
+  if (data && typeof data === 'object' && data.locked === true && typeof data.error === 'string') {
+    const lockedMsg = data.error.trim();
+    if (lockedMsg) return lockedMsg;
+  }
   const fromBody = messageFromErrorBody(data);
   if (fromBody && !isGenericHttpMessage(fromBody)) return fromBody;
   const fieldMsg = firstFieldValidationMessage(data);
