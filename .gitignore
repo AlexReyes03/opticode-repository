@@ -11,5 +11,7 @@ opticode_frontend/.env
 auth_rsa.pe
 opticode_backend/auth_rsa.pem
 
-# Documentación y pruebas locales (no versionar)
-docs/
+# Documentación local bajo docs/ (no versionar), excepto fixtures de prueba WCAG
+docs/*
+!docs/test/
+!docs/test/**

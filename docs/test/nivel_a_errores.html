@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!-- PRUEBA: errores WCAG Nivel A
+     Errores esperados:
+     - 1.1.1  <img> sin alt (3 imágenes)
+     - 1.3.1  inputs sin <label> (4 campos)
+     - 1.3.2  tabindex="-1" en elemento interactivo
+     - 1.4.2  <audio autoplay> sin controls
+     - 2.1.1  <div onclick> sin teclado
+     - 2.2.2  <marquee> y <blink>
+     - 2.4.1  sin skip link ni landmarks
+     - 2.4.2  <title> vacío
+     - 2.4.3  tabindex positivos (>0)
+     - 2.4.4  enlaces con texto genérico
+     - 2.5.3  aria-label no contiene texto visible del botón
+     - 3.1.1  <html> sin lang
+     - 3.3.1  input required sin mensaje de error accesible
+     - 4.1.2  <div role="button"> sin nombre accesible
+-->
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title><!-- 2.4.2: título vacío -->
+</head>
+<!-- 3.1.1: sin atributo lang en <html> -->
+<body>
+  <!-- sin <main>, <nav>, <header> → 2.4.1 -->
+
+  <!-- 1.4.2: audio con autoplay sin controls -->
+  <audio autoplay src="intro.mp3"></audio>
+
+  <!-- 2.2.2: marquee y blink -->
+  <marquee>¡Oferta especial! No te la pierdas.</marquee>
+  <blink>Atención: contenido parpadeante</blink>
+
+  <h1>Tienda en Línea</h1>
+
+  <!-- 2.4.4: texto genérico de enlace -->
+  <p>Para ver nuestros productos <a href="/catalogo">aquí</a>.</p>
+  <p>¿Quieres más información? <a href="/info">haz clic</a>.</p>
+  <p>Consulta el catálogo <a href="/ver">ver más</a>.</p>
+
+  <!-- 1.1.1: imágenes sin alt -->
+  <img src="producto1.jpg">
+  <img src="producto2.jpg">
+  <img src="banner.png">
+
+  <!-- 2.4.3: tabindex positivos -->
+  <input type="text" tabindex="3" placeholder="Campo con tabindex 3">
+  <input type="text" tabindex="1" placeholder="Campo con tabindex 1">
+
+  <!-- 1.3.2: tabindex negativo en elemento interactivo -->
+  <button tabindex="-1">Botón inaccesible por teclado</button>
+
+  <!-- 2.1.1: div clickable sin soporte de teclado -->
+  <div onclick="alert('click')" style="cursor:pointer; padding:8px; background:#eee;">
+    Hacer clic aquí (no accesible por teclado)
+  </div>
+
+  <!-- 4.1.2: div role="button" sin nombre accesible -->
+  <div role="button"></div>
+  <span role="button" style="cursor:pointer"></span>
+
+  <!-- 2.5.3: aria-label que no contiene el texto visible -->
+  <button aria-label="Enviar formulario de contacto">Enviar</button>
+
+  <!-- 1.3.1: formulario con inputs sin label -->
+  <form action="#" method="post">
+    <h2>Registro de usuario</h2>
+
+    <!-- sin label -->
+    <input type="text" placeholder="Nombre completo" required>
+    <!-- sin label -->
+    <input type="email" placeholder="Correo electrónico" required>
+    <!-- sin label -->
+    <input type="password" placeholder="Contraseña" required>
+    <!-- sin label, y es required → 3.3.1 -->
+    <input type="tel" placeholder="Teléfono" required>
+
+    <button type="submit">Registrarme</button>
+  </form>
+
+</body>
+</html>
