@@ -23,8 +23,437 @@ function resizeDescriptionField(el) {
   el.style.height = `${Math.min(el.scrollHeight, 192)}px`;
 }
 
-const ProjectDashboard = () => {
-  const { projectId } = useParams();
+function buildProjectFromApi(proj) {
+  if (!proj || typeof proj !== 'object') return null;
+  return {
+    id: proj.id,
+    name: (proj.name ?? 'Proyecto').slice(0, PROJECT_NAME_MAX_LENGTH),
+    description: (proj.description ?? '').slice(0, PROJECT_DESCRIPTION_MAX_LENGTH),
+  };
+}
+
+function keyboardActivateEdit(handler) {
+  return (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handler();
+    }
+  };
+}
+
+function getBreadcrumbLabel(loading, editing, draftName, projectName) {
+  if (loading) return '…';
+  if (editing === 'name') return draftName.trim() || '…';
+  return projectName;
+}
+
+function DeleteFileModal({ target, fileDeleting, titleId, onClose, onConfirm }) {
+  if (typeof document === 'undefined' || !target) return null;
+
+  return createPortal(
+    <>
+      <div
+        className="modal-backdrop fade show"
+        aria-hidden="true"
+        onClick={() => !fileDeleting && onClose()}
+      />
+      <div
+        className="modal fade show d-block"
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id={titleId}>
+                Eliminar archivo
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                aria-label="Cerrar"
+                disabled={fileDeleting}
+                onClick={onClose}
+              >
+              </button>
+            </div>
+            <div className="modal-body">
+              ¿Seguro que deseas eliminar{' '}
+              <span className="fw-semibold">&quot;{target.name}&quot;</span> de este proyecto? Esta acción es
+              irreversible. Si más adelante subes otro archivo con el mismo nombre, se creará un registro nuevo (no
+              restaura este).
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                disabled={fileDeleting}
+                onClick={onClose}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger d-inline-flex align-items-center gap-2"
+                disabled={fileDeleting}
+                onClick={onConfirm}
+              >
+                {fileDeleting && (
+                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                )}
+                Eliminar archivo
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+}
+
+function ProjectNameInlineInput({
+  draftName,
+  nameInputRef,
+  onDraftNameChange,
+  onCommitName,
+}) {
+  return (
+    <input
+      ref={nameInputRef}
+      type="text"
+      className="oc-project-inline-title min-w-0"
+      size={Math.min(PROJECT_NAME_MAX_LENGTH, Math.max(8, draftName.length + 1))}
+      value={draftName}
+      onChange={onDraftNameChange}
+      onBlur={onCommitName}
+      maxLength={PROJECT_NAME_MAX_LENGTH}
+      aria-label="Nombre del proyecto"
+    />
+  );
+}
+
+function ProjectNameHeading({ loading, projectName, onBeginEditName }) {
+  const titleInteractive = !loading;
+  const titleKeyHandler = titleInteractive ? keyboardActivateEdit(onBeginEditName) : undefined;
+
+  return (
+    <h1
+      className="fw-bold fs-4 mb-0 text-break min-w-0"
+      style={{ color: 'var(--oc-navy)', cursor: loading ? 'default' : 'pointer' }}
+      role={titleInteractive ? 'button' : undefined}
+      tabIndex={titleInteractive ? 0 : undefined}
+      title={titleInteractive ? 'Clic para editar' : undefined}
+      onClick={titleInteractive ? onBeginEditName : undefined}
+      onKeyDown={titleKeyHandler}
+    >
+      {loading ? 'Cargando…' : projectName}
+    </h1>
+  );
+}
+
+function ProjectTitleBlock({
+  loading,
+  editing,
+  draftName,
+  projectName,
+  fileCount,
+  saving,
+  nameInputRef,
+  onDraftNameChange,
+  onCommitName,
+  onBeginEditName,
+}) {
+  const showFileBadge = !loading && editing !== 'name';
+
+  return (
+    <div className="d-flex flex-column gap-1 mb-1">
+      <div className="d-inline-flex flex-wrap align-items-baseline gap-2 max-w-100">
+        {editing === 'name' ? (
+          <ProjectNameInlineInput
+            draftName={draftName}
+            nameInputRef={nameInputRef}
+            onDraftNameChange={onDraftNameChange}
+            onCommitName={onCommitName}
+          />
+        ) : (
+          <ProjectNameHeading loading={loading} projectName={projectName} onBeginEditName={onBeginEditName} />
+        )}
+        {showFileBadge && (
+          <span className="badge bg-light text-secondary fw-normal" style={{ fontSize: '0.75rem' }}>
+            {fileCount} {fileCount === 1 ? 'archivo' : 'archivos'}
+          </span>
+        )}
+        {saving && (
+          <span className="text-secondary small" aria-live="polite">
+            Guardando…
+          </span>
+        )}
+      </div>
+      {editing === 'name' && (
+        <span className="text-muted align-self-end" style={{ fontSize: '0.7rem' }}>
+          {draftName.length}/{PROJECT_NAME_MAX_LENGTH}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ProjectDescriptionBlock({
+  loading,
+  editing,
+  draftDesc,
+  projectDescription,
+  descInputRef,
+  onDraftDescChange,
+  onCommitDescription,
+  onBeginEditDescription,
+}) {
+  const descInteractive = !loading;
+  const descKeyHandler = descInteractive ? keyboardActivateEdit(onBeginEditDescription) : undefined;
+  const trimmedDesc = projectDescription.trim();
+  const showPlaceholder = !trimmedDesc && !loading;
+
+  if (editing === 'description') {
+    return (
+      <div className="d-flex flex-column gap-1">
+        <textarea
+          ref={descInputRef}
+          className="oc-project-inline-desc"
+          rows={1}
+          value={draftDesc}
+          placeholder="Añade una descripción"
+          maxLength={PROJECT_DESCRIPTION_MAX_LENGTH}
+          onChange={onDraftDescChange}
+          onBlur={onCommitDescription}
+          aria-label="Descripción del proyecto"
+        />
+        <span className="text-muted align-self-end" style={{ fontSize: '0.7rem' }}>
+          {draftDesc.length}/{PROJECT_DESCRIPTION_MAX_LENGTH}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="d-flex flex-column gap-1">
+      <p
+        className="small mb-0 text-break"
+        style={{ lineHeight: 1.65, cursor: loading ? 'default' : 'pointer' }}
+        role={descInteractive ? 'button' : undefined}
+        tabIndex={descInteractive ? 0 : undefined}
+        title={descInteractive ? 'Clic para editar' : undefined}
+        onClick={descInteractive ? onBeginEditDescription : undefined}
+        onKeyDown={descKeyHandler}
+      >
+        {trimmedDesc ? (
+          <span className="text-secondary">{projectDescription}</span>
+        ) : (
+          showPlaceholder && <span className="text-secondary fst-italic">Añade una descripción</span>
+        )}
+      </p>
+      {!loading && (
+        <span className="text-muted" style={{ fontSize: '0.65rem' }}>
+          {projectDescription.length}/{PROJECT_DESCRIPTION_MAX_LENGTH}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function FileRowCriticalCell({ value }) {
+  if (value > 0) {
+    return (
+      <td className="text-center">
+        <span className="fw-bold text-danger">{value}</span>
+      </td>
+    );
+  }
+  return (
+    <td className="text-center">
+      <span className="text-secondary">0</span>
+    </td>
+  );
+}
+
+function FileRowWarningsCell({ value }) {
+  if (value > 0) {
+    return (
+      <td className="text-center">
+        <span className="fw-medium text-warning">{value}</span>
+      </td>
+    );
+  }
+  return (
+    <td className="text-center">
+      <span className="text-secondary">0</span>
+    </td>
+  );
+}
+
+function FileRowImprovementsCell({ value }) {
+  if (value > 0) {
+    return (
+      <td className="text-center">
+        <span className="fw-medium" style={{ color: 'var(--oc-royal)' }}>{value}</span>
+      </td>
+    );
+  }
+  return (
+    <td className="text-center">
+      <span className="text-secondary">0</span>
+    </td>
+  );
+}
+
+function FileRowScoreCell({ score }) {
+  return (
+    <td className="text-center">
+      <div className="d-flex justify-content-center">
+        {score === null ? (
+          <span className="text-secondary small">—</span>
+        ) : (
+          <ScoreBadge score={score} size="lg" />
+        )}
+      </div>
+    </td>
+  );
+}
+
+function ProjectFileRow({ file, projectId, navigate, onRequestDelete }) {
+  const rowClick = () => navigate(`/projects/${projectId}/files/${file.id}`);
+  const stop = (e) => e.stopPropagation();
+
+  return (
+    <tr onClick={rowClick} style={{ cursor: 'pointer' }}>
+      <td className="fw-medium text-break p-0" style={{ color: 'var(--oc-royal)' }}>
+        <Link
+          className="d-block px-3 py-2 text-decoration-none text-break"
+          style={{ color: 'var(--oc-royal)' }}
+          to={`/projects/${projectId}/files/${file.id}`}
+          onClick={stop}
+        >
+          {file.name}
+          {file.fileType ? (
+            <span className="text-secondary fw-normal small ms-1">({file.fileType})</span>
+          ) : null}
+        </Link>
+      </td>
+      <td className="text-secondary text-nowrap">{file.date}</td>
+      <FileRowCriticalCell value={file.critical} />
+      <FileRowWarningsCell value={file.warnings} />
+      <FileRowImprovementsCell value={file.improvements} />
+      <FileRowScoreCell score={file.score} />
+      <td className="text-end align-middle" onClick={stop} onKeyDown={stop}>
+        <button
+          type="button"
+          className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
+          aria-label={`Eliminar archivo ${file.name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRequestDelete({ id: file.id, name: file.name });
+          }}
+        >
+          <DeleteOutlineIcon style={{ fontSize: '1.125rem' }} aria-hidden />
+          <span className="d-none d-md-inline">Eliminar</span>
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+function ProjectFilesTable({ loading, files, projectId, navigate, onRequestDelete }) {
+  if (loading) {
+    return (
+      <div className="d-flex flex-column align-items-center justify-content-center py-5 gap-2">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Cargando archivos</span>
+        </div>
+        <p className="text-secondary small mb-0">Cargando archivos del proyecto…</p>
+      </div>
+    );
+  }
+
+  if (files.length === 0) {
+    return (
+      <div className="table-responsive">
+        <table className="table table-hover mb-0">
+          <thead className="table-light">
+            <tr>
+              <th scope="col">Archivo</th>
+              <th scope="col">Última modificación</th>
+              <th className="text-center" scope="col">
+                Críticas
+              </th>
+              <th className="text-center" scope="col">
+                Advertencias
+              </th>
+              <th className="text-center" scope="col">
+                Mejoras
+              </th>
+              <th className="text-center" scope="col">
+                Puntaje global
+              </th>
+              <th className="text-end" scope="col">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={7} className="text-center text-secondary py-5">
+                No hay archivos subidos. Usa &quot;Subir archivos&quot; para añadir HTML o CSS.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  return (
+    <div className="table-responsive">
+      <table className="table table-hover mb-0">
+        <thead className="table-light">
+          <tr>
+            <th scope="col">Archivo</th>
+            <th scope="col">Última modificación</th>
+            <th className="text-center" scope="col">
+              Críticas
+            </th>
+            <th className="text-center" scope="col">
+              Advertencias
+            </th>
+            <th className="text-center" scope="col">
+              Mejoras
+            </th>
+            <th className="text-center" scope="col">
+              Puntaje global
+            </th>
+            <th className="text-end" scope="col">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {files.map((file) => (
+            <ProjectFileRow
+              key={file.id}
+              file={file}
+              projectId={projectId}
+              navigate={navigate}
+              onRequestDelete={onRequestDelete}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function useProjectDashboard(projectId) {
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [files, setFiles] = useState([]);
@@ -57,23 +486,13 @@ const ProjectDashboard = () => {
     setEditing(null);
 
     const id = projectId;
-    return getProjectById(id)
-      .then((proj) => {
-        if (proj && typeof proj === 'object') {
-          setProject({
-            id: proj.id,
-            name: (proj.name ?? 'Proyecto').slice(0, PROJECT_NAME_MAX_LENGTH),
-            description: (proj.description ?? '').slice(0, PROJECT_DESCRIPTION_MAX_LENGTH),
-          });
-        } else {
-          setProject(null);
-        }
-        return getProjectFiles(id);
-      })
-      .then((fileList) => {
+    return (async () => {
+      try {
+        const proj = await getProjectById(id);
+        setProject(buildProjectFromApi(proj));
+        const fileList = await getProjectFiles(id);
         setFiles(Array.isArray(fileList) ? fileList : []);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (err && typeof err === 'object' && err.status === 404) {
           setNotFound(true);
           setProject(null);
@@ -82,10 +501,10 @@ const ProjectDashboard = () => {
         }
         setLoadError(getApiErrorMessage(err, 'No se pudo cargar el proyecto o los archivos.'));
         setFiles([]);
-      })
-      .finally(() => {
+      } finally {
         setLoading(false);
-      });
+      }
+    })();
   }, [projectId]);
 
   useEffect(() => {
@@ -182,7 +601,7 @@ const ProjectDashboard = () => {
       await deleteProjectFile(projectId, fileDeleteTarget.id);
       setFileDeleteTarget(null);
       const reload = loadData();
-      if (reload) await reload;
+      if (reload !== undefined) await reload;
       notifySuccess('Archivo eliminado correctamente.');
     } catch (err) {
       notifyError(getApiErrorMessage(err, 'No se pudo eliminar el archivo.'));
@@ -191,79 +610,78 @@ const ProjectDashboard = () => {
     }
   }, [fileDeleteTarget, projectId, loadData]);
 
+  const onDraftNameChange = useCallback((e) => {
+    setDraftName(e.target.value.slice(0, PROJECT_NAME_MAX_LENGTH));
+  }, []);
+
+  const onDraftDescChange = useCallback((e) => {
+    const v = e.target.value.slice(0, PROJECT_DESCRIPTION_MAX_LENGTH);
+    setDraftDesc(v);
+    resizeDescriptionField(e.target);
+  }, []);
+
+  return {
+    navigate,
+    project,
+    files,
+    loading,
+    loadError,
+    notFound,
+    editing,
+    draftName,
+    draftDesc,
+    saving,
+    fileDeleteTarget,
+    fileDeleting,
+    fileDeleteTitleId,
+    nameInputRef,
+    descInputRef,
+    beginEditName,
+    beginEditDescription,
+    commitName,
+    commitDescription,
+    handleConfirmDeleteFile,
+    setFileDeleteTarget,
+    onDraftNameChange,
+    onDraftDescChange,
+  };
+}
+
+const ProjectDashboard = () => {
+  const { projectId } = useParams();
+  const {
+    navigate,
+    project,
+    files,
+    loading,
+    loadError,
+    notFound,
+    editing,
+    draftName,
+    draftDesc,
+    saving,
+    fileDeleteTarget,
+    fileDeleting,
+    fileDeleteTitleId,
+    nameInputRef,
+    descInputRef,
+    beginEditName,
+    beginEditDescription,
+    commitName,
+    commitDescription,
+    handleConfirmDeleteFile,
+    setFileDeleteTarget,
+    onDraftNameChange,
+    onDraftDescChange,
+  } = useProjectDashboard(projectId);
+
   if (notFound) {
     return <Navigate to="/dashboard" replace />;
   }
 
   const projectName = project?.name ?? 'Proyecto';
   const projectDescription = project?.description ?? '';
-  const breadcrumbLabel = loading ? '…' : editing === 'name' ? draftName.trim() || '…' : projectName;
-
-  const fileDeleteModal =
-    typeof document !== 'undefined' && fileDeleteTarget
-      ? createPortal(
-          <>
-            <div
-              className="modal-backdrop fade show"
-              aria-hidden="true"
-              onClick={() => !fileDeleting && setFileDeleteTarget(null)}
-            />
-            <div
-              className="modal fade show d-block"
-              tabIndex={-1}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={fileDeleteTitleId}
-            >
-              <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <h5 className="modal-title" id={fileDeleteTitleId}>
-                      Eliminar archivo
-                    </h5>
-                    <button
-                      type="button"
-                      className="btn-close"
-                      aria-label="Cerrar"
-                      disabled={fileDeleting}
-                      onClick={() => setFileDeleteTarget(null)}
-                    >
-                    </button>
-                  </div>
-                  <div className="modal-body">
-                    ¿Seguro que deseas eliminar{' '}
-                    <span className="fw-semibold">&quot;{fileDeleteTarget.name}&quot;</span> de este proyecto? Esta
-                    acción es irreversible. Si más adelante subes otro archivo con el mismo nombre, se creará un
-                    registro nuevo (no restaura este).
-                  </div>
-                  <div className="modal-footer">
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      disabled={fileDeleting}
-                      onClick={() => setFileDeleteTarget(null)}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-danger d-inline-flex align-items-center gap-2"
-                      disabled={fileDeleting}
-                      onClick={handleConfirmDeleteFile}
-                    >
-                      {fileDeleting && (
-                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
-                      )}
-                      Eliminar archivo
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>,
-          document.body,
-        )
-      : null;
+  const breadcrumbLabel = getBreadcrumbLabel(loading, editing, draftName, projectName);
 
   return (
     <section>
@@ -283,119 +701,29 @@ const ProjectDashboard = () => {
 
       <div className="row g-3 align-items-start mb-4">
         <div className="col-12 col-md min-w-0">
-          <div className="d-flex flex-column gap-1 mb-1">
-            <div className="d-inline-flex flex-wrap align-items-baseline gap-2 max-w-100">
-              {editing === 'name' ? (
-                <input
-                  ref={nameInputRef}
-                  type="text"
-                  className="oc-project-inline-title min-w-0"
-                  size={Math.min(
-                    PROJECT_NAME_MAX_LENGTH,
-                    Math.max(8, draftName.length + 1),
-                  )}
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value.slice(0, PROJECT_NAME_MAX_LENGTH))}
-                  onBlur={commitName}
-                  maxLength={PROJECT_NAME_MAX_LENGTH}
-                  aria-label="Nombre del proyecto"
-                />
-              ) : (
-                <h1
-                  className="fw-bold fs-4 mb-0 text-break min-w-0"
-                  style={{ color: 'var(--oc-navy)', cursor: loading ? 'default' : 'pointer' }}
-                  role={loading ? undefined : 'button'}
-                  tabIndex={loading ? undefined : 0}
-                  title={loading ? undefined : 'Clic para editar'}
-                  onClick={loading ? undefined : beginEditName}
-                  onKeyDown={
-                    loading
-                      ? undefined
-                      : (e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            beginEditName();
-                          }
-                        }
-                  }
-                >
-                  {loading ? 'Cargando…' : projectName}
-                </h1>
-              )}
-              {!loading && editing !== 'name' && (
-                <span className="badge bg-light text-secondary fw-normal" style={{ fontSize: '0.75rem' }}>
-                  {files.length} {files.length === 1 ? 'archivo' : 'archivos'}
-                </span>
-              )}
-              {saving && (
-                <span className="text-secondary small" aria-live="polite">
-                  Guardando…
-                </span>
-              )}
-            </div>
-            {editing === 'name' && (
-              <span className="text-muted align-self-end" style={{ fontSize: '0.7rem' }}>
-                {draftName.length}/{PROJECT_NAME_MAX_LENGTH}
-              </span>
-            )}
-          </div>
+          <ProjectTitleBlock
+            loading={loading}
+            editing={editing}
+            draftName={draftName}
+            projectName={projectName}
+            fileCount={files.length}
+            saving={saving}
+            nameInputRef={nameInputRef}
+            onDraftNameChange={onDraftNameChange}
+            onCommitName={commitName}
+            onBeginEditName={beginEditName}
+          />
 
-          <div className="d-flex flex-column gap-1">
-            {editing === 'description' ? (
-              <>
-                <textarea
-                  ref={descInputRef}
-                  className="oc-project-inline-desc"
-                  rows={1}
-                  value={draftDesc}
-                  placeholder="Añade una descripción"
-                  maxLength={PROJECT_DESCRIPTION_MAX_LENGTH}
-                  onChange={(e) => {
-                    const v = e.target.value.slice(0, PROJECT_DESCRIPTION_MAX_LENGTH);
-                    setDraftDesc(v);
-                    resizeDescriptionField(e.target);
-                  }}
-                  onBlur={commitDescription}
-                  aria-label="Descripción del proyecto"
-                />
-                <span className="text-muted align-self-end" style={{ fontSize: '0.7rem' }}>
-                  {draftDesc.length}/{PROJECT_DESCRIPTION_MAX_LENGTH}
-                </span>
-              </>
-            ) : (
-              <>
-                <p
-                  className="small mb-0 text-break"
-                  style={{ lineHeight: 1.65, cursor: loading ? 'default' : 'pointer' }}
-                  role={loading ? undefined : 'button'}
-                  tabIndex={loading ? undefined : 0}
-                  title={loading ? undefined : 'Clic para editar'}
-                  onClick={loading ? undefined : beginEditDescription}
-                  onKeyDown={
-                    loading
-                      ? undefined
-                      : (e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            beginEditDescription();
-                          }
-                        }
-                  }
-                >
-                  {projectDescription.trim() ? (
-                    <span className="text-secondary">{projectDescription}</span>
-                  ) : (
-                    !loading && <span className="text-secondary fst-italic">Añade una descripción</span>
-                  )}
-                </p>
-                {!loading && (
-                  <span className="text-muted" style={{ fontSize: '0.65rem' }}>
-                    {projectDescription.length}/{PROJECT_DESCRIPTION_MAX_LENGTH}
-                  </span>
-                )}
-              </>
-            )}
-          </div>
+          <ProjectDescriptionBlock
+            loading={loading}
+            editing={editing}
+            draftDesc={draftDesc}
+            projectDescription={projectDescription}
+            descInputRef={descInputRef}
+            onDraftDescChange={onDraftDescChange}
+            onCommitDescription={commitDescription}
+            onBeginEditDescription={beginEditDescription}
+          />
         </div>
         <div className="col-12 col-md-auto d-grid d-md-block">
           <button
@@ -417,122 +745,22 @@ const ProjectDashboard = () => {
       )}
 
       <div className="card overflow-hidden border-0 shadow-sm">
-        {loading ? (
-          <div className="d-flex flex-column align-items-center justify-content-center py-5 gap-2">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Cargando archivos</span>
-            </div>
-            <p className="text-secondary small mb-0">Cargando archivos del proyecto…</p>
-          </div>
-        ) : (
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th scope="col">Archivo</th>
-                  <th scope="col">Última modificación</th>
-                  <th className="text-center" scope="col">
-                    Críticas
-                  </th>
-                  <th className="text-center" scope="col">
-                    Advertencias
-                  </th>
-                  <th className="text-center" scope="col">
-                    Mejoras
-                  </th>
-                  <th className="text-center" scope="col">
-                    Puntaje global
-                  </th>
-                  <th className="text-end" scope="col">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {files.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center text-secondary py-5">
-                      No hay archivos subidos. Usa &quot;Subir archivos&quot; para añadir HTML o CSS.
-                    </td>
-                  </tr>
-                ) : (
-                  files.map((file) => (
-                    <tr
-                      key={file.id}
-                      onClick={() => navigate(`/projects/${projectId}/files/${file.id}`)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <td className="fw-medium text-break p-0" style={{ color: 'var(--oc-royal)' }}>
-                        <Link
-                          className="d-block px-3 py-2 text-decoration-none text-break"
-                          style={{ color: 'var(--oc-royal)' }}
-                          to={`/projects/${projectId}/files/${file.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {file.name}
-                          {file.fileType ? (
-                            <span className="text-secondary fw-normal small ms-1">({file.fileType})</span>
-                          ) : null}
-                        </Link>
-                      </td>
-                      <td className="text-secondary text-nowrap">{file.date}</td>
-                      <td className="text-center">
-                        {file.critical > 0 ? (
-                          <span className="fw-bold text-danger">{file.critical}</span>
-                        ) : (
-                          <span className="text-secondary">0</span>
-                        )}
-                      </td>
-                      <td className="text-center">
-                        {file.warnings > 0 ? (
-                          <span className="fw-medium text-warning">{file.warnings}</span>
-                        ) : (
-                          <span className="text-secondary">0</span>
-                        )}
-                      </td>
-                      <td className="text-center">
-                        {file.improvements > 0 ? (
-                          <span className="fw-medium" style={{ color: 'var(--oc-royal)' }}>{file.improvements}</span>
-                        ) : (
-                          <span className="text-secondary">0</span>
-                        )}
-                      </td>
-                      <td className="text-center">
-                        <div className="d-flex justify-content-center">
-                          {file.score === null ? (
-                            <span className="text-secondary small">—</span>
-                          ) : (
-                            <ScoreBadge score={file.score} size="lg" />
-                          )}
-                        </div>
-                      </td>
-                      <td
-                        className="text-end align-middle"
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
-                          aria-label={`Eliminar archivo ${file.name}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFileDeleteTarget({ id: file.id, name: file.name });
-                          }}
-                        >
-                          <DeleteOutlineIcon style={{ fontSize: '1.125rem' }} aria-hidden />
-                          <span className="d-none d-md-inline">Eliminar</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <ProjectFilesTable
+          loading={loading}
+          files={files}
+          projectId={projectId}
+          navigate={navigate}
+          onRequestDelete={setFileDeleteTarget}
+        />
       </div>
-      {fileDeleteModal}
+
+      <DeleteFileModal
+        target={fileDeleteTarget}
+        fileDeleting={fileDeleting}
+        titleId={fileDeleteTitleId}
+        onClose={() => setFileDeleteTarget(null)}
+        onConfirm={handleConfirmDeleteFile}
+      />
     </section>
   );
 };

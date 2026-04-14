@@ -107,7 +107,11 @@ const ErrorDetail = () => {
       try {
         const list = await getFileFindings(projectId, fileId);
         if (!mounted) return;
-        setErrors(Array.isArray(list) ? list.map(normalizeFinding) : []);
+        setErrors(
+          Array.isArray(list)
+            ? list.map((finding, index) => normalizeFinding(finding, index))
+            : [],
+        );
         setHasData(true);
       } catch {
         const result = loadAuditResult(projectId, fileId);
@@ -119,7 +123,7 @@ const ErrorDetail = () => {
               { toastId: `findings-cache-${projectId}-${fileId}` },
             );
           }
-          setErrors(findings.map(normalizeFinding));
+          setErrors(findings.map((finding, index) => normalizeFinding(finding, index)));
           setHasData(result !== null);
         }
       } finally {
