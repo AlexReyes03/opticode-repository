@@ -10,3 +10,6 @@ opticode_frontend/.env
 # RSA
 auth_rsa.pe
 opticode_backend/auth_rsa.pem
+
+# Documentación y pruebas locales (no versionar)
+docs/
