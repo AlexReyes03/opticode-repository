@@ -9,7 +9,7 @@
  *   GET  /api/auth/crypto/public-key/ — AuthPublicKeyView: { enabled, public_key_pem?, key_id? }.
  *   POST /api/auth/login/     — LoginView: { email, password } o { email_cipher, password_cipher, key_id },
  *                               devuelve { access, refresh }. No se envía Authorization.
- *   POST /api/token/refresh/  — TokenRefreshView: recibe { refresh },
+ *   POST /api/auth/token/refresh/  — TokenRefreshView: recibe { refresh },
  *                               devuelve { access } y { refresh } si ROTATE_REFRESH_TOKENS=True.
  *   Rutas en `isAnonymousAuthEndpoint`: sin header Bearer (evita 401 por access expirado).
  *
@@ -121,7 +121,7 @@ function buildMultipartBody({ body = {}, files }) {
 }
 
 /**
- * Llama a POST /api/token/refresh/ con el refresh token almacenado.
+ * Llama a POST /api/auth/token/refresh/ con el refresh token almacenado.
  * Compatible con ROTATE_REFRESH_TOKENS=True: si el backend devuelve un nuevo `refresh`, se persiste.
  * @returns {Promise<{ access: string, refresh?: string }>}
  */
@@ -129,7 +129,7 @@ async function refreshAccessToken() {
   const refresh = tokenProvider?.getRefreshToken?.();
   if (!refresh) throw new Error('No hay refresh token disponible.');
 
-  const res  = await fetch(`${BASE_URL.replace(/\/$/, '')}/api/token/refresh/`, {
+  const res  = await fetch(`${BASE_URL.replace(/\/$/, '')}/api/auth/token/refresh/`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ refresh }),
@@ -296,7 +296,7 @@ export default async function request(
     normalizedEndpoint.includes('/api/auth/forgot-password') ||
     normalizedEndpoint.includes('/api/auth/reset-password') ||
     normalizedEndpoint.includes('/api/reset-password') ||
-    normalizedEndpoint.includes('/api/token/refresh');
+    normalizedEndpoint.includes('/api/auth/token/refresh');
 
   let opts = { method, headers: { ...headers }, signal };
 
