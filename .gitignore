@@ -7,9 +7,8 @@ opticode_backend/.env
 opticode_frontend/.env
 .cursor/
 
-# RSA
-auth_rsa.pe
-opticode_backend/auth_rsa.pem
+# RSA (clave privada; no versionar)
+auth_rsa.pem
 
 # Documentación local bajo docs/ (no versionar), excepto fixtures de prueba WCAG
 docs/*

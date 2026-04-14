@@ -2,12 +2,34 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 from corsheaders.defaults import default_headers  # noqa: F401
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")
+
+
+def _resolve_auth_rsa_private_key() -> str:
+    """
+    PEM desde AUTH_RSA_PRIVATE_KEY_FILE (ruta relativa a BASE_DIR o absoluta)
+    o, si está vacío, desde AUTH_RSA_PRIVATE_KEY (una línea con \\n).
+    """
+    key_file = env.str("AUTH_RSA_PRIVATE_KEY_FILE", default="").strip()
+    if key_file:
+        path = Path(key_file).expanduser()
+        if not path.is_absolute():
+            path = BASE_DIR / path
+        try:
+            pem = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise ImproperlyConfigured(
+                f"No se pudo leer AUTH_RSA_PRIVATE_KEY_FILE ({path}): {exc}"
+            ) from exc
+        return pem.strip()
+    return env.str("AUTH_RSA_PRIVATE_KEY", default="").replace("\\n", "\n")
+
 
 SECRET_KEY = env("SECRET_KEY")
 
@@ -104,8 +126,8 @@ AUTH_USER_MODEL = "authentication.User"
 JWT_ENABLED = env.bool("JWT_ENABLED", default=True)
 
 # Cifrado opcional de contraseñas en login/registro (RSA-OAEP SHA-256).
-# PEM en una sola línea usando \n como salto de línea, o dejar vacío para solo texto plano.
-AUTH_RSA_PRIVATE_KEY = env.str("AUTH_RSA_PRIVATE_KEY", default="").replace("\\n", "\n")
+# Ver _resolve_auth_rsa_private_key: archivo PEM o PEM en una línea; vacío = solo texto plano.
+AUTH_RSA_PRIVATE_KEY = _resolve_auth_rsa_private_key()
 AUTH_RSA_KEY_ID = env.str("AUTH_RSA_KEY_ID", default="v1")
 
 REST_FRAMEWORK = {

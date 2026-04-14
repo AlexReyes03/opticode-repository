@@ -12,6 +12,10 @@ globals().update(
 
 DEBUG = True
 
+# CORS permisivo en desarrollo (Vite en :5173, Docker Nginx en :8080, IPs locales).
+# En producción (DJANGO_ENV=production) no aplica este módulo.
+CORS_ALLOW_ALL_ORIGINS = True
+
 setup_logging(LOGURU_CONFIG)
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
