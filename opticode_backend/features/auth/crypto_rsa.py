@@ -1,4 +1,4 @@
-"""RSA-OAEP (SHA-256) alineado con Web Crypto API del frontend."""
+"""RSA-OAEP (SHA-256) alineado con el cliente (Web Crypto o node-forge, mismo padding)."""
 
 from __future__ import annotations
 
