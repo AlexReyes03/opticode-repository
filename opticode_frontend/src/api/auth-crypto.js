@@ -1,3 +1,4 @@
+import forge from 'node-forge';
 import request from './fetch-wrapper';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -8,8 +9,8 @@ export const RSA_OAEP_SHA256_MAX_UTF8_BYTES = 190;
 let bundleCache = { expiresAt: 0, data: null };
 
 /**
- * Web Crypto (RSA-OAEP) solo está disponible en contextos seguros:
- * HTTPS, localhost y 127.0.0.1. Con http://IP-LAN:5173 falla y hay que usar plano o HTTPS.
+ * Web Crypto (`crypto.subtle`) solo existe en contextos seguros (HTTPS, localhost, 127.0.0.1).
+ * En HTTP con otro host (p. ej. IP de LAN) se usa `node-forge` para el mismo RSA-OAEP SHA-256.
  */
 function isWebCryptoSubtleAvailable() {
   return (
@@ -74,11 +75,12 @@ function pemSpkiToArrayBuffer(pem) {
 }
 
 /**
+ * RSA-OAEP SHA-256 + MGF1-SHA-256 (alineado con `cryptography` en el backend).
  * @param {string} publicKeyPem
  * @param {string} plainUtf8
  * @returns {Promise<string>} Base64 del ciphertext
  */
-async function rsaOaepSha256EncryptBase64(publicKeyPem, plainUtf8) {
+async function rsaOaepSha256EncryptWithSubtle(publicKeyPem, plainUtf8) {
   const key = await crypto.subtle.importKey(
     'spki',
     pemSpkiToArrayBuffer(publicKeyPem),
@@ -101,6 +103,35 @@ async function rsaOaepSha256EncryptBase64(publicKeyPem, plainUtf8) {
 }
 
 /**
+ * Misma semántica que SubtleCrypto, pero funciona en orígenes HTTP no seguros.
+ * @param {string} publicKeyPem
+ * @param {string} plainUtf8
+ * @returns {string} Base64 del ciphertext
+ */
+function rsaOaepSha256EncryptWithForge(publicKeyPem, plainUtf8) {
+  const publicKey = forge.pki.publicKeyFromPem(String(publicKeyPem ?? '').trim());
+  const md = forge.md.sha256.create();
+  const encrypted = publicKey.encrypt(forge.util.encodeUtf8(String(plainUtf8 ?? '')), 'RSA-OAEP', {
+    md,
+    mgf1: { md: forge.md.sha256.create() },
+  });
+  return forge.util.encode64(encrypted);
+}
+
+/**
+ * Prefiere Web Crypto en contextos seguros; si no hay `subtle`, usa node-forge.
+ * @param {string} publicKeyPem
+ * @param {string} plainUtf8
+ * @returns {Promise<string>}
+ */
+async function rsaOaepSha256EncryptBase64(publicKeyPem, plainUtf8) {
+  if (isWebCryptoSubtleAvailable()) {
+    return rsaOaepSha256EncryptWithSubtle(publicKeyPem, plainUtf8);
+  }
+  return rsaOaepSha256EncryptWithForge(publicKeyPem, plainUtf8);
+}
+
+/**
  * Cifra un texto UTF-8 con la clave pública del backend, o indica modo plano.
  * @param {string} plainUtf8
  * @param {string} [fieldLabel='Campo']
@@ -112,12 +143,7 @@ async function rsaOaepSha256EncryptBase64(publicKeyPem, plainUtf8) {
 export async function buildPasswordCryptoFields(plainUtf8, fieldLabel = 'Campo') {
   assertRsaOaepUtf8Length(plainUtf8, fieldLabel);
   const bundle = await fetchAuthCryptoBundle();
-  if (
-    !bundle?.enabled ||
-    typeof bundle.public_key_pem !== 'string' ||
-    !bundle.public_key_pem.trim() ||
-    !isWebCryptoSubtleAvailable()
-  ) {
+  if (!bundle?.enabled || typeof bundle.public_key_pem !== 'string' || !bundle.public_key_pem.trim()) {
     return { usePlainPassword: true };
   }
   const password_cipher = await rsaOaepSha256EncryptBase64(
@@ -145,12 +171,7 @@ export async function buildRsaCiphersForPlainMap(plainByKey) {
   }
 
   const bundle = await fetchAuthCryptoBundle();
-  if (
-    !bundle?.enabled ||
-    typeof bundle.public_key_pem !== 'string' ||
-    !bundle.public_key_pem.trim() ||
-    !isWebCryptoSubtleAvailable()
-  ) {
+  if (!bundle?.enabled || typeof bundle.public_key_pem !== 'string' || !bundle.public_key_pem.trim()) {
     return { usePlain: true, plain: Object.fromEntries(entries.map(([k, v]) => [k, String(v ?? '')])) };
   }
 
