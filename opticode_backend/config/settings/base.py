@@ -129,3 +129,7 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+# Límite de intentos de login por correo (features.auth.services.login_throttle)
+LOGIN_THROTTLE_MAX_ATTEMPTS = env.int("LOGIN_THROTTLE_MAX_ATTEMPTS", default=5)
+LOGIN_THROTTLE_LOCK_MINUTES = env.int("LOGIN_THROTTLE_LOCK_MINUTES", default=30)
+

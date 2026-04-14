@@ -11,6 +11,12 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .crypto_rsa import public_key_bundle
+from .services import (
+    check_login_throttle_before_auth,
+    clear_login_throttle,
+    normalize_login_email,
+    record_failed_login,
+)
 from .serializers import (
     ChangePasswordSerializer,
     ForgotPasswordSerializer,
@@ -50,16 +56,21 @@ class LoginView(views.APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             password = serializer.validated_data['password']
+            email_key = normalize_login_email(email)
+            blocked = check_login_throttle_before_auth(request, email_key)
+            if blocked is not None:
+                return blocked
+
             user = authenticate(request, username=email, password=password)
 
             if user is not None:
+                clear_login_throttle(email_key)
                 refresh = RefreshToken.for_user(user)
                 return Response({
                     'refresh': str(refresh),
                     'access': str(refresh.access_token),
                 }, status=status.HTTP_200_OK)
-            else:
-                return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
+            return record_failed_login(request, email_key)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

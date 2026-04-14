@@ -21,3 +21,25 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+class EmailLoginThrottle(models.Model):
+    """
+    Intentos fallidos de login por correo normalizado (persistente).
+    Tras MAX intentos, locked_until bloquea nuevos intentos durante LOCK minutos.
+    last_ip: última IP vista en un intento (servidor); si cambia (CGNAT/móvil), solo se actualiza.
+    """
+
+    email_normalized = models.EmailField("correo normalizado", max_length=254, unique=True, db_index=True)
+    failed_attempts = models.PositiveSmallIntegerField("intentos fallidos", default=0)
+    locked_until = models.DateTimeField("bloqueado hasta", null=True, blank=True)
+    last_ip = models.CharField("última IP de intento", max_length=45, null=True, blank=True)
+    updated_at = models.DateTimeField("actualizado", auto_now=True)
+
+    class Meta:
+        db_table = "auth_email_login_throttle"
+        verbose_name = "throttle de login por email"
+        verbose_name_plural = "throttles de login por email"
+
+    def __str__(self):
+        return f"{self.email_normalized} ({self.failed_attempts})"
