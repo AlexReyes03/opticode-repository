@@ -9,7 +9,7 @@
  *   GET  /api/auth/crypto/public-key/ — AuthPublicKeyView: { enabled, public_key_pem?, key_id? }.
  *   POST /api/auth/login/     — LoginView: { email, password } o { email_cipher, password_cipher, key_id },
  *                               devuelve { access, refresh }. No se envía Authorization.
- *   POST /api/token/refresh/  — TokenRefreshView: recibe { refresh },
+ *   POST /api/auth/token/refresh/  — TokenRefreshView: recibe { refresh },
  *                               devuelve { access } y { refresh } si ROTATE_REFRESH_TOKENS=True.
  *   Rutas en `isAnonymousAuthEndpoint`: sin header Bearer (evita 401 por access expirado).
  *
@@ -28,7 +28,7 @@ const ALLOWED_FILE_SPEC = {
 };
 
 const ALLOWED_EXTENSIONS = Object.values(ALLOWED_FILE_SPEC).flatMap((s) => s.extensions);
-const ALLOWED_MIME_TYPES  = Object.values(ALLOWED_FILE_SPEC).flatMap((s) => s.mimeTypes);
+const ALLOWED_MIME_TYPES = new Set(Object.values(ALLOWED_FILE_SPEC).flatMap((s) => s.mimeTypes));
 
 let authHandlers  = null;
 let errorHandlers = null;
@@ -80,10 +80,28 @@ const RETRY_CONFIG = {
   retryStatuses: [503],
 };
 
+const ANONYMOUS_AUTH_PATH_PREFIXES = [
+  '/api/auth/crypto/public-key',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
+  '/api/reset-password',
+  '/api/auth/token/refresh',
+];
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const shouldRetry = (status, attempt) =>
   attempt < RETRY_CONFIG.maxRetries && RETRY_CONFIG.retryStatuses.includes(status);
+
+/**
+ * @param {string} normalizedEndpoint
+ * @returns {boolean}
+ */
+function isAnonymousAuthEndpointPath(normalizedEndpoint) {
+  return ANONYMOUS_AUTH_PATH_PREFIXES.some((p) => normalizedEndpoint.includes(p));
+}
 
 /**
  * Valida extensión y MIME de un archivo. Lanza si no coincide con ZIP/HTML/CSS.
@@ -92,7 +110,7 @@ const shouldRetry = (status, attempt) =>
 function validateAllowedFile(file) {
   if (!(file instanceof File)) throw new Error('Se esperaba un objeto File.');
   const ext    = ALLOWED_EXTENSIONS.find((e) => file.name.toLowerCase().endsWith(e));
-  const mimeOk = ALLOWED_MIME_TYPES.includes(file.type);
+  const mimeOk = ALLOWED_MIME_TYPES.has(file.type);
   if (!ext || !mimeOk) {
     throw new Error(
       `Tipo de archivo no permitido. Aceptados: ${ALLOWED_EXTENSIONS.join(', ')}.`
@@ -121,7 +139,42 @@ function buildMultipartBody({ body = {}, files }) {
 }
 
 /**
- * Llama a POST /api/token/refresh/ con el refresh token almacenado.
+ * Construye opciones de fetch (JSON, FormData o multipart).
+ * @param {{ method: string, body: unknown, files: unknown[], headers: Record<string, string>, signal?: AbortSignal }} params
+ */
+function buildRequestOptions({ method, body, files, headers, signal }) {
+  const opts = { method, headers: { ...headers }, signal };
+  const hasFiles = Array.isArray(files) && files.length > 0;
+  if (hasFiles) {
+    opts.body = buildMultipartBody({
+      body: body && typeof body === 'object' && !(body instanceof FormData) ? body : {},
+      files,
+    });
+    return opts;
+  }
+  if (body !== null && body !== undefined) {
+    if (body instanceof FormData) {
+      opts.body = body;
+    } else {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+  }
+  return opts;
+}
+
+/**
+ * @param {object} opts
+ * @param {boolean} skipBearer
+ */
+function applyBearerIfNeeded(opts, skipBearer) {
+  if (skipBearer) return;
+  const access = tokenProvider?.getAccessToken?.();
+  if (access) opts.headers['Authorization'] = `Bearer ${access}`;
+}
+
+/**
+ * Llama a POST /api/auth/token/refresh/ con el refresh token almacenado.
  * Compatible con ROTATE_REFRESH_TOKENS=True: si el backend devuelve un nuevo `refresh`, se persiste.
  * @returns {Promise<{ access: string, refresh?: string }>}
  */
@@ -129,7 +182,7 @@ async function refreshAccessToken() {
   const refresh = tokenProvider?.getRefreshToken?.();
   if (!refresh) throw new Error('No hay refresh token disponible.');
 
-  const res  = await fetch(`${BASE_URL.replace(/\/$/, '')}/api/token/refresh/`, {
+  const res  = await fetch(`${BASE_URL.replace(/\/$/, '')}/api/auth/token/refresh/`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ refresh }),
@@ -144,6 +197,20 @@ async function refreshAccessToken() {
     throw err;
   }
   return data;
+}
+
+/**
+ * @param {string} url
+ * @param {object} baseOpts
+ * @returns {Promise<unknown>}
+ */
+async function tryRefreshAndReplay(url, baseOpts) {
+  const tokens = await refreshAccessToken();
+  tokenProvider.setTokens(tokens.access, tokens.refresh ?? tokenProvider.getRefreshToken());
+  const opts = { ...baseOpts, headers: { ...baseOpts.headers } };
+  applyBearerIfNeeded(opts, false);
+  const { data } = await doRequest(url, opts);
+  return data ?? null;
 }
 
 /**
@@ -216,6 +283,10 @@ function isGenericHttpMessage(message) {
 export function getApiErrorMessage(err, fallback = 'Ocurrió un error. Intenta de nuevo.') {
   if (!err || typeof err !== 'object') return fallback;
   const data = err.data;
+  if (data && typeof data === 'object' && data.locked === true && typeof data.error === 'string') {
+    const lockedMsg = data.error.trim();
+    if (lockedMsg) return lockedMsg;
+  }
   const fromBody = messageFromErrorBody(data);
   if (fromBody && !isGenericHttpMessage(fromBody)) return fromBody;
   const fieldMsg = firstFieldValidationMessage(data);
@@ -245,6 +316,70 @@ async function doRequest(url, opts) {
     throw err;
   }
   return { data, status: res.status };
+}
+
+/**
+ * @typedef {{ kind: 'retry' }} RetryOutcome
+ * @typedef {{ kind: 'return', data: unknown }} ReturnOutcome
+ * @typedef {{ kind: 'throw', error: Error }} ThrowOutcome
+ * @typedef {RetryOutcome | ReturnOutcome | ThrowOutcome} FailureOutcome
+ */
+
+/**
+ * @param {Error & { status?: number }} error
+ * @param {{ url: string, opts: object, normalizedEndpoint: string, isAnonymousAuthEndpoint: boolean, attempt: number }} ctx
+ * @returns {Promise<FailureOutcome>}
+ */
+async function handleRequestFailure(error, ctx) {
+  const { url, opts, normalizedEndpoint, isAnonymousAuthEndpoint, attempt } = ctx;
+
+  if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+    if (shouldRetry(503, attempt)) {
+      return { kind: 'retry' };
+    }
+    errorHandlers?.handleServerError?.(0, 'Error de conexión. Verifica tu conexión a internet.');
+    const networkError = new Error('Error de conexión. Verifica tu conexión a internet.');
+    networkError.status = 0;
+    return { kind: 'throw', error: networkError };
+  }
+
+  if (
+    error.status === 401 &&
+    !isAnonymousAuthEndpoint &&
+    tokenProvider?.getRefreshToken &&
+    tokenProvider?.setTokens
+  ) {
+    try {
+      const data = await tryRefreshAndReplay(url, opts);
+      return { kind: 'return', data };
+    } catch (refreshErr) {
+      authHandlers?.handleAuthError?.(401, refreshErr.message ?? 'Sesión expirada.', normalizedEndpoint, true);
+      return { kind: 'throw', error: refreshErr };
+    }
+  }
+
+  if (error.status === 401 && !isAnonymousAuthEndpoint) {
+    authHandlers?.handleAuthError?.(
+      error.status,
+      error.message ?? 'No autorizado.',
+      normalizedEndpoint,
+      Boolean(tokenProvider?.getAccessToken?.()),
+    );
+  }
+
+  if (error.status === 500) {
+    errorHandlers?.handleServerError?.(500, error.message ?? 'Error interno del servidor.');
+  }
+
+  if (error.status === 503 && shouldRetry(503, attempt)) {
+    return { kind: 'retry' };
+  }
+
+  if (error.status === 503 && attempt >= RETRY_CONFIG.maxRetries) {
+    errorHandlers?.handleServerError?.(503, 'El servicio no está disponible después de varios intentos.');
+  }
+
+  return { kind: 'throw', error };
 }
 
 /**
@@ -283,45 +418,10 @@ export default async function request(
 ) {
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${BASE_URL.replace(/\/$/, '')}${normalizedEndpoint}`;
+  const isAnonymousAuthEndpoint = isAnonymousAuthEndpointPath(normalizedEndpoint);
 
-  /**
-   * Rutas donde no debe enviarse JWT: el backend valida el Bearer antes del cuerpo
-   * (p. ej. login con access expirado en localStorage → 401 token_not_valid).
-   * Tampoco deben disparar refresh automático ante 401.
-   */
-  const isAnonymousAuthEndpoint =
-    normalizedEndpoint.includes('/api/auth/crypto/public-key') ||
-    normalizedEndpoint.includes('/api/auth/login') ||
-    normalizedEndpoint.includes('/api/auth/register') ||
-    normalizedEndpoint.includes('/api/auth/forgot-password') ||
-    normalizedEndpoint.includes('/api/auth/reset-password') ||
-    normalizedEndpoint.includes('/api/reset-password') ||
-    normalizedEndpoint.includes('/api/token/refresh');
-
-  let opts = { method, headers: { ...headers }, signal };
-
-  const hasFiles = Array.isArray(files) && files.length > 0;
-  if (hasFiles) {
-    opts.body = buildMultipartBody({
-      body: body && typeof body === 'object' && !(body instanceof FormData) ? body : {},
-      files,
-    });
-  } else if (body !== null && body !== undefined) {
-    if (body instanceof FormData) {
-      opts.body = body;
-    } else {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.body = JSON.stringify(body);
-    }
-  }
-
-  const attachAuth = () => {
-    if (isAnonymousAuthEndpoint) return;
-    const access = tokenProvider?.getAccessToken?.();
-    if (access) opts.headers['Authorization'] = `Bearer ${access}`;
-  };
-
-  attachAuth();
+  let opts = buildRequestOptions({ method, body, files, headers, signal });
+  applyBearerIfNeeded(opts, isAnonymousAuthEndpoint);
 
   let lastError = null;
   let attempt   = 0;
@@ -332,58 +432,19 @@ export default async function request(
       return data ?? null;
     } catch (error) {
       lastError = error;
+      const outcome = await handleRequestFailure(error, {
+        url,
+        opts,
+        normalizedEndpoint,
+        isAnonymousAuthEndpoint,
+        attempt,
+      });
 
-      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        if (shouldRetry(503, attempt)) {
-          attempt++;
-          await delay(RETRY_CONFIG.retryDelay * attempt);
-          continue;
-        }
-        errorHandlers?.handleServerError?.(0, 'Error de conexión. Verifica tu conexión a internet.');
-        const networkError = new Error('Error de conexión. Verifica tu conexión a internet.');
-        networkError.status = 0;
-        throw networkError;
-      }
+      if (outcome.kind === 'return') return outcome.data;
+      if (outcome.kind === 'throw') throw outcome.error;
 
-      if (error.status === 401 && !isAnonymousAuthEndpoint && tokenProvider?.getRefreshToken && tokenProvider?.setTokens) {
-        try {
-          const tokens = await refreshAccessToken();
-          tokenProvider.setTokens(tokens.access, tokens.refresh ?? tokenProvider.getRefreshToken());
-          opts = { ...opts, headers: { ...opts.headers } };
-          attachAuth();
-          const { data } = await doRequest(url, opts);
-          return data ?? null;
-        } catch (refreshErr) {
-          authHandlers?.handleAuthError?.(401, refreshErr.message ?? 'Sesión expirada.', normalizedEndpoint, true);
-          throw refreshErr;
-        }
-      }
-
-      /* Solo 401 implica sesión inválida; 403 es permiso sobre el recurso y no debe borrar tokens. */
-      if (error.status === 401 && !isAnonymousAuthEndpoint) {
-        authHandlers?.handleAuthError?.(
-          error.status,
-          error.message ?? 'No autorizado.',
-          normalizedEndpoint,
-          Boolean(tokenProvider?.getAccessToken?.())
-        );
-      }
-
-      if (error.status === 500) {
-        errorHandlers?.handleServerError?.(500, error.message ?? 'Error interno del servidor.');
-      }
-
-      if (error.status === 503 && shouldRetry(503, attempt)) {
-        attempt++;
-        await delay(RETRY_CONFIG.retryDelay * attempt);
-        continue;
-      }
-
-      if (error.status === 503 && attempt >= RETRY_CONFIG.maxRetries) {
-        errorHandlers?.handleServerError?.(503, 'El servicio no está disponible después de varios intentos.');
-      }
-
-      throw lastError;
+      attempt++;
+      await delay(RETRY_CONFIG.retryDelay * attempt);
     }
   }
 

@@ -1,10 +1,14 @@
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from rest_framework import serializers
 
 from .crypto_rsa import decrypt_oaep_b64, rsa_configured
 
 User = get_user_model()
+
+_ERR_RSA_NOT_CONFIGURED = "El servidor no tiene cifrado de credenciales configurado."
+
+_MSG_EMAIL_REQUIRED = "Indica el correo o envía email_cipher cifrado con la clave pública."
+_MSG_PASSWORD_REQUIRED = "Indica la contraseña o envía password_cipher cifrado con la clave pública."
 
 
 def _validate_password_policy(value):
@@ -15,6 +19,48 @@ def _validate_password_policy(value):
     if not any(char.isdigit() for char in value):
         raise serializers.ValidationError("La contraseña debe contener al menos un número.")
     return value
+
+
+def _require_rsa_and_decrypt(cipher_b64: str, key_id, field_key: str) -> str:
+    if not rsa_configured():
+        raise serializers.ValidationError({field_key: _ERR_RSA_NOT_CONFIGURED})
+    try:
+        return decrypt_oaep_b64(cipher_b64, key_id)
+    except ValueError as exc:
+        raise serializers.ValidationError({field_key: str(exc)}) from exc
+
+
+def _resolve_email_from_inputs(email_cipher: str, key_id, email_plain: str) -> str:
+    if email_cipher:
+        resolved = _require_rsa_and_decrypt(email_cipher, key_id, "email_cipher")
+        email_field = serializers.EmailField()
+        return email_field.run_validation(resolved)
+    if email_plain:
+        return email_plain
+    raise serializers.ValidationError({"email": _MSG_EMAIL_REQUIRED})
+
+
+def _resolve_password_from_inputs(password_cipher: str, key_id, password_plain: str) -> str:
+    if password_cipher:
+        return _require_rsa_and_decrypt(password_cipher, key_id, "password_cipher")
+    if not password_plain:
+        raise serializers.ValidationError({"password": _MSG_PASSWORD_REQUIRED})
+    return password_plain
+
+
+def _resolve_cipher_or_plain(
+    cipher: str,
+    plain: str,
+    key_id,
+    *,
+    cipher_field: str,
+    missing_error: dict,
+) -> str:
+    if cipher:
+        return _require_rsa_and_decrypt(cipher, key_id, cipher_field)
+    if plain:
+        return plain
+    raise serializers.ValidationError(missing_error)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -42,44 +88,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         email_cipher = (attrs.pop("email_cipher", None) or "").strip()
         key_id = (attrs.pop("key_id", None) or "").strip() or None
         email_plain = (attrs.get("email") or "").strip()
-
-        if email_cipher:
-            if not rsa_configured():
-                raise serializers.ValidationError(
-                    {"email_cipher": "El servidor no tiene cifrado de credenciales configurado."}
-                )
-            try:
-                resolved_email = decrypt_oaep_b64(email_cipher, key_id)
-            except ValueError as exc:
-                raise serializers.ValidationError({"email_cipher": str(exc)}) from exc
-            email_field = serializers.EmailField()
-            attrs["email"] = email_field.run_validation(resolved_email)
-        elif not email_plain:
-            raise serializers.ValidationError(
-                {"email": "Indica el correo o envía email_cipher cifrado con la clave pública."}
-            )
-        else:
-            attrs["email"] = email_plain
+        attrs["email"] = _resolve_email_from_inputs(email_cipher, key_id, email_plain)
 
         password_cipher = (attrs.pop("password_cipher", None) or "").strip()
         password_plain = (attrs.get("password") or "").strip()
-
-        if password_cipher:
-            if not rsa_configured():
-                raise serializers.ValidationError(
-                    {"password_cipher": "El servidor no tiene cifrado de credenciales configurado."}
-                )
-            try:
-                attrs["password"] = decrypt_oaep_b64(password_cipher, key_id)
-            except ValueError as exc:
-                raise serializers.ValidationError({"password_cipher": str(exc)}) from exc
-        elif not password_plain:
-            raise serializers.ValidationError(
-                {"password": "Indica la contraseña o envía password_cipher cifrado con la clave pública."}
-            )
-        else:
-            attrs["password"] = password_plain
-
+        attrs["password"] = _resolve_password_from_inputs(password_cipher, key_id, password_plain)
         attrs["password"] = _validate_password_policy(attrs["password"])
         return attrs
 
@@ -101,43 +114,11 @@ class LoginSerializer(serializers.Serializer):
         email_cipher = (attrs.pop("email_cipher", None) or "").strip()
         key_id = (attrs.pop("key_id", None) or "").strip() or None
         email_plain = (attrs.get("email") or "").strip()
-
-        if email_cipher:
-            if not rsa_configured():
-                raise serializers.ValidationError(
-                    {"email_cipher": "El servidor no tiene cifrado de credenciales configurado."}
-                )
-            try:
-                resolved_email = decrypt_oaep_b64(email_cipher, key_id)
-            except ValueError as exc:
-                raise serializers.ValidationError({"email_cipher": str(exc)}) from exc
-            email_field = serializers.EmailField()
-            attrs["email"] = email_field.run_validation(resolved_email)
-        elif email_plain:
-            attrs["email"] = email_plain
-        else:
-            raise serializers.ValidationError(
-                {"email": "Indica el correo o envía email_cipher cifrado con la clave pública."}
-            )
+        attrs["email"] = _resolve_email_from_inputs(email_cipher, key_id, email_plain)
 
         password_cipher = (attrs.pop("password_cipher", None) or "").strip()
         password_plain = (attrs.get("password") or "").strip()
-
-        if password_cipher:
-            if not rsa_configured():
-                raise serializers.ValidationError(
-                    {"password_cipher": "El servidor no tiene cifrado de credenciales configurado."}
-                )
-            try:
-                attrs["password"] = decrypt_oaep_b64(password_cipher, key_id)
-            except ValueError as exc:
-                raise serializers.ValidationError({"password_cipher": str(exc)}) from exc
-        elif not password_plain:
-            raise serializers.ValidationError(
-                {"password": "Indica la contraseña o envía password_cipher cifrado con la clave pública."}
-            )
-        else:
-            attrs["password"] = password_plain
+        attrs["password"] = _resolve_password_from_inputs(password_cipher, key_id, password_plain)
 
         if not attrs["password"]:
             raise serializers.ValidationError({"password": "La contraseña no puede estar vacía."})
@@ -186,55 +167,34 @@ class ChangePasswordSerializer(serializers.Serializer):
         new_plain = (attrs.pop("new_password", None) or "").strip()
         confirm_plain = (attrs.pop("confirm_password", None) or "").strip()
 
-        if current_cipher:
-            if not rsa_configured():
-                raise serializers.ValidationError(
-                    {"current_password_cipher": "El servidor no tiene cifrado de credenciales configurado."}
-                )
-            try:
-                current_resolved = decrypt_oaep_b64(current_cipher, key_id)
-            except ValueError as exc:
-                raise serializers.ValidationError({"current_password_cipher": str(exc)}) from exc
-        elif current_plain:
-            current_resolved = current_plain
-        else:
-            raise serializers.ValidationError(
-                {"current_password": "Indica la contraseña actual o envía current_password_cipher cifrado."}
-            )
-
-        if new_cipher:
-            if not rsa_configured():
-                raise serializers.ValidationError(
-                    {"new_password_cipher": "El servidor no tiene cifrado de credenciales configurado."}
-                )
-            try:
-                new_resolved = decrypt_oaep_b64(new_cipher, key_id)
-            except ValueError as exc:
-                raise serializers.ValidationError({"new_password_cipher": str(exc)}) from exc
-        elif new_plain:
-            new_resolved = new_plain
-        else:
-            raise serializers.ValidationError(
-                {"new_password": "Indica la nueva contraseña o envía new_password_cipher cifrado."}
-            )
-
+        current_resolved = _resolve_cipher_or_plain(
+            current_cipher,
+            current_plain,
+            key_id,
+            cipher_field="current_password_cipher",
+            missing_error={
+                "current_password": "Indica la contraseña actual o envía current_password_cipher cifrado."
+            },
+        )
+        new_resolved = _resolve_cipher_or_plain(
+            new_cipher,
+            new_plain,
+            key_id,
+            cipher_field="new_password_cipher",
+            missing_error={
+                "new_password": "Indica la nueva contraseña o envía new_password_cipher cifrado."
+            },
+        )
         new_resolved = _validate_password_policy(new_resolved)
-
-        if confirm_cipher:
-            if not rsa_configured():
-                raise serializers.ValidationError(
-                    {"confirm_password_cipher": "El servidor no tiene cifrado de credenciales configurado."}
-                )
-            try:
-                confirm_resolved = decrypt_oaep_b64(confirm_cipher, key_id)
-            except ValueError as exc:
-                raise serializers.ValidationError({"confirm_password_cipher": str(exc)}) from exc
-        elif confirm_plain:
-            confirm_resolved = confirm_plain
-        else:
-            raise serializers.ValidationError(
-                {"confirm_password": "Indica la confirmación o envía confirm_password_cipher cifrado."}
-            )
+        confirm_resolved = _resolve_cipher_or_plain(
+            confirm_cipher,
+            confirm_plain,
+            key_id,
+            cipher_field="confirm_password_cipher",
+            missing_error={
+                "confirm_password": "Indica la confirmación o envía confirm_password_cipher cifrado."
+            },
+        )
 
         if new_resolved != confirm_resolved:
             raise serializers.ValidationError({"confirm_password": "Las contraseñas no coinciden."})

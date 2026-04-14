@@ -9,6 +9,9 @@
 # Diferencias con producción:
 #   - Django en modo development (sin HTTPS forzado)
 #   - Nginx en puerto 8080 (el 80 requiere sudo en Mac)
+#   - Clave RSA: se monta opticode_backend/auth_rsa.pem → /app/auth_rsa.pem
+#     (no usar /app/rsa_keys/… aquí: choca con el volumen ./rsa-keys del compose base en Docker Desktop).
+#     Esta override fuerza la ruta (no hace falta cambiar deploy/.env si usas /app/rsa_keys en EC2).
 # ============================================================
 
 services:
@@ -17,6 +20,11 @@ services:
   web:
     environment:
       DJANGO_ENV: development
+      # Sobreescribe deploy/.env: el PEM se monta abajo en /app/auth_rsa.pem, no en rsa_keys/.
+      AUTH_RSA_PRIVATE_KEY_FILE: /app/auth_rsa.pem
+    volumes:
+      # Debe existir opticode_backend/auth_rsa.pem en el host.
+      - ../opticode_backend/auth_rsa.pem:/app/auth_rsa.pem:ro
 
   # ── Nginx en 8080 para no necesitar sudo en Mac ───────────
   nginx:

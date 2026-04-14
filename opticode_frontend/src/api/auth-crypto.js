@@ -8,6 +8,19 @@ export const RSA_OAEP_SHA256_MAX_UTF8_BYTES = 190;
 let bundleCache = { expiresAt: 0, data: null };
 
 /**
+ * Web Crypto (RSA-OAEP) solo está disponible en contextos seguros:
+ * HTTPS, localhost y 127.0.0.1. Con http://IP-LAN:5173 falla y hay que usar plano o HTTPS.
+ */
+function isWebCryptoSubtleAvailable() {
+  return (
+    typeof globalThis !== 'undefined' &&
+    globalThis.crypto &&
+    typeof globalThis.crypto.subtle === 'object' &&
+    globalThis.crypto.subtle !== null
+  );
+}
+
+/**
  * Invalida la caché de la clave pública (p. ej. tras rotación en servidor).
  */
 export function clearAuthCryptoBundleCache() {
@@ -99,7 +112,12 @@ async function rsaOaepSha256EncryptBase64(publicKeyPem, plainUtf8) {
 export async function buildPasswordCryptoFields(plainUtf8, fieldLabel = 'Campo') {
   assertRsaOaepUtf8Length(plainUtf8, fieldLabel);
   const bundle = await fetchAuthCryptoBundle();
-  if (!bundle?.enabled || typeof bundle.public_key_pem !== 'string' || !bundle.public_key_pem.trim()) {
+  if (
+    !bundle?.enabled ||
+    typeof bundle.public_key_pem !== 'string' ||
+    !bundle.public_key_pem.trim() ||
+    !isWebCryptoSubtleAvailable()
+  ) {
     return { usePlainPassword: true };
   }
   const password_cipher = await rsaOaepSha256EncryptBase64(
@@ -127,7 +145,12 @@ export async function buildRsaCiphersForPlainMap(plainByKey) {
   }
 
   const bundle = await fetchAuthCryptoBundle();
-  if (!bundle?.enabled || typeof bundle.public_key_pem !== 'string' || !bundle.public_key_pem.trim()) {
+  if (
+    !bundle?.enabled ||
+    typeof bundle.public_key_pem !== 'string' ||
+    !bundle.public_key_pem.trim() ||
+    !isWebCryptoSubtleAvailable()
+  ) {
     return { usePlain: true, plain: Object.fromEntries(entries.map(([k, v]) => [k, String(v ?? '')])) };
   }
 

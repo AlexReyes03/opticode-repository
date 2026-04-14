@@ -8,7 +8,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 
 const Login = () => {
   const location = useLocation();
-  const { login, error: authError, loading, clearError } = useAuth();
+  const { login, error: authError, loading, clearError, loginAttemptHint } = useAuth();
   const [form, setForm] = useState(() => {
     const raw = location.state?.registeredEmail;
     const email =
@@ -87,6 +87,12 @@ const Login = () => {
           icon={LockOutlinedIcon}
           autoComplete="current-password"
         />
+
+        {loginAttemptHint && (
+          <p className="text-secondary small mb-3 mb-md-4 mt-1" role="status">
+            {loginAttemptHint}
+          </p>
+        )}
 
         <Link
           to="/forgot-password"
