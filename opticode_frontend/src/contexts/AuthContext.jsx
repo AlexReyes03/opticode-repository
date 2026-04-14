@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { loginUser } from '../api/auth-services';
-import { setAuthHandlers, setErrorHandlers, setTokenProvider } from '../api/fetch-wrapper';
 import request, {
   getApiErrorMessage,
   setAuthHandlers,
@@ -157,7 +156,7 @@ export const AuthProvider = ({ children }) => {
       .then((profile) => {
         if (!cancelled && profile && typeof profile === 'object') setUser(profile);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancelled = true;
     };

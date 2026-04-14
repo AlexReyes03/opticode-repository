@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
@@ -288,7 +289,18 @@ const FileReport = () => {
   return (
     <section className="min-w-0">
       <nav aria-label="breadcrumb" className="min-w-0">
-        <ol className="breadcrumb flex-wrap">
+        <ol className="breadcrumb flex-wrap align-items-center">
+          <li className="breadcrumb-item">
+            <button
+              type="button"
+              className="btn btn-link p-0 d-inline-flex align-items-center"
+              style={{ color: 'var(--oc-navy)' }}
+              aria-label="Regresar"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowBackIcon style={{ fontSize: '1.25rem' }} />
+            </button>
+          </li>
           <li className="breadcrumb-item">
             <Link to="/dashboard">Mis Proyectos</Link>
           </li>
