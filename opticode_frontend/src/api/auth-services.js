@@ -9,9 +9,7 @@ import { buildRsaCiphersForPlainMap } from './auth-crypto';
  *   GET  /api/auth/crypto/public-key/ — clave pública RSA-OAEP (features.auth.AuthPublicKeyView).
  *   POST /api/auth/register/   — registro de usuario (features.auth.RegisterView).
  *   POST /api/auth/login/      — obtención de tokens Simple JWT (features.auth.LoginView).
- *
- * TODO(compatibilidad): El frontend debe apuntar a /api/auth/token/refresh/
- * para mantener la compatibilidad real con el refresh token.
+ *   POST /api/auth/token/refresh/ — lo usa fetch-wrapper al renovar access (Simple JWT).
  */
 
 /**

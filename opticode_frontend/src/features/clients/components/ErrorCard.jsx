@@ -1,26 +1,79 @@
+const SEVERITY_THEME = {
+  critical: {
+    borderColor: 'var(--oc-danger)',
+    badgeBg: 'rgba(239,68,68,0.1)',
+    badgeColor: 'var(--oc-danger-dark)',
+    severityLabel: 'Falta Crítica',
+  },
+  improvement: {
+    borderColor: 'var(--oc-royal)',
+    badgeBg: 'rgba(37,99,235,0.1)',
+    badgeColor: '#1e3a8a',
+    severityLabel: 'Mejora Sugerida',
+  },
+  warning: {
+    borderColor: 'var(--oc-warning)',
+    badgeBg: 'rgba(249,115,22,0.1)',
+    badgeColor: 'var(--oc-warning-dark)',
+    severityLabel: 'Advertencia',
+  },
+};
+
+function themeForSeverity(severity) {
+  if (severity === 'critical') return SEVERITY_THEME.critical;
+  if (severity === 'improvement') return SEVERITY_THEME.improvement;
+  return SEVERITY_THEME.warning;
+}
+
+function CodeLineRow({ codeLine, highlightLineNumber }) {
+  const isHighlighted = codeLine.lineNumber === highlightLineNumber;
+  const rowBg = isHighlighted ? 'rgba(239, 68, 68, 0.15)' : 'transparent';
+  const borderLeft = isHighlighted ? '2px solid var(--oc-danger)' : '2px solid transparent';
+  const gutterColor = isHighlighted ? '#fca5a5' : '#64748b';
+  const codeColor = isHighlighted ? '#fecaca' : '#94a3b8';
+
+  return (
+    <div
+      className="d-flex min-w-0"
+      style={{
+        backgroundColor: rowBg,
+        borderLeft,
+      }}
+    >
+      <div
+        className="flex-shrink-0 text-end user-select-none"
+        style={{
+          width: '2.5rem',
+          padding: '0.25rem 0.5rem 0.25rem 0',
+          backgroundColor: 'rgba(15, 23, 42, 0.5)',
+          borderRight: '1px solid #334155',
+          color: gutterColor,
+        }}
+      >
+        {codeLine.lineNumber}
+      </div>
+      <div
+        className="min-w-0"
+        style={{
+          padding: '0.25rem 1rem',
+          color: codeColor,
+          whiteSpace: 'pre',
+          overflowX: 'visible',
+        }}
+      >
+        {codeLine.content}
+      </div>
+    </div>
+  );
+}
+
 const ErrorCard = ({ error }) => {
   const { severity, level, title, description, line, codeLines: rawLines } = error;
   const codeLines = Array.isArray(rawLines) ? rawLines : [];
-  const isCritical = severity === 'critical';
-  const isImprovement = severity === 'improvement';
-
-  const borderColor = isCritical
-    ? 'var(--oc-danger)'
-    : isImprovement
-      ? 'var(--oc-royal)'
-      : 'var(--oc-warning)';
-  const badgeBg = isCritical
-    ? 'rgba(239,68,68,0.1)'
-    : isImprovement
-      ? 'rgba(37,99,235,0.1)'
-      : 'rgba(249,115,22,0.1)';
-  const badgeColor = isCritical
-    ? 'var(--oc-danger-dark)'
-    : isImprovement
-      ? '#1e3a8a'
-      : 'var(--oc-warning-dark)';
-  const severityLabel = isCritical ? 'Falta Crítica' : isImprovement ? 'Mejora Sugerida' : 'Advertencia';
+  const theme = themeForSeverity(severity);
+  const { borderColor, badgeBg, badgeColor, severityLabel } = theme;
   const badgeLabel = level ? `${severityLabel} • ${level}` : severityLabel;
+  const hasCodeLines = codeLines.length > 0;
 
   return (
     <div
@@ -79,52 +132,18 @@ const ErrorCard = ({ error }) => {
             WebkitOverflowScrolling: 'touch',
             contain: 'inline-size',
           }}
-          role={codeLines.length ? 'region' : undefined}
-          aria-label={codeLines.length ? 'Fragmento de código relacionado' : undefined}
+          role={hasCodeLines ? 'region' : undefined}
+          aria-label={hasCodeLines ? 'Fragmento de código relacionado' : undefined}
         >
-          {codeLines.length === 0 ? (
-            <div className="px-3 py-2 text-secondary small" style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)' }}>
-              Sin fragmento de código disponible.
+          {hasCodeLines ? (
+            <div style={{ minWidth: 'min-content' }}>
+              {codeLines.map((codeLine, idx) => (
+                <CodeLineRow key={`${codeLine.lineNumber}-${idx}`} codeLine={codeLine} highlightLineNumber={line} />
+              ))}
             </div>
           ) : (
-            <div style={{ minWidth: 'min-content' }}>
-              {codeLines.map((codeLine, idx) => {
-                const isError = codeLine.lineNumber === line;
-                return (
-                  <div
-                    key={`${codeLine.lineNumber}-${idx}`}
-                    className="d-flex min-w-0"
-                    style={{
-                      backgroundColor: isError ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
-                      borderLeft: isError ? '2px solid var(--oc-danger)' : '2px solid transparent',
-                    }}
-                  >
-                    <div
-                      className="flex-shrink-0 text-end user-select-none"
-                      style={{
-                        width: '2.5rem',
-                        padding: '0.25rem 0.5rem 0.25rem 0',
-                        backgroundColor: 'rgba(15, 23, 42, 0.5)',
-                        borderRight: '1px solid #334155',
-                        color: isError ? '#fca5a5' : '#64748b',
-                      }}
-                    >
-                      {codeLine.lineNumber}
-                    </div>
-                    <div
-                      className="min-w-0"
-                      style={{
-                        padding: '0.25rem 1rem',
-                        color: isError ? '#fecaca' : '#94a3b8',
-                        whiteSpace: 'pre',
-                        overflowX: 'visible',
-                      }}
-                    >
-                      {codeLine.content}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="px-3 py-2 text-secondary small" style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)' }}>
+              Sin fragmento de código disponible.
             </div>
           )}
         </div>

@@ -116,12 +116,13 @@ Edita `.env` con tus valores. La plantilla [`opticode_backend/.env.example`](opt
 | `DB_*` | Conexión MySQL (`NAME`, `USER`, `PASSWORD`, `HOST`, `PORT`). |
 | `CORS_ALLOWED_ORIGINS` | Orígenes del frontend permitidos (p. ej. `http://localhost:5173`). |
 | `JWT_ENABLED` | Activa o desactiva autenticación JWT (solo `False` en entornos controlados). |
-| `AUTH_RSA_PRIVATE_KEY` | Opcional. PEM de clave **privada** RSA en **una línea**, con saltos de línea del PEM sustituidos por la secuencia `\n` (el código expande `\\n` al leer). Si está vacío, login/registro aceptan contraseña en claro (en producción usa HTTPS). |
+| `AUTH_RSA_PRIVATE_KEY_FILE` | Opcional. Ruta a un archivo `.pem` con la clave **privada** (ruta relativa a `opticode_backend` o absoluta). Si no está vacía, **tiene prioridad** sobre `AUTH_RSA_PRIVATE_KEY`. |
+| `AUTH_RSA_PRIVATE_KEY` | Opcional. PEM en **una línea** con `\n` como salto de línea (el código expande `\\n` al leer). Se ignora si `AUTH_RSA_PRIVATE_KEY_FILE` apunta a un archivo válido. Si todo queda vacío, login/registro aceptan contraseña en claro (en producción usa HTTPS). |
 | `AUTH_RSA_KEY_ID` | Identificador de la clave (p. ej. `v1`); debe coincidir con lo que devuelve el endpoint de clave pública. |
 | `LOG_LEVEL`, `LOG_DIR` | Configuración de Loguru. |
 | `DEV_ADMIN_EMAIL`, `DEV_ADMIN_USERNAME`, `DEV_SEED_PASSWORD` | Credenciales usadas por `create_dev_superuser` y seeds (ver paso 7). |
 
-**Cifrado RSA (opcional):** el archivo de clave debe generarse en la **raíz de `opticode_backend`** (junto a `manage.py`), con el nombre sugerido `auth_rsa.pem`.
+**Cifrado RSA (opcional):** el archivo de clave puede generarse en la **raíz de `opticode_backend`** (junto a `manage.py`), con el nombre sugerido `auth_rsa.pem`. Puedes referenciarlo en `.env` con `AUTH_RSA_PRIVATE_KEY_FILE=auth_rsa.pem` sin pegar el PEM en el entorno.
 
 1. Abre una terminal **Bash** (por ejemplo **Git Bash**), sitúate en el backend y genera la clave privada:
 
@@ -152,7 +153,7 @@ awk 'NF {sub(/\r$/,""); printf "%s\\n",$0;}' auth_rsa.pem
 
 #### Cifrado de credenciales (RSA-OAEP SHA-256)
 
-Si `AUTH_RSA_PRIVATE_KEY` está definido en el servidor, el cliente puede cifrar datos sensibles antes del `POST` sin compartir nunca la clave **privada**: solo el servidor puede descifrar.
+Si hay clave privada configurada (`AUTH_RSA_PRIVATE_KEY_FILE` o `AUTH_RSA_PRIVATE_KEY`), el cliente puede cifrar datos sensibles antes del `POST` sin compartir nunca la clave **privada**: solo el servidor puede descifrar.
 
 **¿Dónde “vive” la clave pública?** No se almacena en una tabla de base de datos: se expone solo por HTTP. La clave privada permanece en el `.env` del backend (o en el material que uses en producción).
 

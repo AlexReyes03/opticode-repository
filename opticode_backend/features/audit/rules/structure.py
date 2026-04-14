@@ -213,6 +213,60 @@ _REFLOW_SEVERITY   = "error"
 _MAX_SCALE_PATTERN = re.compile(r"maximum-scale=([0-9.]+)")
 
 
+def _normalized_viewport_content(tag) -> str:
+    return str(tag.get("content", "")).lower().replace(" ", "")
+
+
+def _viewport_zoom_disabled(content: str) -> bool:
+    return "user-scalable=no" in content or "user-scalable=0" in content
+
+
+def _extract_maximum_scale(content: str) -> float | None:
+    match = _MAX_SCALE_PATTERN.search(content)
+    if not match:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return None
+
+
+def _reflow_findings_for_viewport_tag(tag, source_lines: list[str]) -> list[WcagFinding]:
+    content = _normalized_viewport_content(tag)
+    findings: list[WcagFinding] = []
+
+    if _viewport_zoom_disabled(content):
+        findings.append(make_finding(
+            tag=tag,
+            source_lines=source_lines,
+            wcag_rule=_REFLOW_RULE_CODE,
+            wcag_level=_REFLOW_WCAG_LEVEL,
+            severity=_REFLOW_SEVERITY,
+            message=(
+                "El meta viewport desactiva el zoom del usuario (user-scalable=no). "
+                "Personas con baja visión no podrán ampliar el contenido."
+            ),
+            category="viewport-zoom-disabled",
+        ))
+
+    scale = _extract_maximum_scale(content)
+    if scale is not None and scale <= 1.0:
+        findings.append(make_finding(
+            tag=tag,
+            source_lines=source_lines,
+            wcag_rule=_REFLOW_RULE_CODE,
+            wcag_level=_REFLOW_WCAG_LEVEL,
+            severity=_REFLOW_SEVERITY,
+            message=(
+                f"El meta viewport limita el zoom máximo a {scale} "
+                "(maximum-scale≤1), impidiendo ampliar el contenido."
+            ),
+            category="viewport-max-scale-limited",
+        ))
+
+    return findings
+
+
 def detect_reflow_findings(html_content: str) -> list[WcagFinding]:
     """
     Detecta <meta name="viewport"> que desactiva el zoom del usuario:
@@ -231,43 +285,7 @@ def detect_reflow_findings(html_content: str) -> list[WcagFinding]:
     for tag in soup.find_all("meta"):
         if tag.get("name", "").lower() != "viewport":
             continue
-
-        content = tag.get("content", "").lower().replace(" ", "")
-
-        if "user-scalable=no" in content or "user-scalable=0" in content:
-            findings.append(make_finding(
-                tag=tag,
-                source_lines=source_lines,
-                wcag_rule=_REFLOW_RULE_CODE,
-                wcag_level=_REFLOW_WCAG_LEVEL,
-                severity=_REFLOW_SEVERITY,
-                message=(
-                    'El meta viewport desactiva el zoom del usuario (user-scalable=no). '
-                    "Personas con baja visión no podrán ampliar el contenido."
-                ),
-                category="viewport-zoom-disabled",
-            ))
-
-        match = _MAX_SCALE_PATTERN.search(content)
-        if match:
-            try:
-                scale = float(match.group(1))
-            except ValueError:
-                scale = None
-
-            if scale is not None and scale <= 1.0:
-                findings.append(make_finding(
-                    tag=tag,
-                    source_lines=source_lines,
-                    wcag_rule=_REFLOW_RULE_CODE,
-                    wcag_level=_REFLOW_WCAG_LEVEL,
-                    severity=_REFLOW_SEVERITY,
-                    message=(
-                        f"El meta viewport limita el zoom máximo a {scale} "
-                        "(maximum-scale≤1), impidiendo ampliar el contenido."
-                    ),
-                    category="viewport-max-scale-limited",
-                ))
+        findings.extend(_reflow_findings_for_viewport_tag(tag, source_lines))
 
     return findings
 
