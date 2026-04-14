@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useId, useRef, useState } from
 import { createPortal } from 'react-dom';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -681,12 +682,89 @@ const ProjectDashboard = () => {
 
   const projectName = project?.name ?? 'Proyecto';
   const projectDescription = project?.description ?? '';
-  const breadcrumbLabel = getBreadcrumbLabel(loading, editing, draftName, projectName);
+  const breadcrumbLabel = loading ? '…' : editing === 'name' ? draftName.trim() || '…' : projectName;
+
+  const fileDeleteModal =
+    typeof document !== 'undefined' && fileDeleteTarget
+      ? createPortal(
+        <>
+          <div
+            className="modal-backdrop fade show"
+            aria-hidden="true"
+            onClick={() => !fileDeleting && setFileDeleteTarget(null)}
+          />
+          <div
+            className="modal fade show d-block"
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={fileDeleteTitleId}
+          >
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title" id={fileDeleteTitleId}>
+                    Eliminar archivo
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    aria-label="Cerrar"
+                    disabled={fileDeleting}
+                    onClick={() => setFileDeleteTarget(null)}
+                  >
+                  </button>
+                </div>
+                <div className="modal-body">
+                  ¿Seguro que deseas eliminar{' '}
+                  <span className="fw-semibold">&quot;{fileDeleteTarget.name}&quot;</span> de este proyecto? Esta
+                  acción es irreversible. Si más adelante subes otro archivo con el mismo nombre, se creará un
+                  registro nuevo (no restaura este).
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    disabled={fileDeleting}
+                    onClick={() => setFileDeleteTarget(null)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger d-inline-flex align-items-center gap-2"
+                    disabled={fileDeleting}
+                    onClick={handleConfirmDeleteFile}
+                  >
+                    {fileDeleting && (
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                    )}
+                    Eliminar archivo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body,
+      )
+      : null;
 
   return (
     <section>
       <nav aria-label="breadcrumb">
-        <ol className="breadcrumb">
+        <ol className="breadcrumb align-items-center">
+          <li className="breadcrumb-item">
+            <button
+              type="button"
+              className="btn btn-link p-0 d-inline-flex align-items-center"
+              style={{ color: 'var(--oc-navy)' }}
+              aria-label="Regresar"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowBackIcon style={{ fontSize: '1.25rem' }} />
+            </button>
+          </li>
           <li className="breadcrumb-item">
             <Link to="/dashboard">Mis Proyectos</Link>
           </li>

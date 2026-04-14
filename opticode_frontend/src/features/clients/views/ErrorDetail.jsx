@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ErrorCard from '../components/ErrorCard';
 import ErrorFilter from '../components/ErrorFilter';
 import { getFileFindings } from '../../../api/file-services';
@@ -70,6 +71,7 @@ const normalizeFinding = (finding, index) => {
  */
 const ErrorDetail = () => {
   const { projectId, fileId } = useParams();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -152,7 +154,18 @@ const ErrorDetail = () => {
   return (
     <section className="min-w-0">
       <nav aria-label="breadcrumb" className="min-w-0">
-        <ol className="breadcrumb flex-wrap">
+        <ol className="breadcrumb flex-wrap align-items-center">
+          <li className="breadcrumb-item">
+            <button
+              type="button"
+              className="btn btn-link p-0 d-inline-flex align-items-center"
+              style={{ color: 'var(--oc-navy)' }}
+              aria-label="Regresar"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowBackIcon style={{ fontSize: '1.25rem' }} />
+            </button>
+          </li>
           <li className="breadcrumb-item">
             <Link to="/dashboard">Mis Proyectos</Link>
           </li>

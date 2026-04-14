@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DropZone from '../components/DropZone';
 import FileStatusList from '../components/FileStatusList';
 import { useFileUpload } from '../hooks/useFileUpload';
@@ -8,7 +9,8 @@ import { getProjectById } from '../../../api/project-services';
 
 const FileUpload = () => {
   const { projectId } = useParams();
-  const { files, handleFile } = useFileUpload(projectId);
+  const navigate = useNavigate();
+  const { files, handleFile, removeFile } = useFileUpload(projectId);
   const [projectName, setProjectName] = useState('Proyecto');
 
   useEffect(() => {
@@ -35,7 +37,18 @@ const FileUpload = () => {
     <section>
       {/* Breadcrumb */}
       <nav aria-label="breadcrumb">
-        <ol className="breadcrumb">
+        <ol className="breadcrumb align-items-center">
+          <li className="breadcrumb-item">
+            <button
+              type="button"
+              className="btn btn-link p-0 d-inline-flex align-items-center"
+              style={{ color: 'var(--oc-navy)' }}
+              aria-label="Regresar"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowBackIcon style={{ fontSize: '1.25rem' }} />
+            </button>
+          </li>
           <li className="breadcrumb-item">
             <Link to="/dashboard">Mis Proyectos</Link>
           </li>
@@ -79,7 +92,7 @@ const FileUpload = () => {
       </div>
 
       {/* Files list */}
-      <FileStatusList files={files} />
+      <FileStatusList files={files} projectId={projectId} onDelete={removeFile} />
     </section>
   );
 };

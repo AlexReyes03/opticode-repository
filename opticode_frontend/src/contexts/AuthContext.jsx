@@ -161,7 +161,7 @@ export const AuthProvider = ({ children }) => {
       .then((profile) => {
         if (!cancelled && profile && typeof profile === 'object') setUser(profile);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancelled = true;
     };

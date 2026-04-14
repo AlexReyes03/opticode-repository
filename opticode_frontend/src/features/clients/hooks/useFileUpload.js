@@ -75,5 +75,9 @@ export function useFileUpload(projectId) {
     [projectId, navigate, patchFile],
   );
 
-  return { files, handleFile };
+  const removeFile = useCallback((name) => {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
+  }, []);
+
+  return { files, handleFile, removeFile };
 }
