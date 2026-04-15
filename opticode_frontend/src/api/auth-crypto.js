@@ -63,13 +63,13 @@ export function assertRsaOaepUtf8Length(text, label) {
 function pemSpkiToArrayBuffer(pem) {
   const trimmed = String(pem ?? '').trim();
   const b64 = trimmed
-    .replace(/-----BEGIN PUBLIC KEY-----/g, '')
-    .replace(/-----END PUBLIC KEY-----/g, '')
-    .replace(/\s/g, '');
+    .replaceAll('-----BEGIN PUBLIC KEY-----', '')
+    .replaceAll('-----END PUBLIC KEY-----', '')
+    .replaceAll(/\s/g, '');
   const binary = atob(b64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
+    bytes[i] = binary.codePointAt(i);
   }
   return bytes.buffer;
 }
@@ -97,7 +97,7 @@ async function rsaOaepSha256EncryptWithSubtle(publicKeyPem, plainUtf8) {
   const out = new Uint8Array(ciphertext);
   let binary = '';
   for (let i = 0; i < out.byteLength; i += 1) {
-    binary += String.fromCharCode(out[i]);
+    binary += String.fromCodePoint(out[i]);
   }
   return btoa(binary);
 }

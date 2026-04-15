@@ -58,18 +58,12 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
     e.currentTarget.style.backgroundColor = DROP_ZONE_IDLE_BG;
   };
 
-  const handleClick = () => inputRef.current?.click();
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      inputRef.current?.click();
-    }
-  };
+  const handleActivate = () => inputRef.current?.click();
 
   return (
-    <div
-      className="rounded-4 h-100 p-5 text-center min-w-0"
+    <button
+      type="button"
+      className="rounded-4 h-100 p-5 text-center min-w-0 w-100 border-0"
       style={{
         ...DROP_ZONE_BORDER_BASE,
         borderColor: DROP_ZONE_BORDER_IDLE,
@@ -88,10 +82,8 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-      aria-label={`Zona de carga: ${title}`}
+      onClick={handleActivate}
+      aria-label={`Zona de carga: ${title}. Activa para elegir archivo.`}
     >
       <input
         ref={inputRef}
@@ -100,7 +92,6 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
         className="d-none"
         onChange={(e) => emitFile(e.target.files?.[0])}
         aria-hidden="true"
-        tabIndex={-1}
       />
 
       <div
@@ -141,7 +132,7 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
           {constraints}
         </span>
       </div>
-    </div>
+    </button>
   );
 };
 
