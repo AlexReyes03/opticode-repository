@@ -49,6 +49,26 @@ function isTokenExpired(token) {
 const AuthContext = createContext(null);
 const GENERIC_HTTP_MESSAGE_REGEX =
   /^(?:\d{3}\s+)?(?:internal server error|bad request|unauthorized|forbidden|not found|service unavailable)[.!: ]*$/i;
+const INFRA_ERROR_STATUSES = new Set([0, 500, 503]);
+const DEFAULT_LOGIN_ERROR_MESSAGE = 'No se pudo iniciar sesión. Verifica correo y contraseña.';
+
+function getLoginAttemptHint(data) {
+  if (data && typeof data === 'object' && data.locked === true) return null;
+  const n = Number(data?.failed_attempt);
+  if (Number.isInteger(n) && n >= 2 && n <= 4) return `Intento ${n}/5`;
+  return null;
+}
+
+function resolveLoginErrorState(err) {
+  const status = Number(err?.status ?? 0);
+  if (INFRA_ERROR_STATUSES.has(status)) {
+    return { shouldSetError: false, hint: null };
+  }
+  return {
+    shouldSetError: true,
+    hint: getLoginAttemptHint(err?.data),
+  };
+}
 
 /**
  * Provider de autenticaci?n. Debe envolverse dentro de BrowserRouter para
@@ -100,6 +120,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(TOKEN_KEYS.REFRESH);
     setAccessToken(null);
     setUser(null);
+  }, []);
+
+  const fetchAndSetProfile = useCallback(async () => {
+    const profile = await request('/api/auth/me/', { method: 'GET' });
+    if (profile && typeof profile === 'object') setUser(profile);
   }, []);
 
   /**
@@ -186,39 +211,23 @@ export const AuthProvider = ({ children }) => {
         storeTokens(data?.access, data?.refresh);
         if (data?.access) {
           try {
-            const profile = await request('/api/auth/me/', { method: 'GET' });
-            if (profile && typeof profile === 'object') setUser(profile);
+            await fetchAndSetProfile();
           } catch {
             // Se mantiene el usuario derivado del JWT en storeTokens.
           }
         }
       } catch (err) {
-        const status = Number(err?.status ?? 0);
-        const isGlobalInfraError = status === 0 || status === 500 || status === 503;
-        if (isGlobalInfraError) {
-          setLoginAttemptHint(null);
-        } else {
-          setError(
-            getApiErrorMessage(err, 'No se pudo iniciar sesión. Verifica correo y contraseña.'),
-          );
-          const data = err?.data;
-          if (data && typeof data === 'object' && data.locked === true) {
-            setLoginAttemptHint(null);
-          } else {
-            const n = Number(data?.failed_attempt);
-            if (Number.isInteger(n) && n >= 2 && n <= 4) {
-              setLoginAttemptHint(`Intento ${n}/5`);
-            } else {
-              setLoginAttemptHint(null);
-            }
-          }
+        const { shouldSetError, hint } = resolveLoginErrorState(err);
+        if (shouldSetError) {
+          setError(getApiErrorMessage(err, DEFAULT_LOGIN_ERROR_MESSAGE));
         }
+        setLoginAttemptHint(hint);
         throw err;
       } finally {
         setLoading(false);
       }
     },
-    [storeTokens],
+    [storeTokens, fetchAndSetProfile],
   );
 
   /**

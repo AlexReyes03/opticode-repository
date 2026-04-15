@@ -1,3 +1,6 @@
+MASKED_AUDIT_VALUE = "******"
+
+
 def get_sensitive_fields(model):
     """
     Obtiene la lista de campos sensibles directamente como atributo del modelo.
@@ -21,6 +24,90 @@ def capture_old_state(sender, instance, **kwargs):
     else:
         instance._old_state = None
 
+
+def _resolve_audit_user(get_current_user):
+    user = get_current_user()
+    if user and not user.is_authenticated:
+        return None
+    return user
+
+
+def _format_field_value(field_name, value, sensitive_fields):
+    if field_name in sensitive_fields:
+        return MASKED_AUDIT_VALUE
+    if value is None:
+        return None
+    return str(value)
+
+
+def _create_audit_log_entry(
+    audit_model,
+    sender_name,
+    field_name,
+    action,
+    old_value,
+    new_value,
+    user,
+    ip,
+    record_id,
+):
+    audit_model.objects.create(
+        model_name=sender_name,
+        field_name=field_name,
+        action=action,
+        old_value=old_value,
+        new_value=new_value,
+        user=user,
+        ip_address=ip,
+        record_id=record_id,
+    )
+
+
+def _log_insert_changes(audit_model, sender, instance, user, ip, sensitive_fields):
+    for field in instance._meta.fields:
+        value = getattr(instance, field.attname)
+        if value is None or value == "":
+            continue
+
+        new_value = _format_field_value(field.name, value, sensitive_fields)
+        _create_audit_log_entry(
+            audit_model=audit_model,
+            sender_name=sender.__name__,
+            field_name=field.name,
+            action="INSERT",
+            old_value=None,
+            new_value=new_value,
+            user=user,
+            ip=ip,
+            record_id=str(instance.pk),
+        )
+
+
+def _log_update_changes(audit_model, sender, instance, user, ip, sensitive_fields):
+    old_instance = getattr(instance, "_old_state", None)
+    if not old_instance:
+        return
+
+    for field in instance._meta.fields:
+        old_value = getattr(old_instance, field.attname)
+        new_value = getattr(instance, field.attname)
+        if old_value == new_value:
+            continue
+
+        old_str = _format_field_value(field.name, old_value, sensitive_fields)
+        new_str = _format_field_value(field.name, new_value, sensitive_fields)
+        _create_audit_log_entry(
+            audit_model=audit_model,
+            sender_name=sender.__name__,
+            field_name=field.name,
+            action="UPDATE",
+            old_value=old_str,
+            new_value=new_str,
+            user=user,
+            ip=ip,
+            record_id=str(instance.pk),
+        )
+
 def audit_post_save(sender, instance, created, **kwargs):
     """
     Señal post_save para registrar INSERTS y UPDATES sin utilizar JSON,
@@ -29,65 +116,18 @@ def audit_post_save(sender, instance, created, **kwargs):
     from auditlog.models import AuditLog
     from auditlog.middleware import get_current_user, get_current_ip
 
-    if sender.__name__ == 'AuditLog':
+    if sender.__name__ == "AuditLog":
         return
 
-    user = get_current_user()
-    if user and not user.is_authenticated:
-        user = None
-
+    user = _resolve_audit_user(get_current_user)
     ip = get_current_ip()
     sensitive_fields = get_sensitive_fields(sender)
 
     if created:
-        # INSERCIÓN: Guardamos 1 fila por campo, PERO omitimos nulos y vacíos.
-        for field in instance._meta.fields:
-            value = getattr(instance, field.attname)
-            
-            # Filtro anti-basura: Solo registrar si el valor realmente existe
-            if value is not None and value != '':
-                if field.name in sensitive_fields:
-                    final_value = '******'
-                else:
-                    final_value = str(value)
-                    
-                AuditLog.objects.create(
-                    model_name=sender.__name__,
-                    field_name=field.name,
-                    action='INSERT',
-                    old_value=None,
-                    new_value=final_value,
-                    user=user,
-                    ip_address=ip,
-                    record_id=str(instance.pk)
-                )
-    else:
-        # ACTUALIZACIÓN: Comparar rigurosamente campo VS campo
-        if hasattr(instance, '_old_state') and instance._old_state:
-            old_instance = instance._old_state
-            for field in instance._meta.fields:
-                old_value = getattr(old_instance, field.attname)
-                new_value = getattr(instance, field.attname)
-                
-                # Solo guardar si en verdad cambió el valor
-                if old_value != new_value:
-                    if field.name in sensitive_fields:
-                        old_str = '******'
-                        new_str = '******'
-                    else:
-                        old_str = str(old_value) if old_value is not None else None
-                        new_str = str(new_value) if new_value is not None else None
-                        
-                    AuditLog.objects.create(
-                        model_name=sender.__name__,
-                        field_name=field.name,
-                        action='UPDATE',
-                        old_value=old_str,
-                        new_value=new_str,
-                        user=user,
-                        ip_address=ip,
-                        record_id=str(instance.pk)
-                    )
+        _log_insert_changes(AuditLog, sender, instance, user, ip, sensitive_fields)
+        return
+
+    _log_update_changes(AuditLog, sender, instance, user, ip, sensitive_fields)
 
 def audit_post_delete(sender, instance, **kwargs):
     """

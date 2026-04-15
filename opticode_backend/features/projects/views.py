@@ -20,6 +20,7 @@ ALLOWED_EXTENSIONS = {"html", "css"}
 MAX_SIZE = 10_485_760      # 10 MB (tamaño mínimo permitido: 0 B)
 ZIP_MAX_SIZE = 52_428_800  # 50 MB
 ZIP_MAX_FILES = 50
+PROJECT_NOT_FOUND_MESSAGE = "Proyecto no encontrado."
 
 
 class ProjectListCreateView(ListCreateAPIView):
@@ -56,7 +57,7 @@ class ProjectFileListView(APIView):
             project = Project.objects.get(pk=pk, owner=request.user)
         except Project.DoesNotExist:
             return Response(
-                {"detail": "Proyecto no encontrado."},
+                {"detail": PROJECT_NOT_FOUND_MESSAGE},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -79,7 +80,7 @@ class ProjectUploadedFileDestroyView(APIView):
             project = Project.objects.get(pk=pk, owner=request.user)
         except Project.DoesNotExist:
             return Response(
-                {"detail": "Proyecto no encontrado."},
+                {"detail": PROJECT_NOT_FOUND_MESSAGE},
                 status=status.HTTP_404_NOT_FOUND,
             )
         try:
@@ -134,7 +135,7 @@ class FileUploadView(APIView):
             project = Project.objects.get(pk=pk, owner=request.user)
         except Project.DoesNotExist:
             return Response(
-                {"detail": "Proyecto no encontrado."},
+                {"detail": PROJECT_NOT_FOUND_MESSAGE},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -225,17 +226,81 @@ def _save_or_overwrite(project, filename, content, file_type):
     )
 
 
+def _get_owned_project_or_404(user, pk):
+    try:
+        return Project.objects.get(pk=pk, owner=user), None
+    except Project.DoesNotExist:
+        return None, Response(
+            {"detail": PROJECT_NOT_FOUND_MESSAGE},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+def _zip_entry_basename(entry):
+    return entry.filename.split("/")[-1]
+
+
+def _build_ignored_entry(filename, reason):
+    return {"filename": filename, "reason": reason}
+
+
+def _valid_zip_entries(zip_file):
+    return [
+        e for e in zip_file.infolist()
+        if not e.is_dir()
+        and e.filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS
+    ]
+
+
+def _invalid_extension_entries(zip_file):
+    return [
+        e for e in zip_file.infolist()
+        if not e.is_dir()
+        and e.filename.rsplit(".", 1)[-1].lower() not in ALLOWED_EXTENSIONS
+    ]
+
+
+def _resolve_uploaded_file_type(content, filename):
+    file_type = _detect_file_type(content)
+    if file_type is None and len(content) == 0:
+        return _file_type_from_extension(filename)
+    return file_type
+
+
+def _process_zip_entry(project, zip_file, entry):
+    filename = _zip_entry_basename(entry)
+    content = zip_file.read(entry.filename)
+    size = len(content)
+    if size > MAX_SIZE:
+        return None, _build_ignored_entry(
+            filename,
+            f"Supera el máximo permitido ({size} bytes). Cada archivo debe pesar como máximo 10 MB.",
+        )
+
+    file_type = _resolve_uploaded_file_type(content, filename)
+    if file_type is None:
+        return None, _build_ignored_entry(
+            filename,
+            "El contenido no corresponde a HTML ni CSS válido.",
+        )
+
+    saved = _save_or_overwrite(project, filename, content, file_type)
+    run_audit(saved, content=content.decode("utf-8", errors="ignore"))
+    return {
+        "id": saved.pk,
+        "filename": saved.filename,
+        "file_type": saved.file_type,
+        "size_bytes": saved.size_bytes,
+    }, None
+
+
 class ZipUploadView(APIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request, pk):
-        try:
-            project = Project.objects.get(pk=pk, owner=request.user)
-        except Project.DoesNotExist:
-            return Response(
-                {"detail": "Proyecto no encontrado."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        project, error_response = _get_owned_project_or_404(request.user, pk)
+        if error_response:
+            return error_response
 
         file = request.FILES.get("file")
         if not file:
@@ -265,12 +330,7 @@ class ZipUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Filtrar entradas válidas (no directorios, extensión html/css)
-        entries = [
-            e for e in zf.infolist()
-            if not e.is_dir()
-            and e.filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS
-        ]
+        entries = _valid_zip_entries(zf)
 
         ignored = []
 
@@ -283,47 +343,17 @@ class ZipUploadView(APIView):
         uploaded = []
 
         for entry in entries:
-            filename = entry.filename.split("/")[-1]  # descartar rutas internas
-            content = zf.read(entry.filename)
-            size = len(content)
-
-            if size > MAX_SIZE:
-                ignored.append({
-                    "filename": filename,
-                    "reason": f"Supera el máximo permitido ({size} bytes). Cada archivo debe pesar como máximo 10 MB.",
-                })
+            uploaded_item, ignored_item = _process_zip_entry(project, zf, entry)
+            if ignored_item:
+                ignored.append(ignored_item)
                 continue
-
-            file_type = _detect_file_type(content)
-            if file_type is None and len(content) == 0:
-                file_type = _file_type_from_extension(filename)
-            if file_type is None:
-                ignored.append({
-                    "filename": filename,
-                    "reason": "El contenido no corresponde a HTML ni CSS válido.",
-                })
-                continue
-
-            saved = _save_or_overwrite(project, filename, content, file_type)
-            run_audit(saved, content=content.decode("utf-8", errors="ignore"))
-            uploaded.append({
-                "id": saved.pk,
-                "filename": saved.filename,
-                "file_type": saved.file_type,
-                "size_bytes": saved.size_bytes,
-            })
+            uploaded.append(uploaded_item)
 
         # Archivos del ZIP con extensión no permitida
-        skipped_extensions = [
-            e for e in zf.infolist()
-            if not e.is_dir()
-            and e.filename.rsplit(".", 1)[-1].lower() not in ALLOWED_EXTENSIONS
-        ]
-        for entry in skipped_extensions:
-            ignored.append({
-                "filename": entry.filename.split("/")[-1],
-                "reason": "Extensión no permitida.",
-            })
+        for entry in _invalid_extension_entries(zf):
+            ignored.append(
+                _build_ignored_entry(_zip_entry_basename(entry), "Extensión no permitida.")
+            )
 
         return Response(
             {"uploaded": uploaded, "ignored": ignored},
@@ -337,7 +367,7 @@ class ProjectExportExcelView(APIView):
             project = Project.objects.get(pk=pk, owner=request.user)
         except Project.DoesNotExist:
             return Response(
-                {"detail": "Proyecto no encontrado."},
+                {"detail": PROJECT_NOT_FOUND_MESSAGE},
                 status=status.HTTP_404_NOT_FOUND,
             )
 

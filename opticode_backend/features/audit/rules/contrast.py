@@ -106,6 +106,66 @@ _MIN_SEVERITY   = "error"
 _MIN_THRESHOLD  = 4.5
 
 
+def _iter_qualified_rules(css_content: str):
+    return (
+        rule
+        for rule in tinycss2.parse_stylesheet(
+            css_content, skip_whitespace=True, skip_comments=True
+        )
+        if rule.type == "qualified-rule"
+    )
+
+
+def _selector_text(rule: Any) -> str:
+    return "".join(t.serialize() for t in rule.prelude).strip()
+
+
+def _line_number(rule: Any) -> int:
+    return max(1, rule.source_line)
+
+
+def _extract_foreground_background(rule: Any) -> tuple[tuple[int, int, int] | None, tuple[int, int, int] | None]:
+    declarations = tinycss2.parse_declaration_list(
+        rule.content, skip_whitespace=True, skip_comments=True
+    )
+    foreground: tuple[int, int, int] | None = None
+    bg_explicit: tuple[int, int, int] | None = None
+    bg_shorthand: tuple[int, int, int] | None = None
+
+    for decl in declarations:
+        if decl.type != "declaration":
+            continue
+        if decl.lower_name == "color":
+            foreground = _extract_color(decl.value)
+        elif decl.lower_name == "background-color":
+            bg_explicit = _extract_color(decl.value)
+        elif decl.lower_name == "background":
+            bg_shorthand = _extract_color(decl.value)
+
+    background = bg_explicit if bg_explicit is not None else bg_shorthand
+    return foreground, background
+
+
+def _extract_border_background(rule: Any) -> tuple[tuple[int, int, int] | None, tuple[int, int, int] | None]:
+    declarations = tinycss2.parse_declaration_list(
+        rule.content, skip_whitespace=True, skip_comments=True
+    )
+    border_color: tuple[int, int, int] | None = None
+    background: tuple[int, int, int] | None = None
+
+    for decl in declarations:
+        if decl.type != "declaration":
+            continue
+        if decl.lower_name in ("border-color", "border"):
+            border_color = _extract_color(decl.value)
+        elif decl.lower_name == "background-color":
+            background = _extract_color(decl.value)
+        elif decl.lower_name == "background" and background is None:
+            background = _extract_color(decl.value)
+
+    return border_color, background
+
+
 def detect_contrast_findings(css_content: str) -> list[WcagFinding]:
     """
     Detecta reglas CSS cuyo ratio de contraste texto/fondo es inferior a 4.5:1.
@@ -116,30 +176,8 @@ def detect_contrast_findings(css_content: str) -> list[WcagFinding]:
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in tinycss2.parse_stylesheet(css_content, skip_whitespace=True, skip_comments=True):
-        if rule.type != "qualified-rule":
-            continue
-
-        declarations = tinycss2.parse_declaration_list(
-            rule.content, skip_whitespace=True, skip_comments=True
-        )
-
-        foreground: tuple[int, int, int] | None = None
-        bg_explicit: tuple[int, int, int] | None = None
-        bg_shorthand: tuple[int, int, int] | None = None
-
-        for decl in declarations:
-            if decl.type != "declaration":
-                continue
-            if decl.lower_name == "color":
-                foreground = _extract_color(decl.value)
-            elif decl.lower_name == "background-color":
-                bg_explicit = _extract_color(decl.value)
-            elif decl.lower_name == "background":
-                bg_shorthand = _extract_color(decl.value)
-
-        background = bg_explicit if bg_explicit is not None else bg_shorthand
-
+    for rule in _iter_qualified_rules(css_content):
+        foreground, background = _extract_foreground_background(rule)
         if foreground is None or background is None:
             continue
 
@@ -147,8 +185,8 @@ def detect_contrast_findings(css_content: str) -> list[WcagFinding]:
         if ratio >= _MIN_THRESHOLD:
             continue
 
-        selector = "".join(t.serialize() for t in rule.prelude).strip()
-        line_num  = max(1, rule.source_line)
+        selector = _selector_text(rule)
+        line_num = _line_number(rule)
 
         findings.append(WcagFinding(
             severity=_MIN_SEVERITY,
@@ -191,30 +229,8 @@ def detect_contrast_enhanced_findings(css_content: str) -> list[WcagFinding]:
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in tinycss2.parse_stylesheet(css_content, skip_whitespace=True, skip_comments=True):
-        if rule.type != "qualified-rule":
-            continue
-
-        declarations = tinycss2.parse_declaration_list(
-            rule.content, skip_whitespace=True, skip_comments=True
-        )
-
-        foreground: tuple[int, int, int] | None = None
-        bg_explicit: tuple[int, int, int] | None = None
-        bg_shorthand: tuple[int, int, int] | None = None
-
-        for decl in declarations:
-            if decl.type != "declaration":
-                continue
-            if decl.lower_name == "color":
-                foreground = _extract_color(decl.value)
-            elif decl.lower_name == "background-color":
-                bg_explicit = _extract_color(decl.value)
-            elif decl.lower_name == "background":
-                bg_shorthand = _extract_color(decl.value)
-
-        background = bg_explicit if bg_explicit is not None else bg_shorthand
-
+    for rule in _iter_qualified_rules(css_content):
+        foreground, background = _extract_foreground_background(rule)
         if foreground is None or background is None:
             continue
 
@@ -223,8 +239,8 @@ def detect_contrast_enhanced_findings(css_content: str) -> list[WcagFinding]:
         if ratio < _MIN_THRESHOLD or ratio >= _ENH_THRESHOLD:
             continue
 
-        selector = "".join(t.serialize() for t in rule.prelude).strip()
-        line_num  = max(1, rule.source_line)
+        selector = _selector_text(rule)
+        line_num = _line_number(rule)
 
         findings.append(WcagFinding(
             severity=_ENH_SEVERITY,
@@ -273,31 +289,12 @@ def detect_nontext_contrast_findings(css_content: str) -> list[WcagFinding]:
     source_lines = css_content.splitlines()
     findings: list[WcagFinding] = []
 
-    for rule in tinycss2.parse_stylesheet(css_content, skip_whitespace=True, skip_comments=True):
-        if rule.type != "qualified-rule":
-            continue
-
-        selector = "".join(t.serialize() for t in rule.prelude).strip()
+    for rule in _iter_qualified_rules(css_content):
+        selector = _selector_text(rule)
         if not any(p in selector.lower() for p in _UI_COMPONENT_PATTERNS):
             continue
 
-        declarations = tinycss2.parse_declaration_list(
-            rule.content, skip_whitespace=True, skip_comments=True
-        )
-
-        border_color: tuple[int, int, int] | None = None
-        background:   tuple[int, int, int] | None = None
-
-        for decl in declarations:
-            if decl.type != "declaration":
-                continue
-            if decl.lower_name in ("border-color", "border"):
-                border_color = _extract_color(decl.value)
-            elif decl.lower_name == "background-color":
-                background = _extract_color(decl.value)
-            elif decl.lower_name == "background" and background is None:
-                background = _extract_color(decl.value)
-
+        border_color, background = _extract_border_background(rule)
         if border_color is None or background is None:
             continue
 
@@ -305,7 +302,7 @@ def detect_nontext_contrast_findings(css_content: str) -> list[WcagFinding]:
         if ratio >= _NTC_THRESHOLD:
             continue
 
-        line_num = max(1, rule.source_line)
+        line_num = _line_number(rule)
         findings.append(WcagFinding(
             severity=_NTC_SEVERITY,
             wcag_level=_NTC_WCAG_LEVEL,

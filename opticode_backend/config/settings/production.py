@@ -1,7 +1,17 @@
-from config.settings.base import *  # noqa: F401,F403
-from config.settings.logging import *  # noqa: F401,F403
+from config.settings import base as base_settings
+from config.settings import logging as logging_settings
 
 from core.logging import setup_logging
+
+
+def _load_uppercase_settings(module):
+    for name, value in vars(module).items():
+        if name.isupper():
+            globals()[name] = value
+
+
+_load_uppercase_settings(base_settings)
+_load_uppercase_settings(logging_settings)
 
 DEBUG = False
 
