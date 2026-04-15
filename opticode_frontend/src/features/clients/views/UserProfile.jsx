@@ -159,13 +159,7 @@ const UserProfile = () => {
               aria-hidden="true"
               onClick={() => !pwdLoading && setPasswordModalOpen(false)}
             />
-            <div
-              className="modal fade show d-block"
-              tabIndex={-1}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={passwordModalTitleId}
-            >
+            <dialog className="modal fade show d-block" open aria-labelledby={passwordModalTitleId}>
               <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                 <div className="modal-content">
                   <div className="modal-header">
@@ -238,26 +232,26 @@ const UserProfile = () => {
                       </div>
 
                       {confirmFeedback === 'mismatch' && (
-                        <ul className="list-unstyled mt-2 mb-0" role="status">
-                          <li
+                        <output className="d-block mt-2 mb-0" aria-live="polite">
+                          <span
                             className="d-flex align-items-center gap-2 mb-1 text-danger"
                             style={{ fontSize: '0.75rem' }}
                           >
                             <ErrorOutlineIcon style={{ fontSize: '0.875rem' }} />
                             Las contraseñas no coinciden.
-                          </li>
-                        </ul>
+                          </span>
+                        </output>
                       )}
                       {confirmFeedback === 'match' && (
-                        <ul className="list-unstyled mt-2 mb-0" role="status">
-                          <li
+                        <output className="d-block mt-2 mb-0" aria-live="polite">
+                          <span
                             className="d-flex align-items-center gap-2 mb-1 text-success"
                             style={{ fontSize: '0.75rem' }}
                           >
                             <CheckCircleOutlineIcon style={{ fontSize: '0.875rem' }} />
                             Las contraseñas coinciden.
-                          </li>
-                        </ul>
+                          </span>
+                        </output>
                       )}
                     </div>
                     <div className="modal-footer">
@@ -282,11 +276,12 @@ const UserProfile = () => {
                       >
                         {pwdLoading ? (
                           <>
-                            <span
+                            <output
                               className="spinner-border spinner-border-sm me-2"
-                              role="status"
+                              aria-live="polite"
                               aria-hidden="true"
                             />
+                            {' '}
                             Guardando...
                           </>
                         ) : (
@@ -297,7 +292,7 @@ const UserProfile = () => {
                   </form>
                 </div>
               </div>
-            </div>
+            </dialog>
           </>,
           document.body,
         )
@@ -335,7 +330,7 @@ const UserProfile = () => {
                     <PersonIcon />
                   </div>
                   <div>
-                    <label className="text-muted small fw-medium mb-1 d-block">Nombre completo</label>
+                    <div className="text-muted small fw-medium mb-1 d-block">Nombre completo</div>
                     <span className="fw-medium">{profile.displayName}</span>
                   </div>
                 </div>
@@ -347,7 +342,7 @@ const UserProfile = () => {
                     <EmailOutlinedIcon />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <label className="text-muted small fw-medium mb-1 d-block">Correo electrónico</label>
+                    <div className="text-muted small fw-medium mb-1 d-block">Correo electrónico</div>
                     <div className="fw-medium text-break">{profile.email}</div>
                   </div>
                 </div>
@@ -359,7 +354,7 @@ const UserProfile = () => {
                     <AdminPanelSettingsOutlinedIcon />
                   </div>
                   <div>
-                    <label className="text-muted small fw-medium mb-1 d-block">Rol en la plataforma</label>
+                    <div className="text-muted small fw-medium mb-1 d-block">Rol en la plataforma</div>
                     <span className="fw-medium">{profile.roleLabel}</span>
                   </div>
                 </div>
@@ -371,7 +366,7 @@ const UserProfile = () => {
                     <EventOutlinedIcon />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <label className="text-muted small fw-medium mb-1 d-block">Registro en OptiCode</label>
+                    <div className="text-muted small fw-medium mb-1 d-block">Registro en OptiCode</div>
                     <div className="fw-medium text-break">{profile.dateJoined}</div>
                   </div>
                 </div>

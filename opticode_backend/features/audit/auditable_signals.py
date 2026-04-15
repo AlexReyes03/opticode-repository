@@ -1,4 +1,4 @@
-def auto_fill_audit_fields(sender, instance, **kwargs):
+def auto_fill_audit_fields(_sender, instance, **kwargs):
     """
     Señal pre_save universal para llenar 'created_by' y 'updated_by' automáticamente
     antes de que el modelo se guarde en la Base de Datos.

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   createProject,
   PROJECT_DESCRIPTION_MAX_LENGTH,
@@ -86,7 +87,9 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated, projectToEdit = n
   };
 
   const title = isEdit ? 'Editar proyecto' : 'Nuevo proyecto';
-  const submitLabel = loading ? (isEdit ? 'Guardando…' : 'Creando…') : isEdit ? 'Guardar cambios' : 'Crear proyecto';
+  const loadingLabel = isEdit ? 'Guardando…' : 'Creando…';
+  const idleLabel = isEdit ? 'Guardar cambios' : 'Crear proyecto';
+  const submitLabel = loading ? loadingLabel : idleLabel;
 
   return (
     <div className="modal fade" ref={modalRef} tabIndex={-1} aria-labelledby="projectModalLabel" aria-hidden="true">
@@ -161,6 +164,17 @@ const CreateProjectModal = ({ show, onClose, onProjectCreated, projectToEdit = n
       </div>
     </div>
   );
+};
+
+CreateProjectModal.propTypes = {
+  projectToEdit: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    name: PropTypes.string,
+    description: PropTypes.string,
+  }),
+  onProjectCreated: PropTypes.func,
+  show: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default CreateProjectModal;

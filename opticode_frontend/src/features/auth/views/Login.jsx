@@ -89,9 +89,9 @@ const Login = () => {
         />
 
         {loginAttemptHint && (
-          <p className="text-secondary small mb-3 mb-md-4 mt-1" role="status">
+          <output className="text-secondary small mb-3 mb-md-4 mt-1 d-block" aria-live="polite">
             {loginAttemptHint}
-          </p>
+          </output>
         )}
 
         <Link
@@ -109,11 +109,12 @@ const Login = () => {
         >
           {loading ? (
             <>
-              <span
+              <output
                 className="spinner-border spinner-border-sm me-2"
-                role="status"
+                aria-live="polite"
                 aria-hidden="true"
               />
+              {' '}
               Ingresando...
             </>
           ) : (

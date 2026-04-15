@@ -62,7 +62,12 @@ const UserDashboard = () => {
     }
   };
 
-  const primaryCtaLabel = loading ? 'Cargando…' : projects.length === 0 ? 'Crear primer proyecto' : 'Nuevo proyecto';
+  let primaryCtaLabel = 'Nuevo proyecto';
+  if (loading) {
+    primaryCtaLabel = 'Cargando…';
+  } else if (projects.length === 0) {
+    primaryCtaLabel = 'Crear primer proyecto';
+  }
 
   const deleteModal =
     typeof document !== 'undefined' && deleteTarget
@@ -73,13 +78,7 @@ const UserDashboard = () => {
               aria-hidden="true"
               onClick={() => setDeleteTarget(null)}
             />
-            <div
-              className="modal fade show d-block"
-              tabIndex={-1}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={deleteTitleId}
-            >
+            <dialog className="modal fade show d-block" open aria-labelledby={deleteTitleId}>
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content">
                   <div className="modal-header">
@@ -103,7 +102,7 @@ const UserDashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </dialog>
           </>,
           document.body,
         )
@@ -129,7 +128,7 @@ const UserDashboard = () => {
               onClick={openCreateModal}
             >
               {!loading && <AddIcon style={{ fontSize: '1.25rem' }} aria-hidden />}
-              {loading && <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />}
+              {loading && <output className="spinner-border spinner-border-sm" aria-live="polite" aria-hidden="true" />}
               {primaryCtaLabel}
             </button>
           </div>
@@ -150,39 +149,44 @@ const UserDashboard = () => {
 
           {loading ? (
             <div className="oc-dashboard-loading d-flex flex-column align-items-center justify-content-center gap-3 py-4">
-              <div className="spinner-border text-primary" role="status">
+              <output className="spinner-border text-primary" aria-live="polite">
                 <span className="visually-hidden">Cargando proyectos</span>
-              </div>
+              </output>
               <p className="text-secondary small mb-0">Cargando tus proyectos…</p>
             </div>
-          ) : projects.length === 0 ? (
-            <div className="text-center py-4 py-md-5 px-2 mx-auto" style={{ maxWidth: '26rem' }}>
-              <div className="oc-dashboard-empty-icon mb-4" aria-hidden>
-                <FolderCopyOutlinedIcon style={{ fontSize: '2.5rem' }} />
-              </div>
-              <h2 className="fs-5 fw-bold mb-2" style={{ color: 'var(--oc-navy)' }}>
-                Aún no hay proyectos
-              </h2>
-              <p className="text-secondary small mb-0" style={{ lineHeight: 1.65 }}>
-                Usa el botón <span className="fw-semibold" style={{ color: 'var(--oc-navy)' }}>{primaryCtaLabel}</span> arriba
-                para crear tu primer proyecto y comenzar a subir HTML o CSS.
-              </p>
-            </div>
-          ) : (
-            <div className="row row-cols-1 row-cols-sm-2 row-cols-xxl-3 g-3 g-md-4">
-              {projects.map((project) => (
-                <div className="col" key={project.id}>
-                  <ProjectCard
-                    project={project}
-                    onEdit={openEditModal}
-                    onDelete={(p) => {
-                      setDeleteTarget(p);
-                    }}
-                  />
+          ) : (() => {
+            if (projects.length === 0) {
+              return (
+                <div className="text-center py-4 py-md-5 px-2 mx-auto" style={{ maxWidth: '26rem' }}>
+                  <div className="oc-dashboard-empty-icon mb-4" aria-hidden>
+                    <FolderCopyOutlinedIcon style={{ fontSize: '2.5rem' }} />
+                  </div>
+                  <h2 className="fs-5 fw-bold mb-2" style={{ color: 'var(--oc-navy)' }}>
+                    Aún no hay proyectos
+                  </h2>
+                  <p className="text-secondary small mb-0" style={{ lineHeight: 1.65 }}>
+                    Usa el botón <span className="fw-semibold" style={{ color: 'var(--oc-navy)' }}>{primaryCtaLabel}</span> arriba
+                    para crear tu primer proyecto y comenzar a subir HTML o CSS.
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            }
+            return (
+              <div className="row row-cols-1 row-cols-sm-2 row-cols-xxl-3 g-3 g-md-4">
+                {projects.map((project) => (
+                  <div className="col" key={project.id}>
+                    <ProjectCard
+                      project={project}
+                      onEdit={openEditModal}
+                      onDelete={(p) => {
+                        setDeleteTarget(p);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </div>
 

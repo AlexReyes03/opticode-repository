@@ -239,6 +239,13 @@ a:hover {
   overflow: hidden;
 }
 
+dialog.modal {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  max-width: none;
+}
+
 .modal-header {
   border-bottom: 1px solid var(--oc-gray-100);
   padding: 1rem 1.5rem;

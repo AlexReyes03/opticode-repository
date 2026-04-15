@@ -143,7 +143,7 @@ const Sidebar = () => {
       ? createPortal(
           <>
             <div className="modal-backdrop fade show" aria-hidden="true" onClick={() => setLogoutModalOpen(false)} />
-            <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={logoutTitleId}>
+            <dialog className="modal fade show d-block" open aria-labelledby={logoutTitleId}>
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content">
                   <div className="modal-header">
@@ -163,7 +163,7 @@ const Sidebar = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </dialog>
           </>,
           document.body,
         )

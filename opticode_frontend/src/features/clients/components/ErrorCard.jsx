@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 const SEVERITY_THEME = {
   critical: {
     borderColor: 'var(--oc-danger)',
@@ -67,6 +69,14 @@ function CodeLineRow({ codeLine, highlightLineNumber }) {
   );
 }
 
+CodeLineRow.propTypes = {
+  codeLine: PropTypes.shape({
+    lineNumber: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+    content: PropTypes.string.isRequired,
+  }).isRequired,
+  highlightLineNumber: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+};
+
 const ErrorCard = ({ error }) => {
   const { severity, level, title, description, line, codeLines: rawLines } = error;
   const codeLines = Array.isArray(rawLines) ? rawLines : [];
@@ -120,7 +130,7 @@ const ErrorCard = ({ error }) => {
         </p>
 
         {/* Code Snippet: scroll horizontal dentro del viewport, sin ensanchar la página */}
-        <div
+        <section
           className="rounded-3 min-w-0 w-100"
           style={{
             backgroundColor: '#0f172a',
@@ -132,8 +142,7 @@ const ErrorCard = ({ error }) => {
             WebkitOverflowScrolling: 'touch',
             contain: 'inline-size',
           }}
-          role={hasCodeLines ? 'region' : undefined}
-          aria-label={hasCodeLines ? 'Fragmento de código relacionado' : undefined}
+          aria-label={hasCodeLines ? 'Fragmento de código relacionado' : 'Sin fragmento de código disponible'}
         >
           {hasCodeLines ? (
             <div style={{ minWidth: 'min-content' }}>
@@ -146,10 +155,26 @@ const ErrorCard = ({ error }) => {
               Sin fragmento de código disponible.
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
+};
+
+ErrorCard.propTypes = {
+  error: PropTypes.shape({
+    line: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    level: PropTypes.string,
+    codeLines: PropTypes.arrayOf(
+      PropTypes.shape({
+        lineNumber: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+        content: PropTypes.string.isRequired,
+      }),
+    ),
+    description: PropTypes.string,
+    title: PropTypes.string,
+    severity: PropTypes.oneOf(['critical', 'improvement', 'warning']),
+  }).isRequired,
 };
 
 export default ErrorCard;

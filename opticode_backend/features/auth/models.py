@@ -33,7 +33,7 @@ class EmailLoginThrottle(models.Model):
     email_normalized = models.EmailField("correo normalizado", max_length=254, unique=True, db_index=True)
     failed_attempts = models.PositiveSmallIntegerField("intentos fallidos", default=0)
     locked_until = models.DateTimeField("bloqueado hasta", null=True, blank=True)
-    last_ip = models.CharField("última IP de intento", max_length=45, null=True, blank=True)
+    last_ip = models.CharField("última IP de intento", max_length=45, blank=True, default="")
     updated_at = models.DateTimeField("actualizado", auto_now=True)
 
     class Meta:

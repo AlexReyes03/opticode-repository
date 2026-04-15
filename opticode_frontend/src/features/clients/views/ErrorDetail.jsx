@@ -44,12 +44,12 @@ const normalizeCodeLines = (finding) => {
  */
 const normalizeFinding = (finding, index) => {
   const rawSeverity = String(finding?.severity ?? '').toLowerCase();
-  const severity =
-    rawSeverity === 'error' || rawSeverity === 'critical'
-      ? 'critical'
-      : rawSeverity === 'improvement'
-        ? 'improvement'
-        : 'warning';
+  let severity = 'warning';
+  if (rawSeverity === 'error' || rawSeverity === 'critical') {
+    severity = 'critical';
+  } else if (rawSeverity === 'improvement') {
+    severity = 'improvement';
+  }
   const rawLevel = finding?.wcag_level ?? finding?.level ?? null;
   const level = rawLevel ? `Nivel ${rawLevel}` : null;
   return {
@@ -198,9 +198,9 @@ const ErrorDetail = () => {
       </div>
 
       {isLoading && (
-        <div className="alert alert-secondary" role="status">
+        <output className="alert alert-secondary d-block" aria-live="polite">
           Cargando hallazgos del archivo...
-        </div>
+        </output>
       )}
 
       {!isLoading && !hasData && (

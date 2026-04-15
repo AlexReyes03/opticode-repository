@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -65,24 +66,13 @@ function ExpandableMetricCard({ metricKey, isOpen, onToggle, count, Icon, copy, 
     onToggle(metricKey);
   }, [metricKey, onToggle]);
 
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleActivate();
-      }
-    },
-    [handleActivate],
-  );
-
   const stopCardToggle = useCallback((e) => {
     e.stopPropagation();
   }, []);
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       aria-expanded={isOpen}
       aria-label={`${copy.title}: ${count}. Clic o Enter para ${isOpen ? 'ocultar' : 'mostrar'} la explicación.`}
       className={`card w-100 h-100 min-h-0 oc-file-report-card-hover d-flex flex-column ${isOpen ? 'overflow-y-auto' : ''}`}
@@ -90,9 +80,9 @@ function ExpandableMetricCard({ metricKey, isOpen, onToggle, count, Icon, copy, 
         backgroundColor: theme.bg,
         border: theme.border,
         cursor: 'pointer',
+        padding: 0,
       }}
       onClick={handleActivate}
-      onKeyDown={handleKeyDown}
     >
       <div className="d-flex flex-column p-3 min-w-0 align-items-stretch">
         <div className={`d-flex gap-3 min-w-0 align-items-start ${isOpen ? 'mb-2' : ''}`}>
@@ -116,7 +106,7 @@ function ExpandableMetricCard({ metricKey, isOpen, onToggle, count, Icon, copy, 
               {count}
             </div>
             <div
-              className={`fw-semibold ${isOpen ? 'small' : 'small'} mt-1`}
+              className="fw-semibold small mt-1"
               style={{ color: theme.labelColor, lineHeight: 1.35 }}
             >
               {copy.title}
@@ -145,9 +135,29 @@ function ExpandableMetricCard({ metricKey, isOpen, onToggle, count, Icon, copy, 
           </a>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
+
+ExpandableMetricCard.propTypes = {
+  count: PropTypes.number.isRequired,
+  metricKey: PropTypes.oneOf(['critical', 'warning', 'improvement']).isRequired,
+  theme: PropTypes.shape({
+    bg: PropTypes.string.isRequired,
+    border: PropTypes.string.isRequired,
+    iconBg: PropTypes.string.isRequired,
+    iconColor: PropTypes.string.isRequired,
+    numberColor: PropTypes.string.isRequired,
+    labelColor: PropTypes.string.isRequired,
+  }).isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  copy: PropTypes.shape({
+    title: PropTypes.string.isRequired,
+    explanation: PropTypes.string.isRequired,
+  }).isRequired,
+  Icon: PropTypes.elementType.isRequired,
+  onToggle: PropTypes.func.isRequired,
+};
 
 /**
  * Reporte de accesibilidad de un archivo analizado.
@@ -324,14 +334,14 @@ const FileReport = () => {
         conformidad está en{' '}
         <a href={WCAG_LEVELS_DOC} target="_blank" rel="noopener noreferrer">
           {WCAG_CONFORMANCE_LINK_LABEL}
-        </a>
-        . Para cada incidencia concreta y sugerencias de corrección, usa «Ver hallazgos detectados».
+        </a>.{' '}
+        Para cada incidencia concreta y sugerencias de corrección, usa «Ver hallazgos detectados».
       </p>
 
       {isLoading && (
-        <div className="alert alert-secondary" role="status">
+        <output className="alert alert-secondary d-block" aria-live="polite">
           Cargando reporte del archivo...
-        </div>
+        </output>
       )}
 
       {!isLoading && !report && (

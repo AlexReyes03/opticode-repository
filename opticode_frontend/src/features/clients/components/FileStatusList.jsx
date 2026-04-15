@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import CssOutlinedIcon from '@mui/icons-material/CssOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -6,6 +7,11 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 const getFileIcon = (fileName) => {
   if (fileName.endsWith('.css')) return <CssOutlinedIcon style={{ fontSize: '1.25rem', color: 'var(--oc-royal)' }} />;
   return <DescriptionOutlinedIcon style={{ fontSize: '1.25rem', color: 'var(--oc-warning)' }} />;
+};
+
+const getCompletedLabel = (score) => {
+  if (score != null && score !== '') return `Completado — eval: ${score}`;
+  return 'Completado';
 };
 
 const FileStatusList = ({ files = [], projectId, onDelete }) => {
@@ -67,21 +73,20 @@ const FileStatusList = ({ files = [], projectId, onDelete }) => {
                       style={{ width: '0.625rem', height: '0.625rem', borderWidth: '2px' }}
                       aria-hidden="true"
                     />
+                    {' '}
                     Subiendo…
                   </span>
                 ) : file.status === 'error' ? (
-                  <span
+                  <output
                     className="badge bg-danger bg-opacity-10 text-danger text-wrap text-break text-start"
                     style={{ maxWidth: '16rem', whiteSpace: 'normal' }}
-                    role="status"
+                    aria-live="polite"
                   >
                     {file.errorMessage ?? 'Error durante la carga.'}
-                  </span>
+                  </output>
                 ) : (
                   <span className="badge bg-success bg-opacity-10 text-success">
-                    {file.score != null && file.score !== ''
-                      ? `Completado — eval: ${file.score}`
-                      : 'Completado'}
+                    {getCompletedLabel(file.score)}
                   </span>
                 )}
 
@@ -104,6 +109,21 @@ const FileStatusList = ({ files = [], projectId, onDelete }) => {
       </div>
     </div>
   );
+};
+
+FileStatusList.propTypes = {
+  projectId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  files: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      size: PropTypes.string,
+      status: PropTypes.oneOf(['uploading', 'error', 'completed']).isRequired,
+      fileId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      errorMessage: PropTypes.string,
+      score: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    }),
+  ),
+  onDelete: PropTypes.func,
 };
 
 export default FileStatusList;

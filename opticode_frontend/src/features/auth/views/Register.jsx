@@ -171,26 +171,26 @@ const Register = () => {
         </div>
 
         {confirmFeedback === 'mismatch' && (
-          <ul className="list-unstyled mt-2 mb-0" role="status">
-            <li
+          <output className="d-block mt-2 mb-0" aria-live="polite">
+            <span
               className="d-flex align-items-center gap-2 mb-1 text-danger"
               style={{ fontSize: '0.75rem', transition: 'color 200ms ease' }}
             >
               <ErrorOutlineIcon style={{ fontSize: '0.875rem' }} />
               Las contraseñas no coinciden.
-            </li>
-          </ul>
+            </span>
+          </output>
         )}
         {confirmFeedback === 'match' && (
-          <ul className="list-unstyled mt-2 mb-0" role="status">
-            <li
+          <output className="d-block mt-2 mb-0" aria-live="polite">
+            <span
               className="d-flex align-items-center gap-2 mb-1 text-success"
               style={{ fontSize: '0.75rem', transition: 'color 200ms ease' }}
             >
               <CheckCircleOutlineIcon style={{ fontSize: '0.875rem' }} />
               Las contraseñas coinciden.
-            </li>
-          </ul>
+            </span>
+          </output>
         )}
 
         <button
@@ -202,11 +202,12 @@ const Register = () => {
         >
           {loading ? (
             <>
-              <span
+              <output
                 className="spinner-border spinner-border-sm me-2"
-                role="status"
+                aria-live="polite"
                 aria-hidden="true"
               />
+              {' '}
               Creando cuenta...
             </>
           ) : (

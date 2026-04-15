@@ -1,4 +1,5 @@
 import { useState, useId } from 'react';
+import PropTypes from 'prop-types';
 import { createPortal } from 'react-dom';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -9,7 +10,7 @@ import { deleteUser, suspendUser } from '../../../api/admin-services';
 import { notifyError, notifySuccess } from '../../../utils/toast';
 
 const UserTable = ({ users = [], onRefresh }) => {
-  const [pendingDelete, setPendingDelete] = useState(null); // { id, name }
+  const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const deleteTitleId = useId();
 
@@ -52,13 +53,7 @@ const UserTable = ({ users = [], onRefresh }) => {
               aria-hidden="true"
               onClick={() => !deleting && setPendingDelete(null)}
             />
-            <div
-              className="modal fade show d-block"
-              tabIndex={-1}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={deleteTitleId}
-            >
+            <dialog className="modal fade show d-block" open aria-labelledby={deleteTitleId}>
               <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content">
                   <div className="modal-header">
@@ -94,11 +89,12 @@ const UserTable = ({ users = [], onRefresh }) => {
                     >
                       {deleting ? (
                         <>
-                          <span
+                          <output
                             className="spinner-border spinner-border-sm me-2"
-                            role="status"
+                            aria-live="polite"
                             aria-hidden="true"
                           />
+                          {' '}
                           Eliminando...
                         </>
                       ) : (
@@ -108,7 +104,7 @@ const UserTable = ({ users = [], onRefresh }) => {
                   </div>
                 </div>
               </div>
-            </div>
+            </dialog>
           </>,
           document.body,
         )
@@ -139,7 +135,6 @@ const UserTable = ({ users = [], onRefresh }) => {
                   </td>
                   <td>
                     <div className="d-flex gap-2">
-                      {/* Botón Suspender / Activar */}
                       <button
                         type="button"
                         className={`btn btn-sm d-flex align-items-center p-1 ${
@@ -155,7 +150,6 @@ const UserTable = ({ users = [], onRefresh }) => {
                         )}
                       </button>
 
-                      {/* Botón Eliminar */}
                       <button
                         type="button"
                         className="btn btn-outline-danger btn-sm d-flex align-items-center p-1"
@@ -175,6 +169,19 @@ const UserTable = ({ users = [], onRefresh }) => {
       {deleteModal}
     </>
   );
+};
+
+UserTable.propTypes = {
+  users: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+      name: PropTypes.string,
+      email: PropTypes.string,
+      registeredAt: PropTypes.string,
+      status: PropTypes.string,
+    }),
+  ),
+  onRefresh: PropTypes.func,
 };
 
 export default UserTable;

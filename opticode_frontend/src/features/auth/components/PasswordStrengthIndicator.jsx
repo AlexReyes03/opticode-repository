@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 
@@ -30,6 +31,11 @@ const PasswordStrengthIndicator = ({ password = '', visible = true }) => {
       })}
     </ul>
   );
+};
+
+PasswordStrengthIndicator.propTypes = {
+  password: PropTypes.string,
+  visible: PropTypes.bool,
 };
 
 export default PasswordStrengthIndicator;

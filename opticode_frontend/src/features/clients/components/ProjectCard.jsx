@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { PROJECT_DESCRIPTION_MAX_LENGTH } from '../../../api/project-services';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
@@ -109,6 +110,18 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
       </div>
     </div>
   );
+};
+
+ProjectCard.propTypes = {
+  onDelete: PropTypes.func,
+  onEdit: PropTypes.func,
+  project: PropTypes.shape({
+    fileCount: PropTypes.number,
+    date: PropTypes.string,
+    description: PropTypes.string,
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+    name: PropTypes.string.isRequired,
+  }).isRequired,
 };
 
 export default ProjectCard;

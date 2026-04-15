@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserRole } from '../utils/userRole';
 
@@ -31,6 +32,10 @@ const PrivateRoute = ({ allowedRoles = ['user', 'admin'] }) => {
   }
 
   return <Outlet />;
+};
+
+PrivateRoute.propTypes = {
+  allowedRoles: PropTypes.arrayOf(PropTypes.oneOf(['admin', 'user'])),
 };
 
 export default PrivateRoute;

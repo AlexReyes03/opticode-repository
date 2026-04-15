@@ -97,13 +97,13 @@ const ResetPassword = () => {
       </p>
 
       {submitted && (
-        <div
+        <output
           className="alert alert-success d-flex align-items-center gap-2 py-2 small mb-4"
-          role="status"
+          aria-live="polite"
         >
           <CheckCircleOutlineIcon style={{ fontSize: '1.125rem' }} />
           Contraseña actualizada (flujo de demostración; pendiente de conectar con el API real).
-        </div>
+        </output>
       )}
 
       {error && (
@@ -182,11 +182,12 @@ const ResetPassword = () => {
           >
             {loading ? (
               <>
-                <span
+                <output
                   className="spinner-border spinner-border-sm me-2"
-                  role="status"
+                  aria-live="polite"
                   aria-hidden="true"
                 />
+                {' '}
                 Guardando...
               </>
             ) : (

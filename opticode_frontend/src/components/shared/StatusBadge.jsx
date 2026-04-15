@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 const variants = {
   active: {
     label: 'Activo',
@@ -12,6 +14,10 @@ const variants = {
 const StatusBadge = ({ status }) => {
   const config = variants[status] ?? variants.active;
   return <span className={config.className}>{config.label}</span>;
+};
+
+StatusBadge.propTypes = {
+  status: PropTypes.string,
 };
 
 export default StatusBadge;

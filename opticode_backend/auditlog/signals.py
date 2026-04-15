@@ -36,7 +36,7 @@ def _format_field_value(field_name, value, sensitive_fields):
     if field_name in sensitive_fields:
         return MASKED_AUDIT_VALUE
     if value is None:
-        return None
+        return ""
     return str(value)
 
 
@@ -75,7 +75,7 @@ def _log_insert_changes(audit_model, sender, instance, user, ip, sensitive_field
             sender_name=sender.__name__,
             field_name=field.name,
             action="INSERT",
-            old_value=None,
+            old_value="",
             new_value=new_value,
             user=user,
             ip=ip,
@@ -155,8 +155,8 @@ def audit_post_delete(sender, instance, **kwargs):
         model_name=sender.__name__,
         field_name=pk_field.name,
         action='DELETE',
-        old_value=str(pk_value) if pk_value is not None else None,
-        new_value=None,
+        old_value=str(pk_value) if pk_value is not None else "",
+        new_value="",
         user=user,
         ip_address=ip,
         record_id=str(instance.pk)

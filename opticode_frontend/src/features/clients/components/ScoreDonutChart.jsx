@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 const getStrokeColor = (score) => {
   if (score >= 90) return 'var(--oc-success)';
   if (score >= 50) return 'var(--oc-warning)';
@@ -47,6 +49,10 @@ const ScoreDonutChart = ({ score = 0 }) => {
       </div>
     </div>
   );
+};
+
+ScoreDonutChart.propTypes = {
+  score: PropTypes.number,
 };
 
 export default ScoreDonutChart;

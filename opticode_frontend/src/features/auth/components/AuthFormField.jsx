@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 
@@ -89,6 +90,23 @@ const AuthFormField = ({
       )}
     </div>
   );
+};
+
+AuthFormField.propTypes = {
+  id: PropTypes.string.isRequired,
+  label: PropTypes.string.isRequired,
+  type: PropTypes.string,
+  placeholder: PropTypes.string,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  onChange: PropTypes.func.isRequired,
+  onFocus: PropTypes.func,
+  onBlur: PropTypes.func,
+  required: PropTypes.bool,
+  icon: PropTypes.elementType,
+  error: PropTypes.string,
+  maxLength: PropTypes.number,
+  showPasswordToggle: PropTypes.bool,
+  autoComplete: PropTypes.string,
 };
 
 export default AuthFormField;

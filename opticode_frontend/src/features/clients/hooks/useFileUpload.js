@@ -37,7 +37,7 @@ export function useFileUpload(projectId) {
     setFiles((prev) => prev.map((f) => (f.name === name ? { ...f, ...patch } : f)));
   }, []);
 
-  const handleFile = useCallback(
+  const uploadSelectedFile = useCallback(
     async (file) => {
       if (!file) return;
 
@@ -59,7 +59,7 @@ export function useFileUpload(projectId) {
           patchFile(file.name, {
             status: 'completed',
             fileId,
-            ...(score != null && score !== '' ? { score } : {}),
+            ...(score != null ? { score } : {}),
           });
           if (fileId) {
             navigate(`/projects/${projectId}/files/${fileId}`);
@@ -73,6 +73,13 @@ export function useFileUpload(projectId) {
       }
     },
     [projectId, navigate, patchFile],
+  );
+
+  const handleFile = useCallback(
+    (file) => {
+      void uploadSelectedFile(file);
+    },
+    [uploadSelectedFile],
   );
 
   const removeFile = useCallback((name) => {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useId, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import { createPortal } from 'react-dom';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
@@ -33,15 +34,6 @@ function buildProjectFromApi(proj) {
   };
 }
 
-function keyboardActivateEdit(handler) {
-  return (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handler();
-    }
-  };
-}
-
 function getBreadcrumbLabel(loading, editing, draftName, projectName) {
   if (loading) return '…';
   if (editing === 'name') return draftName.trim() || '…';
@@ -58,13 +50,7 @@ function DeleteFileModal({ target, fileDeleting, titleId, onClose, onConfirm }) 
         aria-hidden="true"
         onClick={() => !fileDeleting && onClose()}
       />
-      <div
-        className="modal fade show d-block"
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
+      <dialog className="modal fade show d-block" open aria-labelledby={titleId}>
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header">
@@ -102,18 +88,29 @@ function DeleteFileModal({ target, fileDeleting, titleId, onClose, onConfirm }) 
                 onClick={onConfirm}
               >
                 {fileDeleting && (
-                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                  <output className="spinner-border spinner-border-sm" aria-live="polite" aria-hidden="true" />
                 )}
                 Eliminar archivo
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </dialog>
     </>,
     document.body,
   );
 }
+
+DeleteFileModal.propTypes = {
+  onConfirm: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired,
+  target: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    name: PropTypes.string.isRequired,
+  }),
+  fileDeleting: PropTypes.bool.isRequired,
+  titleId: PropTypes.string.isRequired,
+};
 
 function ProjectNameInlineInput({
   draftName,
@@ -136,24 +133,35 @@ function ProjectNameInlineInput({
   );
 }
 
-function ProjectNameHeading({ loading, projectName, onBeginEditName }) {
-  const titleInteractive = !loading;
-  const titleKeyHandler = titleInteractive ? keyboardActivateEdit(onBeginEditName) : undefined;
+ProjectNameInlineInput.propTypes = {
+  draftName: PropTypes.string.isRequired,
+  nameInputRef: PropTypes.oneOfType([PropTypes.func, PropTypes.shape({ current: PropTypes.any })]).isRequired,
+  onDraftNameChange: PropTypes.func.isRequired,
+  onCommitName: PropTypes.func.isRequired,
+};
 
+function ProjectNameHeading({ loading, projectName, onBeginEditName }) {
   return (
-    <h1
-      className="fw-bold fs-4 mb-0 text-break min-w-0"
-      style={{ color: 'var(--oc-navy)', cursor: loading ? 'default' : 'pointer' }}
-      role={titleInteractive ? 'button' : undefined}
-      tabIndex={titleInteractive ? 0 : undefined}
-      title={titleInteractive ? 'Clic para editar' : undefined}
-      onClick={titleInteractive ? onBeginEditName : undefined}
-      onKeyDown={titleKeyHandler}
-    >
-      {loading ? 'Cargando…' : projectName}
+    <h1 className="fw-bold fs-4 mb-0 text-break min-w-0" style={{ color: 'var(--oc-navy)' }}>
+      <button
+        type="button"
+        className="btn p-0 border-0 bg-transparent text-start fw-bold fs-4 text-break"
+        style={{ color: 'var(--oc-navy)', cursor: loading ? 'default' : 'pointer' }}
+        title={!loading ? 'Clic para editar' : undefined}
+        onClick={onBeginEditName}
+        disabled={loading}
+      >
+        {loading ? 'Cargando…' : projectName}
+      </button>
     </h1>
   );
 }
+
+ProjectNameHeading.propTypes = {
+  projectName: PropTypes.string.isRequired,
+  onBeginEditName: PropTypes.func.isRequired,
+  loading: PropTypes.bool.isRequired,
+};
 
 function ProjectTitleBlock({
   loading,
@@ -202,6 +210,19 @@ function ProjectTitleBlock({
   );
 }
 
+ProjectTitleBlock.propTypes = {
+  loading: PropTypes.bool.isRequired,
+  editing: PropTypes.oneOf(['name', 'description', null]),
+  draftName: PropTypes.string.isRequired,
+  projectName: PropTypes.string.isRequired,
+  fileCount: PropTypes.number.isRequired,
+  saving: PropTypes.bool.isRequired,
+  nameInputRef: PropTypes.oneOfType([PropTypes.func, PropTypes.shape({ current: PropTypes.any })]).isRequired,
+  onDraftNameChange: PropTypes.func.isRequired,
+  onCommitName: PropTypes.func.isRequired,
+  onBeginEditName: PropTypes.func.isRequired,
+};
+
 function ProjectDescriptionBlock({
   loading,
   editing,
@@ -212,8 +233,6 @@ function ProjectDescriptionBlock({
   onCommitDescription,
   onBeginEditDescription,
 }) {
-  const descInteractive = !loading;
-  const descKeyHandler = descInteractive ? keyboardActivateEdit(onBeginEditDescription) : undefined;
   const trimmedDesc = projectDescription.trim();
   const showPlaceholder = !trimmedDesc && !loading;
 
@@ -240,21 +259,20 @@ function ProjectDescriptionBlock({
 
   return (
     <div className="d-flex flex-column gap-1">
-      <p
-        className="small mb-0 text-break"
+      <button
+        type="button"
+        className="btn p-0 border-0 bg-transparent small mb-0 text-break text-start"
         style={{ lineHeight: 1.65, cursor: loading ? 'default' : 'pointer' }}
-        role={descInteractive ? 'button' : undefined}
-        tabIndex={descInteractive ? 0 : undefined}
-        title={descInteractive ? 'Clic para editar' : undefined}
-        onClick={descInteractive ? onBeginEditDescription : undefined}
-        onKeyDown={descKeyHandler}
+        title={!loading ? 'Clic para editar' : undefined}
+        onClick={onBeginEditDescription}
+        disabled={loading}
       >
         {trimmedDesc ? (
           <span className="text-secondary">{projectDescription}</span>
         ) : (
           showPlaceholder && <span className="text-secondary fst-italic">Añade una descripción</span>
         )}
-      </p>
+      </button>
       {!loading && (
         <span className="text-muted" style={{ fontSize: '0.65rem' }}>
           {projectDescription.length}/{PROJECT_DESCRIPTION_MAX_LENGTH}
@@ -263,6 +281,17 @@ function ProjectDescriptionBlock({
     </div>
   );
 }
+
+ProjectDescriptionBlock.propTypes = {
+  loading: PropTypes.bool.isRequired,
+  editing: PropTypes.oneOf(['name', 'description', null]),
+  draftDesc: PropTypes.string.isRequired,
+  projectDescription: PropTypes.string.isRequired,
+  descInputRef: PropTypes.oneOfType([PropTypes.func, PropTypes.shape({ current: PropTypes.any })]).isRequired,
+  onDraftDescChange: PropTypes.func.isRequired,
+  onCommitDescription: PropTypes.func.isRequired,
+  onBeginEditDescription: PropTypes.func.isRequired,
+};
 
 function FileRowCriticalCell({ value }) {
   if (value > 0) {
@@ -278,6 +307,9 @@ function FileRowCriticalCell({ value }) {
     </td>
   );
 }
+FileRowCriticalCell.propTypes = {
+  value: PropTypes.number.isRequired,
+};
 
 function FileRowWarningsCell({ value }) {
   if (value > 0) {
@@ -293,6 +325,9 @@ function FileRowWarningsCell({ value }) {
     </td>
   );
 }
+FileRowWarningsCell.propTypes = {
+  value: PropTypes.number.isRequired,
+};
 
 function FileRowImprovementsCell({ value }) {
   if (value > 0) {
@@ -308,6 +343,9 @@ function FileRowImprovementsCell({ value }) {
     </td>
   );
 }
+FileRowImprovementsCell.propTypes = {
+  value: PropTypes.number.isRequired,
+};
 
 function FileRowScoreCell({ score }) {
   return (
@@ -322,6 +360,9 @@ function FileRowScoreCell({ score }) {
     </td>
   );
 }
+FileRowScoreCell.propTypes = {
+  score: PropTypes.number,
+};
 
 function ProjectFileRow({ file, projectId, navigate, onRequestDelete }) {
   const rowClick = () => navigate(`/projects/${projectId}/files/${file.id}`);
@@ -364,14 +405,29 @@ function ProjectFileRow({ file, projectId, navigate, onRequestDelete }) {
     </tr>
   );
 }
+ProjectFileRow.propTypes = {
+  projectId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  navigate: PropTypes.func.isRequired,
+  onRequestDelete: PropTypes.func.isRequired,
+  file: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+    name: PropTypes.string.isRequired,
+    fileType: PropTypes.string,
+    date: PropTypes.string,
+    critical: PropTypes.number,
+    warnings: PropTypes.number,
+    improvements: PropTypes.number,
+    score: PropTypes.number,
+  }).isRequired,
+};
 
 function ProjectFilesTable({ loading, files, projectId, navigate, onRequestDelete }) {
   if (loading) {
     return (
       <div className="d-flex flex-column align-items-center justify-content-center py-5 gap-2">
-        <div className="spinner-border text-primary" role="status">
+        <output className="spinner-border text-primary" aria-live="polite">
           <span className="visually-hidden">Cargando archivos</span>
-        </div>
+        </output>
         <p className="text-secondary small mb-0">Cargando archivos del proyecto…</p>
       </div>
     );
@@ -453,6 +509,25 @@ function ProjectFilesTable({ loading, files, projectId, navigate, onRequestDelet
     </div>
   );
 }
+
+ProjectFilesTable.propTypes = {
+  onRequestDelete: PropTypes.func.isRequired,
+  loading: PropTypes.bool.isRequired,
+  projectId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+  files: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+      name: PropTypes.string.isRequired,
+      fileType: PropTypes.string,
+      date: PropTypes.string,
+      critical: PropTypes.number,
+      warnings: PropTypes.number,
+      improvements: PropTypes.number,
+      score: PropTypes.number,
+    }),
+  ).isRequired,
+  navigate: PropTypes.func.isRequired,
+};
 
 function useProjectDashboard(projectId) {
   const navigate = useNavigate();
@@ -682,73 +757,7 @@ const ProjectDashboard = () => {
 
   const projectName = project?.name ?? 'Proyecto';
   const projectDescription = project?.description ?? '';
-  const breadcrumbLabel = loading ? '…' : editing === 'name' ? draftName.trim() || '…' : projectName;
-
-  const fileDeleteModal =
-    typeof document !== 'undefined' && fileDeleteTarget
-      ? createPortal(
-        <>
-          <div
-            className="modal-backdrop fade show"
-            aria-hidden="true"
-            onClick={() => !fileDeleting && setFileDeleteTarget(null)}
-          />
-          <div
-            className="modal fade show d-block"
-            tabIndex={-1}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={fileDeleteTitleId}
-          >
-            <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title" id={fileDeleteTitleId}>
-                    Eliminar archivo
-                  </h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    aria-label="Cerrar"
-                    disabled={fileDeleting}
-                    onClick={() => setFileDeleteTarget(null)}
-                  >
-                  </button>
-                </div>
-                <div className="modal-body">
-                  ¿Seguro que deseas eliminar{' '}
-                  <span className="fw-semibold">&quot;{fileDeleteTarget.name}&quot;</span> de este proyecto? Esta
-                  acción es irreversible. Si más adelante subes otro archivo con el mismo nombre, se creará un
-                  registro nuevo (no restaura este).
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    disabled={fileDeleting}
-                    onClick={() => setFileDeleteTarget(null)}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger d-inline-flex align-items-center gap-2"
-                    disabled={fileDeleting}
-                    onClick={handleConfirmDeleteFile}
-                  >
-                    {fileDeleting && (
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
-                    )}
-                    Eliminar archivo
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>,
-        document.body,
-      )
-      : null;
+  const breadcrumbLabel = getBreadcrumbLabel(loading, editing, draftName, projectName);
 
   return (
     <section>

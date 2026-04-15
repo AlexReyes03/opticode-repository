@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import PropTypes from 'prop-types';
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
 import FolderZipOutlinedIcon from '@mui/icons-material/FolderZipOutlined';
 
@@ -89,7 +90,6 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
       onDrop={handleDrop}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      role="button"
       tabIndex={0}
       aria-label={`Zona de carga: ${title}`}
     >
@@ -143,6 +143,14 @@ const DropZone = ({ variant = 'individual', title, description, constraints, onF
       </div>
     </div>
   );
+};
+
+DropZone.propTypes = {
+  description: PropTypes.string.isRequired,
+  onFile: PropTypes.func,
+  variant: PropTypes.oneOf(['individual', 'batch']),
+  title: PropTypes.string.isRequired,
+  constraints: PropTypes.string.isRequired,
 };
 
 export default DropZone;

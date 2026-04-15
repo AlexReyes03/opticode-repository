@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 const filters = [
   { key: 'all', label: 'Todos' },
   { key: 'critical', label: 'Solo Críticos', dotColor: 'var(--oc-danger)' },
@@ -7,12 +9,11 @@ const filters = [
 
 const ErrorFilter = ({ activeFilter, onFilterChange, counts = {} }) => {
   return (
-    <div
+    <fieldset
       className="d-flex flex-wrap align-items-stretch"
-      role="group"
-      aria-label="Filtro de errores"
       style={{ maxWidth: '100%', gap: '0.5rem' }}
     >
+      <legend className="visually-hidden">Filtro de errores</legend>
       {filters.map(({ key, label, dotColor }) => {
         const isActive = activeFilter === key;
         const count = counts[key] ?? 0;
@@ -39,8 +40,19 @@ const ErrorFilter = ({ activeFilter, onFilterChange, counts = {} }) => {
           </button>
         );
       })}
-    </div>
+    </fieldset>
   );
+};
+
+ErrorFilter.propTypes = {
+  counts: PropTypes.shape({
+    all: PropTypes.number,
+    critical: PropTypes.number,
+    warning: PropTypes.number,
+    improvement: PropTypes.number,
+  }),
+  activeFilter: PropTypes.oneOf(['all', 'critical', 'warning', 'improvement']).isRequired,
+  onFilterChange: PropTypes.func.isRequired,
 };
 
 export default ErrorFilter;

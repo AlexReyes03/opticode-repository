@@ -26,7 +26,7 @@ _GENERIC_LINK_TEXTS = {
     # Español
     "aquí", "aqui", "clic aquí", "clic aqui", "click aquí", "click aqui",
     "haz clic", "haz clic aquí", "ver más", "ver mas", "leer más", "leer mas",
-    "más", "mas", "más información", "mas información", "más información", "más info",
+    "más", "mas", "más información", "mas información", "más info",
     "este enlace", "enlace", "ir", "entrar", "continuar", "siguiente", "anterior",
     # Inglés
     "here", "click here", "read more", "more", "learn more", "this link",

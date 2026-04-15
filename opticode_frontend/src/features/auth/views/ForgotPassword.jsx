@@ -57,13 +57,13 @@ const ForgotPassword = () => {
       </p>
 
       {submitted && (
-        <div
+        <output
           className="alert alert-success d-flex align-items-center gap-2 py-2 small mb-4"
-          role="status"
+          aria-live="polite"
         >
           <MarkEmailReadOutlinedIcon style={{ fontSize: '1.125rem' }} />
           Si el correo existe, recibirás instrucciones para restablecer tu contraseña.
-        </div>
+        </output>
       )}
 
       {error && (
@@ -96,11 +96,12 @@ const ForgotPassword = () => {
           >
             {loading ? (
               <>
-                <span
+                <output
                   className="spinner-border spinner-border-sm me-2"
-                  role="status"
+                  aria-live="polite"
                   aria-hidden="true"
                 />
+                {' '}
                 Enviando...
               </>
             ) : (

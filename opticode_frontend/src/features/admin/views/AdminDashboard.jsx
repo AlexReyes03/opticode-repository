@@ -66,9 +66,9 @@ const AdminDashboard = () => {
 
       {loading ? (
         <div className="text-center py-5">
-          <div className="spinner-border text-primary" role="status">
+          <output className="spinner-border text-primary" aria-live="polite" aria-label="Cargando usuarios">
             <span className="visually-hidden">Cargando...</span>
-          </div>
+          </output>
         </div>
       ) : (
         <UserTable users={filtered} onRefresh={async () => setRefreshKey(k => k + 1)} />
