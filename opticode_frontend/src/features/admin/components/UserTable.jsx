@@ -1,66 +1,179 @@
+import { useState, useId } from 'react';
+import { createPortal } from 'react-dom';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import StatusBadge from '../../../components/shared/StatusBadge';
 import { getApiErrorMessage } from '../../../api/fetch-wrapper';
-import { suspendUser } from '../../../api/admin-services';
+import { deleteUser, suspendUser } from '../../../api/admin-services';
 import { notifyError, notifySuccess } from '../../../utils/toast';
 
 const UserTable = ({ users = [], onRefresh }) => {
-  const handleSuspend = async (id) => {
+  const [pendingDelete, setPendingDelete] = useState(null); // { id, name }
+  const [deleting, setDeleting] = useState(false);
+  const deleteTitleId = useId();
+
+  const handleToggleSuspend = async (user) => {
     try {
-      await suspendUser(id);
+      await suspendUser(user.id);
       if (onRefresh) await onRefresh();
-      notifySuccess('Usuario suspendido correctamente.');
+      const action = user.status === 'active' ? 'suspendido' : 'activado';
+      notifySuccess(`Usuario ${action} correctamente.`);
     } catch (error) {
       notifyError(
-        getApiErrorMessage(error, 'No se pudo suspender el usuario. Intenta de nuevo.'),
+        getApiErrorMessage(error, 'No se pudo cambiar el estado del usuario. Intenta de nuevo.'),
       );
     }
   };
 
-  return (
-    <div className="card overflow-hidden">
-      <table className="table table-hover mb-0">
-        <thead className="table-light">
-          <tr>
-            {['Nombre', 'Correo', 'Registro', 'Estado', 'Acciones'].map((header) => (
-              <th key={header}>{header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td className="fw-medium">{user.name}</td>
-              <td className="text-secondary">{user.email}</td>
-              <td className="text-secondary">{user.registeredAt}</td>
-              <td>
-                <StatusBadge status={user.status} />
-              </td>
-              <td>
-                <div className="d-flex gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-outline-warning btn-sm d-flex align-items-center p-1"
-                    title="Suspender"
-                    onClick={() => handleSuspend(user.id)}
-                  >
-                    <BlockOutlinedIcon style={{ fontSize: '1rem' }} />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger btn-sm d-flex align-items-center p-1"
-                    title="Eliminar"
-                  >
-                    <DeleteOutlineOutlinedIcon style={{ fontSize: '1rem' }} />
-                  </button>
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteUser(pendingDelete.id);
+      if (onRefresh) await onRefresh();
+      notifySuccess('Usuario eliminado correctamente.');
+      setPendingDelete(null);
+    } catch (error) {
+      notifyError(
+        getApiErrorMessage(error, 'No se pudo eliminar el usuario. Intenta de nuevo.'),
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const deleteModal =
+    typeof document !== 'undefined' && pendingDelete
+      ? createPortal(
+          <>
+            <div
+              className="modal-backdrop fade show"
+              aria-hidden="true"
+              onClick={() => !deleting && setPendingDelete(null)}
+            />
+            <div
+              className="modal fade show d-block"
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={deleteTitleId}
+            >
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title" id={deleteTitleId}>
+                      Eliminar usuario
+                    </h5>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      aria-label="Cerrar"
+                      onClick={() => !deleting && setPendingDelete(null)}
+                      disabled={deleting}
+                    />
+                  </div>
+                  <div className="modal-body">
+                    ¿Estás seguro de que deseas eliminar al usuario{' '}
+                    <strong>{pendingDelete.name}</strong>? Esta acción no se puede deshacer.
+                  </div>
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setPendingDelete(null)}
+                      disabled={deleting}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={handleDeleteConfirm}
+                      disabled={deleting}
+                    >
+                      {deleting ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm me-2"
+                            role="status"
+                            aria-hidden="true"
+                          />
+                          Eliminando...
+                        </>
+                      ) : (
+                        'Eliminar'
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </td>
+              </div>
+            </div>
+          </>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <>
+      <div className="card overflow-hidden">
+        <table className="table table-hover mb-0">
+          <thead className="table-light">
+            <tr>
+              {['Nombre', 'Correo', 'Registro', 'Estado', 'Acciones'].map((header) => (
+                <th key={header}>{header}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {users.map((user) => {
+              const isSuspended = user.status === 'suspended';
+
+              return (
+                <tr key={user.id}>
+                  <td className="fw-medium">{user.name}</td>
+                  <td className="text-secondary">{user.email}</td>
+                  <td className="text-secondary">{user.registeredAt}</td>
+                  <td>
+                    <StatusBadge status={user.status} />
+                  </td>
+                  <td>
+                    <div className="d-flex gap-2">
+                      {/* Botón Suspender / Activar */}
+                      <button
+                        type="button"
+                        className={`btn btn-sm d-flex align-items-center p-1 ${
+                          isSuspended ? 'btn-outline-success' : 'btn-outline-warning'
+                        }`}
+                        title={isSuspended ? 'Activar usuario' : 'Suspender usuario'}
+                        onClick={() => handleToggleSuspend(user)}
+                      >
+                        {isSuspended ? (
+                          <CheckCircleOutlineIcon style={{ fontSize: '1rem' }} />
+                        ) : (
+                          <BlockOutlinedIcon style={{ fontSize: '1rem' }} />
+                        )}
+                      </button>
+
+                      {/* Botón Eliminar */}
+                      <button
+                        type="button"
+                        className="btn btn-outline-danger btn-sm d-flex align-items-center p-1"
+                        title="Eliminar usuario"
+                        onClick={() => setPendingDelete({ id: user.id, name: user.name })}
+                      >
+                        <DeleteOutlineOutlinedIcon style={{ fontSize: '1rem' }} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {deleteModal}
+    </>
   );
 };
 

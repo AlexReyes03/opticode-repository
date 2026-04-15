@@ -51,3 +51,6 @@ export const getUsers = () =>
 
 export const suspendUser = (id) =>
   request(`/api/users/${id}/suspend/`, { method: 'PATCH' });
+
+export const deleteUser = (id) =>
+  request(`/api/users/${id}/delete/`, { method: 'DELETE' });
