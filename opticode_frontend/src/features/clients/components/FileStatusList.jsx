@@ -14,6 +14,43 @@ const getCompletedLabel = (score) => {
   return 'Completado';
 };
 
+/**
+ * @param {{ status: string, errorMessage?: string, score?: number|string }} file
+ */
+function renderFileStatusBadge(file) {
+  if (file.status === 'uploading') {
+    return (
+      <span className="badge bg-info bg-opacity-10 text-primary d-inline-flex align-items-center gap-1">
+        <span
+          className="spinner-border spinner-border-sm"
+          style={{ width: '0.625rem', height: '0.625rem', borderWidth: '2px' }}
+          aria-hidden="true"
+        />
+        {' '}
+        Subiendo…
+      </span>
+    );
+  }
+
+  if (file.status === 'error') {
+    return (
+      <output
+        className="badge bg-danger bg-opacity-10 text-danger text-wrap text-break text-start"
+        style={{ maxWidth: '16rem', whiteSpace: 'normal' }}
+        aria-live="polite"
+      >
+        {file.errorMessage ?? 'Error durante la carga.'}
+      </output>
+    );
+  }
+
+  return (
+    <span className="badge bg-success bg-opacity-10 text-success">
+      {getCompletedLabel(file.score)}
+    </span>
+  );
+}
+
 const FileStatusList = ({ files = [], projectId, onDelete }) => {
   const navigate = useNavigate();
 
@@ -66,29 +103,7 @@ const FileStatusList = ({ files = [], projectId, onDelete }) => {
 
               {/* Right: badge + delete button */}
               <div className="d-flex align-items-center gap-2 align-self-sm-end flex-shrink-0">
-                {file.status === 'uploading' ? (
-                  <span className="badge bg-info bg-opacity-10 text-primary d-inline-flex align-items-center gap-1">
-                    <span
-                      className="spinner-border spinner-border-sm"
-                      style={{ width: '0.625rem', height: '0.625rem', borderWidth: '2px' }}
-                      aria-hidden="true"
-                    />
-                    {' '}
-                    Subiendo…
-                  </span>
-                ) : file.status === 'error' ? (
-                  <output
-                    className="badge bg-danger bg-opacity-10 text-danger text-wrap text-break text-start"
-                    style={{ maxWidth: '16rem', whiteSpace: 'normal' }}
-                    aria-live="polite"
-                  >
-                    {file.errorMessage ?? 'Error durante la carga.'}
-                  </output>
-                ) : (
-                  <span className="badge bg-success bg-opacity-10 text-success">
-                    {getCompletedLabel(file.score)}
-                  </span>
-                )}
+                {renderFileStatusBadge(file)}
 
                 {file.status !== 'uploading' && onDelete && (
                   <button

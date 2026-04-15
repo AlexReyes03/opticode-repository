@@ -520,8 +520,9 @@ input[type='password']::-ms-clear {
 }
 
 .navbar-sidebar__link--danger:hover {
-  background-color: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
+  /* Fondo sobre --oc-navy: texto claro para ratio WCAG AA frente al tinte rojo */
+  background-color: rgba(239, 68, 68, 0.22);
+  color: var(--oc-danger-light);
 }
 
 .navbar-sidebar__link .MuiSvgIcon-root {
