@@ -4,12 +4,17 @@ import UserTable from '../components/UserTable';
 import { getUsers } from '../../../api/admin-services';
 import { getApiErrorMessage } from '../../../api/fetch-wrapper';
 import { notifyError } from '../../../utils/toast';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const AdminDashboard = () => {
+  const { user: currentUser } = useAuth();
+  const currentUserId = currentUser?.id ?? currentUser?.user_id ?? null;
+
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -31,6 +36,8 @@ const AdminDashboard = () => {
 
   const q = search.trim().toLowerCase();
   const filtered = users.filter((u) => {
+    // Excluir al administrador en sesión de la lista
+    if (currentUserId !== null && Number(u?.id) === Number(currentUserId)) return false;
     const name = String(u?.name ?? '').toLowerCase();
     const email = String(u?.email ?? '').toLowerCase();
     return !q || name.includes(q) || email.includes(q);
@@ -71,3 +78,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
